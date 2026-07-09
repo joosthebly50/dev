@@ -1,0 +1,12 @@
+[Unit]
+Description=SOC Lab Traffic Mirror
+After=libvirtd.service
+Requires=libvirtd.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/soc-mirror.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
