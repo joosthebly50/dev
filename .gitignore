@@ -1,0 +1,4 @@
+secure/
+evidence/
+*.kdbx
+*.env
