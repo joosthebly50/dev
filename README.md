@@ -1,45 +1,129 @@
-# Enterprise SOC Lab
+# SOC Homelab
+
+## Cybersecurity Training Environment
+
+A private cybersecurity laboratory built for learning, testing and improving defensive security skills.
+
+---
+
+# Project Goals
+
+This homelab focuses on:
+
+- Blue Team operations
+- SOC workflows
+- Security monitoring
+- Active Directory security
+- Network defense
+- Incident response
+- Penetration testing practice
+
+---
+
+# Infrastructure
 
 ## Host
-- Bazzite
-- KVM / Libvirt
 
-## Firewall
-- OPNsense
+Operating System:
 
-## Security Monitoring
-- Security Onion
-- Suricata
-- Zeek
-- Elastic
+Bazzite Linux
 
-## Attack VM
-- Kali Linux
+Virtualization:
 
-## Target VMs
-- DC01
-- Ubuntu Server
-- Metasploitable2
+- KVM
+- QEMU
+- libvirt
+- virt-manager
 
-## Networks
 
-default
-192.168.122.0/24
+---
 
-pentest-lab
+# Core Systems
+
+## OPNsense
+
+Role:
+
+Firewall and network gateway.
+
+
+## DC01
+
+Role:
+
+Windows Server Active Directory Domain Controller.
+
+
+## Security Onion
+
+Role:
+
+Security Operations Center monitoring platform.
+
+
+## Kali Linux
+
+Role:
+
+Security testing workstation.
+
+
+## Metasploitable
+
+Role:
+
+Vulnerable training target.
+
+
+---
+
+# Network
+
+Primary Lab Network:
+
 192.168.50.0/24
 
-monitor-net
-Traffic Mirror Network
 
-## Status
+---
 
-✅ Dynamic Traffic Mirror
+# Documentation
 
-✅ Security Onion Operational
+All infrastructure changes are documented.
 
-✅ Suricata Operational
+Documentation principles:
 
-✅ Zeek Operational
+- Security first
+- Backup before changes
+- Explain before execution
+- Keep configurations reproducible
 
-✅ Elastic Operational
+
+---
+
+# AI Collaboration
+
+AI assistants may help with:
+
+- Documentation
+- Analysis
+- Troubleshooting
+- Suggestions
+
+Sensitive information such as passwords and secrets is stored separately.
+
+
+---
+
+# Project Status
+
+Current phase:
+
+Building and documenting the SOC Homelab foundation.
+
+
+Next steps:
+
+- Complete infrastructure setup
+- Integrate monitoring
+- Improve detections
+- Perform security exercises
