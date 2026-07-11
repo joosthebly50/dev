@@ -80,3 +80,94 @@ When giving commands:
 - Explain what the command does
 - Avoid unnecessary destructive commands
 - Verify results after changes
+
+---
+
+# SOC Homelab Knowledge Base
+
+## Documentation Source
+
+The SOC Homelab documentation is the source of truth.
+
+Before answering questions about this project, read the relevant documentation.
+
+Main index:
+
+docs/INDEX.md
+
+---
+
+## Required Reading Order
+
+For project understanding:
+
+1. README.md
+2. PROJECT_RULES.md
+3. AI_ACCESS_POLICY.md
+4. docs/INDEX.md
+
+Then read the relevant sections:
+
+- docs/decisions/
+- docs/guides/
+- docs/troubleshooting/
+- docs/chat_history/
+
+---
+
+## Documentation Rules
+
+Always:
+
+- Check existing documentation before making assumptions.
+- Use previous troubleshooting solutions when available.
+- Preserve the existing architecture.
+- Explain changes before applying them.
+- Document important new discoveries.
+
+Never:
+
+- Store passwords in documentation.
+- Commit secrets to Git.
+- Make destructive infrastructure changes without confirmation.
+- Ignore previous decisions.
+
+---
+
+## Troubleshooting Method
+
+When solving problems:
+
+1. Check documentation first.
+2. Identify the affected system.
+3. Review previous troubleshooting cases.
+4. Explain the cause.
+5. Apply the smallest safe change.
+6. Document the result.
+
+---
+
+## Current Infrastructure
+
+Main systems:
+
+- Bazzite Linux host
+- KVM/QEMU virtualization
+- OPNsense firewall
+- DC01 Active Directory
+- Security Onion SOC platform
+
+Network:
+
+192.168.50.0/24
+
+Important IPs:
+
+OPNsense:
+192.168.50.1
+
+DC01:
+192.168.50.10
+
+Security Onion:
+192.168.50.20
