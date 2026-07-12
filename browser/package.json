@@ -1,0 +1,9 @@
+{
+  "name": "soc-browser",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Playwright-driven browser automation for the SOC Homelab (Security Onion / Kibana / Fleet).",
+  "dependencies": {
+    "playwright": "^1.48.0"
+  }
+}

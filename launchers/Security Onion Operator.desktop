@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Security Onion Operator
+Comment=Open de beheerde browseromgeving: Overview, Hunt, Detections, Cases, Grid, Administration, Kibana en Fleet
+Exec=/var/home/Joost/Homelab/scripts/soc-browser.sh
+Icon=security-high
+Terminal=false
+Categories=System;
+StartupNotify=true
+Keywords=Homelab;SecurityOnion;Kibana;Fleet;SOC;

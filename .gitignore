@@ -2,3 +2,10 @@ Secure/
 evidence/
 *.kdbx
 *.env
+
+# Playwright browser automation: session profile (cookies/session state
+# live here once logged in) and captured screenshots/reports -- never
+# committed, regardless of how the browser/ directory structure evolves.
+browser/profile/
+browser/artifacts/
+browser/node_modules/
