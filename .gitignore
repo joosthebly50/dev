@@ -1,4 +1,4 @@
-secure/
+Secure/
 evidence/
 *.kdbx
 *.env
