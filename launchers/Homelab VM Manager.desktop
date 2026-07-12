@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Homelab VM Manager
+Comment=Open virt-manager op de system libvirt-connectie (qemu:///system)
+Exec=flatpak run org.virt_manager.virt-manager --connect qemu:///system
+Icon=virt-manager
+Terminal=false
+Categories=System;
+StartupNotify=true
+Keywords=Homelab;KVM;QEMU;Virtualization;libvirt;

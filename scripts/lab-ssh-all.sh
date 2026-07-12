@@ -1,57 +1,59 @@
 #!/usr/bin/env bash
-# Opent één tmux-sessie met een venster (tab) per homelab-machine, elk via
-# de bijbehorende alias uit ~/.ssh/config. Alleen machines waarvan poort 22
-# live geverifieerd is als bereikbaar staan hierin -- zie ~/Homelab/docs.
-# Een mislukte SSH-verbinding sluit alleen dat ene venster niet af: de fout
-# blijft zichtbaar en de rest van de tmux-sessie blijft gewoon werken.
+# Opens one Konsole window with a real tab per homelab machine, each with
+# its own independent interactive TTY (via `konsole --tabs-from-file`).
+# No tmux: password prompts work normally in every tab, and a failed
+# connection in one tab never affects the others or closes the window.
+#
+# This script plays two roles:
+#   (no args)        builds the tabs file and launches Konsole.
+#   --pane-worker X  internal: this is what actually runs *inside* each tab.
 set -uo pipefail
 
-SESSION="homelab-ssh"
+SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
+TABSFILE="/tmp/homelab-ssh-tabs.txt"
 
-# alias|label -- alleen hosts met live-geverifieerde, werkende SSH (poort 22
-# bevestigd open op 2026-07-12). WIN11-01 bewust weggelaten: geen SSH-server.
-HOSTS=(
-  "opnsense|OPNsense-FW"
-  "dc01|DC01"
-  "security-onion|Security Onion"
-  "kali|Kali"
-  "ubuntu-server|Ubuntu Server"
+# alias -> label. Only live-verified, SSH-reachable hosts (checked
+# 2026-07-12 via ARP + an SSH-level connection test, not assumed). Aliases
+# come from ~/.ssh/config. WIN11-01 is deliberately excluded: port 22
+# doesn't respond there (no SSH server on that Windows 11 client, and
+# nothing was installed/changed on it to add one).
+declare -A LABELS=(
+  [opnsense]="OPNsense-FW"
+  [security-onion]="Security Onion"
+  [kali]="Kali"
+  [dc01]="DC01"
+  [ubuntu-server]="Ubuntu Server"
 )
+ALIASES=(opnsense security-onion kali dc01 ubuntu-server)
 
-if ! command -v tmux >/dev/null 2>&1; then
-  echo "❌ tmux is niet geïnstalleerd. Kan SSH Alle Machines niet starten."
-  read -r -p "Druk op Enter om af te sluiten..." _
+# --- worker mode: runs inside a single Konsole tab for one host ---
+if [ "${1:-}" = "--pane-worker" ]; then
+  alias_name="${2:-}"
+  label="${LABELS[$alias_name]:-$alias_name}"
+  ssh -o ConnectTimeout=8 "$alias_name"
+  ec=$?
+  if [ "$ec" -ne 0 ]; then
+    echo
+    echo "⚠️  Verbinding met $label mislukt (ssh exitcode: $ec)."
+    echo "Controleer ~/.ssh/config en of de VM draait."
+  fi
+  echo
+  exec bash
+fi
+
+# --- default mode: build the tabs file and open Konsole ---
+if ! command -v konsole >/dev/null 2>&1; then
+  echo "❌ konsole is niet geïnstalleerd. Kan SSH Alle Machines niet starten." >&2
   exit 1
 fi
 
-pane_cmd() {
-  local host_alias="$1" label="$2"
-  # Bij mislukte verbinding: duidelijke fout tonen en in een lokale shell
-  # blijven staan (venster/sessie blijft open, alleen dit venster faalt).
-  # shellcheck disable=SC2016  # bewust single-quoted: $ec/$? moeten pas
-  # expanderen wanneer tmux dit als los commando uitvoert, niet nu.
-  printf 'ssh -o ConnectTimeout=8 %q; ec=$?; if [ "$ec" -ne 0 ]; then echo; echo "⚠️  Verbinding met %s mislukt (ssh exitcode: $ec)."; echo "Controleer ~/.ssh/config en of de VM draait."; fi; echo; exec bash' \
-    "$host_alias" "$label"
-}
+: > "$TABSFILE"
+for alias_name in "${ALIASES[@]}"; do
+  label="${LABELS[$alias_name]}"
+  printf 'title: %s ;; command: %s --pane-worker %s\n' "$label" "$SCRIPT" "$alias_name" >> "$TABSFILE"
+done
 
-if tmux has-session -t "$SESSION" 2>/dev/null; then
-  echo "ℹ️  tmux-sessie '$SESSION' bestaat al, hierheen verbinden..."
-else
-  first=1
-  for entry in "${HOSTS[@]}"; do
-    alias_name="${entry%%|*}"
-    label="${entry##*|}"
-    cmd="$(pane_cmd "$alias_name" "$label")"
-    if [ "$first" = 1 ]; then
-      tmux new-session -d -s "$SESSION" -n "$label" "$cmd"
-      first=0
-    else
-      tmux new-window -t "$SESSION" -n "$label" "$cmd"
-    fi
-  done
-  # tmux windows zijn standaard 0-geïndexeerd (base-index 0) -- venster 0 is
-  # het eerst aangemaakte venster (OPNsense-FW), niet venster 1.
-  tmux select-window -t "$SESSION:0"
-fi
-
-exec tmux attach-session -t "$SESSION"
+# --separate: force a genuinely new, independent window rather than
+# possibly adding tabs to whatever Konsole window the user already has
+# open (observed during testing when --separate was omitted).
+exec konsole --separate --tabs-from-file "$TABSFILE"

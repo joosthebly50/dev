@@ -2,9 +2,10 @@
 
 ## Purpose
 
-Three one-click desktop launchers for the daily lab workflow: start everything,
-stop everything, and SSH into everything. Built to replace several earlier,
-inconsistent attempts at the same thing (see "History" below).
+Four one-click desktop launchers for the daily lab workflow: start everything,
+stop everything, SSH into everything, and open the VM manager on the right
+connection. Built to replace several earlier, inconsistent attempts at the
+same thing (see "History" below).
 
 ---
 
@@ -16,7 +17,7 @@ inconsistent attempts at the same thing (see "History" below).
 |---|---|
 | `lab-start.sh` | Starts all 7 VMs in order (OPNsense-FW, DC01, SOC-SecurityOnion, ` ATTACK-Kali`, WIN11-01, ubuntu-server-01, Target-Metasploitable2). Idempotent -- already-running VMs are skipped. Every `virsh` call is `timeout`-wrapped so a stuck daemon can never hang the script. VM names are matched exactly as `virsh list --all` reports them, including the leading space on Kali. |
 | `lab-stop.sh` | Stops all 7 VMs: clients/targets first, OPNsense and Security Onion last. Each VM is polled individually via ACPI shutdown (`virsh shutdown`); only forced with `virsh destroy` after a clear warning and a per-VM timeout (60s normal, 180s for Windows/Security Onion). Prints a final summary of graceful vs. forced shutdowns. |
-| `lab-ssh-all.sh` | Opens one `tmux` session (`homelab-ssh`) with one window per reachable machine, using the aliases below. A failed SSH connection shows a readable error in that window and drops to a local shell -- it never kills the whole session. |
+| `lab-ssh-all.sh` | Opens **one Konsole window with a real tab per machine** (no tmux), using the aliases below. Each tab has its own independent TTY via `konsole --separate --tabs-from-file`, so interactive password prompts work normally and a failed connection in one tab never affects the others. The script plays two roles: called with no arguments it builds the tabs file and launches Konsole; called as `lab-ssh-all.sh --pane-worker <alias>` (what actually runs *inside* each tab) it does the `ssh` call and error handling for that one host. |
 
 ## Launchers (`~/Homelab/launchers/`, symlinked to `~/Desktop/` and `~/.local/share/applications/`)
 
@@ -24,12 +25,45 @@ inconsistent attempts at the same thing (see "History" below).
 |---|---|
 | Pentest Lab Start | `konsole --hold -e lab-start.sh` |
 | Pentest Lab Stop | `konsole --hold -e lab-stop.sh` |
-| SSH Alle Machines | `konsole --hold -e lab-ssh-all.sh` |
+| SSH Alle Machines | `lab-ssh-all.sh` (the script itself opens Konsole -- see below) |
+| Homelab VM Manager | `flatpak run org.virt_manager.virt-manager --connect qemu:///system` |
 
-`--hold` keeps the Konsole window open after the script finishes so the summary
-stays readable until closed manually. All three use Konsole (the terminal
-actually installed on this system) -- `gnome-terminal`, used by earlier
-attempts, isn't installed here and those launchers silently did nothing.
+`--hold` keeps the Start/Stop Konsole windows open after the script finishes so
+the summary stays readable until closed manually. All terminal launchers use
+Konsole (the terminal actually installed on this system) -- `gnome-terminal`,
+used by earlier attempts, isn't installed here and those launchers silently
+did nothing.
+
+### Why SSH Alle Machines isn't wrapped in `konsole -e` like the others
+
+The first version of this launcher used `tmux` inside a single Konsole tab.
+That turned out impractical day-to-day: only one connection was visible at a
+time, and typing a password meant first switching tmux windows correctly.
+Rebuilt to use Konsole's own native tabs instead (`konsole --tabs-from-file`,
+one line per host: `title: <name> ;; command: <worker invocation>`). Because
+the script itself now needs to be the thing that calls `konsole`, the
+launcher's `Exec=` runs the script directly rather than wrapping it in an
+outer `konsole -e` -- doing both would open two windows.
+
+`--separate` is important here: without it, testing showed a new
+`--tabs-from-file` invocation can add its tabs to whatever Konsole window the
+user already has open, instead of opening a dedicated new one.
+
+**Known cosmetic quirk:** an extra tab titled after the working directory
+(e.g. "Homelab : bash") sometimes appears alongside the 5 SSH tabs. This is
+Konsole's own session-restore behavior running *in addition to*
+`--tabs-from-file`, not something this script creates -- confirmed by testing
+that it appears regardless of what the tabs file contains. Harmless; close it
+like any other tab if it's in the way.
+
+### Homelab VM Manager
+
+Opens virt-manager (Flatpak) with `--connect qemu:///system` so it lands on
+the system connection (all 7 lab VMs) rather than defaulting to
+`qemu:///session` (the separate "QEMU/KVM User session" connection, which has
+its own unrelated VMs and is not this lab). Verified via `flatpak run
+org.virt_manager.virt-manager --help`, which confirmed `-c/--connect URI` is
+supported by the installed version.
 
 ## SSH config (`~/.ssh/config`)
 
@@ -89,8 +123,8 @@ are left in place, unmodified, pending a decision on whether to remove them.
   `ubuntu`) -- correct in `~/.ssh/config` if login fails.
 - Only Kali and Security Onion currently accept the local SSH key
   passwordlessly; OPNsense, DC01, and ubuntu-server-01 will prompt for a
-  password in their `tmux` window. Run `ssh-copy-id <alias>` for any of them
-  if passwordless login is wanted.
+  password in their tab (confirmed working interactively). Run `ssh-copy-id
+  <alias>` for any of them if passwordless login is wanted.
 - Target-Metasploitable2 does not respond to ACPI shutdown (no `acpid` on that
   old image) -- `lab-stop.sh` always ends up forcing it via `virsh destroy`
   after its 60s timeout. This is expected, not a bug.
