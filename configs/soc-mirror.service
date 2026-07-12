@@ -1,11 +1,12 @@
 [Unit]
-Description=SOC Lab Traffic Mirror
+Description=SOC Lab Traffic Mirror (boot-time catch-up reconcile)
+Documentation=file:///var/home/Joost/Homelab/docs/guides/security_onion_setup.md
 After=libvirtd.service
 Requires=libvirtd.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/soc-mirror.sh
+ExecStart=/usr/local/sbin/soc-mirror.sh --reconcile
 RemainAfterExit=yes
 
 [Install]

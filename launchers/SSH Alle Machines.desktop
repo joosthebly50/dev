@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=SSH Alle Machines
+Comment=Open tmux-sessie met SSH naar alle bereikbare homelab-machines
+Exec=konsole --hold -e /var/home/Joost/Homelab/scripts/lab-ssh-all.sh
+Icon=utilities-terminal
+Terminal=false
+Categories=System;
+StartupNotify=true
+Keywords=Homelab;SSH;tmux;Terminal;
