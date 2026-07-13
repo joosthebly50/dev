@@ -265,6 +265,18 @@ Problems:
 
 ---
 
+## 06_dc01_fleet_health_and_sysmon.md
+
+Problems:
+
+- DC01 offline in Elastic Fleet
+- Security Onion firewall hostgroups (elastic_agent_endpoint, beats_endpoint, endgame)
+- DC01 clock skew (vmictimesync vs NTP) not surviving reboot
+- Sysmon not installed, no Windows/Sysmon telemetry reaching Security Onion
+
+
+---
+
 # Screenshots
 
 Location:
