@@ -6,6 +6,34 @@ All important project changes are documented here.
 
 # 2026-07-13
 
+## Attack Scope Agreed With Joost + Safety Snapshots Taken (Execution Deferred)
+
+Follow-up to the live verification pass (below). Reviewed the §12 attack-scope proposals with Joost and got three concrete decisions: (1) Tier 1 recon + Tier 2 exploitation of Metasploitable2/Juice Shop run together, first; (2) Tier 3 AD attack chain uses Option B — deliberately build a privilege-escalation path (SPN on `SQL Service`, elevate `IT Admin 01`) before attacking it, rather than testing the current no-privilege-path state; (3) WIN11-01 becomes a target too, but only after being tidied up (moved into `OU=Workstations`, general cleanup) and then having its firewall deliberately loosened for lateral-movement practice.
+
+Ahead of any of that, per the AI change procedure ([§4](docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md) of the master doc): took fresh VM snapshots as rollback points before any AD/firewall changes — `DC01` → `2026-07-13-pre-ad-escalation-path`, `WIN11-01` → `2026-07-13-pre-target-cleanup`. Ran one read-only recon command (`nmap -sn` subnet sweep from Kali, confirmed no new information beyond already-known IPs) and started a full-port scan against Metasploitable2 before Joost clarified the pentest itself should wait for a dedicated session — the scan was stopped immediately, no exploitation/AD/firewall changes were made.
+
+`docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §12 updated to record the agreed scope and next-session checklist; re-rendered the PDF.
+
+## Live Lab Verification Pass + AI Rules & Attack Scope Sections Added to Master Doc
+
+Follow-up to the master documentation compile (below). Used direct, read-only access already available on the Bazzite host (`virsh -c qemu:///system`, ARP tables on `virbr10`, unauthenticated TCP port probes, existing passwordless SSH aliases, one unauthenticated HTTP GET) to verify facts the master doc had flagged as open (⚠️), rather than leaving them or guessing.
+
+Findings and fixes:
+
+- **`ubuntu-server-01`'s real IP is `192.168.50.100`, not `.40`** as every document (including `~/.ssh/config`) said. Verified via `virsh domiflist` MAC (`52:54:00:0e:0f:65`) cross-referenced against ARP. Nothing has ever answered on `.40` — this is why the role was never previously documented (the SSH alias pointed at a dead address). Corrected in `~/.ssh/config`, `NETWORK.md`, `SERVERS.md`, `docs/ASSET_INVENTORY.md`, and the master doc.
+- **`Target-Metasploitable2`'s IP is `192.168.50.70`** (was undocumented/unverified everywhere). Found via ping sweep + ARP (MAC `52:54:00:1b:cf:b3`); port fingerprint confirms a stock, unmodified Metasploitable2 image. Corrected in the same files.
+- **`ubuntu-server-01` is running OWASP Juice Shop live**, right now, on port 3000 (confirmed via unauthenticated HTTP GET) — not just "previously, during Fortress Bazzite" as older docs implied.
+- **`WIN11-01` is domain-joined** to `pentest.lab` as `DESKTOP-EFKB8GQ` (never renamed from the Windows default), confirmed via `dsquery computer` on DC01. Windows Firewall blocks all inbound SMB/RDP/WinRM/139 from the lab network — only RPC endpoint mapper (135) is reachable.
+- **The Active Directory OU/group/user structure is already built**, contradicting `ACTIVE_DIRECTORY.md`'s "planned, not yet built" language. Verified via read-only `dsquery` on DC01: 7 OUs, 8 user accounts, 2 custom groups (`SOC-Analysts`, `Helpdesk`). Real gaps found and documented (not silently fixed): `Helpdesk` group has no members, `IT Admin 01` isn't actually a Domain Admin, `OU=Workstations`/`OU=Servers` are empty, and the role accounts have no differentiating privileges yet.
+- **Host hardware specs (CPU/GPU/RAM/WiFi) verified live** (`lscpu`/`lspci`/`free -h`) — all matched the previously-unverified 2026-07-05 design document exactly, plus RAM (62 GiB) added since it wasn't previously recorded.
+- **Regression found, not fixed:** the `opnsense` SSH alias (root), documented in `docs/PROJECT_STATUS.md` as passwordless, now returns `Permission denied`. `ubuntu-server-01`'s SSH key auth was never working either. Both are recorded as open items — need either the OPNsense web UI or key re-deployment, not something to silently work around.
+
+Also substantially expanded `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md`:
+
+- A full, unabridged **"AI implementation & rules"** section (§4), replacing the previous condensed summary — merges `AI_ACCESS_POLICY.md`, `PROJECT_RULES.md`, and `CLAUDE.md` into one place: role definition, allowed/restricted actions, credential handling, change procedure, troubleshooting method, and what "read-only investigation" is allowed to cover in practice.
+- A new **§12, "Attack scope proposals (Red Team test plan)"** — three tiers of concrete test scenarios (recon, exploitation of Metasploitable2/Juice Shop, an AD attack chain) grounded in the systems actually present in this lab, explicitly marked as proposed-not-executed, with open questions for Joost on goals/scope before anything is run.
+- Re-rendered `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.pdf` (47 pages, up from 37).
+
 ## Master Documentation Compiled + Cross-Document IP/Domain Corrections
 
 Compiled all existing documentation (root docs, decisions, guides, troubleshooting, chat_history, daily logs, asset inventory, glossary) into a single synthesized reference: `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md`, and rendered it to `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.pdf`.

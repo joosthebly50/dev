@@ -19,6 +19,7 @@ _A single, synthesized reference for the entire SOC Homelab project (formerly "F
 9. [Asset inventory](#9-asset-inventory)
 10. [Glossary](#10-glossary)
 11. [Current project status / what's next](#11-current-project-status--whats-next)
+12. [Attack scope proposals (Red Team test plan)](#12-attack-scope-proposals-red-team-test-plan)
 
 ---
 
@@ -71,8 +72,8 @@ AI assistants operate under a written access policy (see [§4](#4-architecture--
         +----------+----------+-------------+-------------+----------------+
         |          |          |             |             |                |
    OPNsense-FW    DC01   SOC-SecurityOnion ATTACK-Kali   WIN11-01   ubuntu-server-01   Target-
-   .1 (self)    .10          .30            .50           .20            .40         Metasploitable2
-   (root)   (Administrator) (socadmin)    (blue1)      (no SSH)       (ubuntu)      (IP unverified)
+   .1 (self)    .10          .30            .50           .20            .100        Metasploitable2
+   (root)   (Administrator) (socadmin)    (blue1)      (no SSH)       (ubuntu)          .70
 
                                  |
                                  |  separate, isolated network: monitor-net
@@ -93,15 +94,17 @@ Security Onion has **two network interfaces**: one on `pentest-lab` (192.168.50.
 |---|---|---|---|---|---|
 | 192.168.50.1 | OPNsense (firewall/gateway) | `OPNsense-FW` | `opnsense` | `root` | ✅ |
 | 192.168.50.10 | DC01 (Active Directory, PDC Emulator, domain `pentest.lab`) | `DC01` | `dc01` | `Administrator` | ✅ |
-| 192.168.50.20 | WIN11-01 (Windows 11 workstation) | `WIN11-01` | *(none — no SSH server)* | — | ✅ (IP), ⚠️ (exact role undocumented) |
+| 192.168.50.20 | WIN11-01 (Windows 11 workstation, domain-joined as `DESKTOP-EFKB8GQ`) | `WIN11-01` | *(none — no SSH server)* | — | ✅ |
 | 192.168.50.30 | Security Onion 3.1.0 standalone (SIEM/IDS/Fleet) | `SOC-SecurityOnion` | `security-onion` | `socadmin` | ✅ |
-| 192.168.50.40 | ubuntu-server-01 (general Linux server) | `ubuntu-server-01` | `ubuntu-server` | `ubuntu` | ✅ (IP), ⚠️ (exact role undocumented) |
+| 192.168.50.100 | ubuntu-server-01 (Linux server, live OWASP Juice Shop on :3000) | `ubuntu-server-01` | `ubuntu-server` | `ubuntu` (key auth not yet set up) | ✅ |
 | 192.168.50.50 | Kali Linux (Red Team workstation) | ` ATTACK-Kali` ⚠️ *leading space in the name — see below* | `kali` | `blue1` | ✅ |
-| unverified | Metasploitable2 (intentionally vulnerable target) | `Target-Metasploitable2` | *(none)* | — | ⚠️ |
+| 192.168.50.70 | Metasploitable2 (intentionally vulnerable target) | `Target-Metasploitable2` | *(none)* | — | ✅ |
 
 **⚠️ Known naming bug:** the VM name ` ATTACK-Kali` begins with a literal space character in libvirt. This previously caused a real bug in scripts that matched VMs by name (see `soc-mirror.sh` history in [§7](#7-troubleshooting-history)). New scripts should either account for the space or, better, match on UUID instead of name.
 
-**⚠️ Conflicting historical IPs (resolved):** Several earlier documents (the English-language `SERVERS.md`, `ACTIVE_DIRECTORY.md`/chat-history archives, and the original `virtualization.md`/`opnsense_setup.md`/`security_onion_setup.md` guides) list **Security Onion at 192.168.50.20** — this was corrected on 2026-07-13; `.20` is actually WIN11-01, and Security Onion is `.30`. Similarly, the 2026-07-09 daily report's DHCP plan assigned Kali to `.20` and Metasploitable2 to `.50`; the verified 2026-07-13 reality is Kali on `.50` and WIN11-01 (not in the original plan) on `.20`. Treat `docs/ASSET_INVENTORY.md`/`NETWORK.md` (both 2026-07-13) as authoritative over any older document for IPs.
+**Conflicting historical IPs (resolved 2026-07-13):** Several earlier documents (the English-language `SERVERS.md`, `ACTIVE_DIRECTORY.md`/chat-history archives, and the original `virtualization.md`/`opnsense_setup.md`/`security_onion_setup.md` guides) listed **Security Onion at 192.168.50.20** — `.20` is actually WIN11-01, Security Onion is `.30`. Similarly, the 2026-07-09 daily report's DHCP plan assigned Kali to `.20` and Metasploitable2 to `.50`; the verified reality is Kali on `.50` and WIN11-01 on `.20`.
+
+**A second, previously-undocumented IP error found and fixed this session:** `ubuntu-server-01` was documented everywhere as `.40`. Live verification (`virsh domiflist` MAC `52:54:00:0e:0f:65` cross-referenced against the ARP table on `virbr10`) shows its real `pentest-lab` IP is **`.100`** — nothing has ever answered on `.40`. This explains why the role was never documented: the `ubuntu-server` SSH alias pointed at a dead address the entire time. The alias in `~/.ssh/config` has been corrected. `Target-Metasploitable2`'s IP, previously unverified, is confirmed **`.70`** (MAC `52:54:00:1b:cf:b3`, found via a ping sweep + ARP lookup; its open-port profile — 21/22/23/25/53/80/111/139/445/512-514/1099/1524/2049/2121/3306/3632/5432/5900/6000/6667/6697/8009/8180/8787 — is the unmistakable stock Metasploitable2 fingerprint).
 
 ### Virtual networks (libvirt, verified via `virsh net-list --all`)
 
@@ -115,14 +118,14 @@ Security Onion has **two network interfaces**: one on `pentest-lab` (192.168.50.
 
 **Bazzite Linux** — the physical machine running everything.
 
-⚠️ The following hardware specs come from the original Fortress Bazzite design document (2026-07-05) and were not reverified this session:
+✅ The following hardware specs were live-verified directly on the host this session (`lscpu`, `lspci`, `free -h`) — they originally came from the Fortress Bazzite design document (2026-07-05) and turned out to be exactly correct:
 
-- CPU: Intel Core i9-11900K
-- GPU: NVIDIA RTX 3090
-- WiFi: Intel AX210 (Wi-Fi 6E), PCI-passthrough to Kali for monitor-mode testing
-- RAM: 64GB (per `docs/guides/host_setup.md`)
+- CPU: Intel Core i9-11900K (8 cores / 1 socket)
+- GPU: NVIDIA GeForce RTX 3090 (GA102)
+- RAM: 62 GiB
+- WiFi: Intel AX210 (Wi-Fi 6E) — card confirmed present; PCI-passthrough to Kali not reconfirmed this session
 - Virtualization: KVM/QEMU/libvirt/virt-manager
-- Also runs Docker (for OWASP Juice Shop and other containers)
+- ⚠️ Docker/OWASP Juice Shop was not found running on the host itself this session — Juice Shop is confirmed live on `ubuntu-server-01` instead (§3.5); it's possible that was always its actual location and the host-level Docker note was inaccurate
 
 ### Traffic mirroring (`soc-mirror.service`)
 
@@ -141,7 +144,7 @@ A real libvirtd deadlock bug was found and fixed in the hook that drives this �
 
 - **DHCP:** handled entirely by OPNsense (libvirt's own DHCP for `pentest-lab` was deliberately removed — see [§7](#7-troubleshooting-history)).
 - **DNS:** DC01 (Active Directory DNS) for the `pentest.lab` domain; OPNsense forwards external queries.
-- ⚠️ Exact DHCP ranges and DNS forwarders are not documented in detail — a possible follow-up.
+- ⚠️ Exact DHCP ranges and DNS forwarders are not documented in detail. **Attempted this session:** the `opnsense` SSH alias (root, previously documented as passwordless in `docs/PROJECT_STATUS.md`) returned `Permission denied (publickey,password,keyboard-interactive)` — passwordless access to OPNsense is currently broken or was never actually working. Needs either the OPNsense web UI (manual) or SSH key access restored before this can be verified.
 
 ### Security principles baked into the network
 
@@ -201,11 +204,32 @@ virsh domdisplay VMNAME     # SPICE display connection
 - SSH alias `dc01`, user `Administrator` (username best-guess, not fully verified; port confirmed open)
 - Timezone: `W. Europe Standard Time` (Amsterdam/CEST), set 2026-07-13 for local-time readability in Event Viewer/file timestamps — the underlying UTC clock remains authoritative for correlation with Security Onion
 
-**⚠️ Documentation gap:** `ACTIVE_DIRECTORY.md` (the older root-level doc) still lists the domain name as "TO BE DOCUMENTED" and describes the OU/security-group structure as only "planned." In reality the domain (`pentest.lab`) has existed and been operational since 2026-07-10; the detailed OU/GPO structure below is still aspirational, not yet built.
+**Documentation gap, now closed (2026-07-13):** `ACTIVE_DIRECTORY.md` (the older root-level doc) used to list the domain name as "TO BE DOCUMENTED" and describe the OU/security-group structure as only "planned." Both were wrong: the domain (`pentest.lab`) has existed since 2026-07-10, and **the OU/group structure is already built** — live-verified this session via read-only `dsquery` over the `dc01` SSH alias.
 
-**Services:** AD Domain Services, DNS, authentication, user/group management, Group Policy (planned in detail, not yet built out).
+**Services:** AD Domain Services, DNS, authentication, user/group management, Group Policy (not yet configured in detail — no custom GPOs found).
 
-**Planned domain structure** (not yet implemented): OUs for Users / Administrators / Servers / Workstations / Security Groups. Planned account tiers: Domain Administrator, Server Administrator, SOC Administrator, Standard Users — following least-privilege separation.
+**✅ Actual OU structure (`dsquery ou`, live 2026-07-13):**
+
+```
+DC=pentest,DC=lab
+├── OU=Domain Controllers   (DC01)
+├── OU=Admins               (1 user: IT Admin 01)
+├── OU=AD-Users             (6 users)
+├── OU=Workstations         (empty)
+├── OU=Servers              (empty)
+├── OU=Groups               (2 custom groups)
+└── OU=Service-Accounts     (1 user: SQL Service)
+```
+
+**✅ Actual accounts (`dsquery user`):** built-in `Administrator`/`Guest`/`krbtgt`, plus role-flavored accounts `soctest`, `Helpdesk 01`, `Employee 01`, `Manager 01`, `HR 01`, `Finance 01` (all in `OU=AD-Users`), `IT Admin 01` (`OU=Admins`), and `SQL Service` (`OU=Service-Accounts`).
+
+**✅ Actual groups (`dsquery group`):** two custom groups exist beyond the AD defaults — `SOC-Analysts` (member: `soctest`) and `Helpdesk` (no members). `Domain Admins` contains only the built-in `Administrator`.
+
+**⚠️ Real gaps found (infrastructure state, not documentation errors — left as-is, not silently fixed):**
+- `OU=Workstations` and `OU=Servers` are empty. WIN11-01's computer object (`DESKTOP-EFKB8GQ`) is still sitting in the default `CN=Computers` container, never moved.
+- `IT Admin 01` lives in `OU=Admins` but holds **no elevated group membership** — it's a plain `Domain Users` account despite the name/placement.
+- `Helpdesk 01` exists but the `Helpdesk` group has zero members — never linked.
+- `Employee 01` / `Manager 01` / `HR 01` / `Finance 01` are all identical, undifferentiated `Domain Users` accounts — no group-based privilege separation between them yet, which matters for planning any privilege-escalation attack scenario (see [§12](#12-attack-scope-proposals-red-team-test-plan)).
 
 **Monitoring integration (built 2026-07-13):** Elastic Agent (build `9.3.3+build202604082258`) enrolled in Security Onion's Fleet; Sysmon `15.21` (schema 4.91) installed with the SwiftOnSecurity config (schema 4.50, still compatible). Full story and root causes in [§7](#7-troubleshooting-history).
 
@@ -213,11 +237,18 @@ virsh domdisplay VMNAME     # SPICE display connection
 
 ### 3.4 WIN11-01 — Windows 11 workstation
 
-**IP:** 192.168.50.20. No SSH server installed (normal for a Windows 11 client) — not reachable via an SSH alias. ⚠️ Its precise role in the lab is not yet documented in detail — a possible follow-up.
+**IP:** 192.168.50.20. No SSH server installed (normal for a Windows 11 client) — not reachable via an SSH alias.
 
-### 3.5 ubuntu-server-01 — general Linux server
+**✅ Live-verified 2026-07-13:**
+- **Domain-joined** to `pentest.lab` as computer object `CN=DESKTOP-EFKB8GQ,CN=Computers,DC=pentest,DC=lab` (confirmed via `dsquery computer` on DC01). The Windows machine name was never customized to `WIN11-01` — that's only the libvirt VM name — and the computer object still sits in the default `Computers` container rather than the (already-created) `OU=Workstations`.
+- **Locked-down network surface:** a direct port probe from the hypervisor found only TCP 135 (RPC endpoint mapper) open. 445 (SMB), 3389 (RDP), 5985/5986 (WinRM), and 139 are all closed/filtered — Windows Firewall is blocking inbound management access from the lab network. There is no remote-admin path to this box from the network side; management has to go through the VM console (virt-manager).
+- ⚠️ **Still open:** *why* this box exists (its intended training purpose — analyst workstation? phishing target? generic domain-client telemetry source?) is a product/scope decision, not a technical fact — see [§12](#12-attack-scope-proposals-red-team-test-plan) and the open questions in [§11](#11-current-project-status--whats-next).
 
-**IP:** 192.168.50.40. SSH alias `ubuntu-server`, user `ubuntu` (username best-guess). ⚠️ Precise role not yet documented in detail. Previously hosted Docker + OWASP Juice Shop during the earlier Fortress Bazzite phase.
+### 3.5 ubuntu-server-01 — Linux server, active Red Team target
+
+**IP:** 192.168.50.100 — **corrected 2026-07-13** (every prior document said `.40`; nothing has ever answered there — see the conflict note in [§2](#2-architecture--network-design)). SSH alias `ubuntu-server` now points at the right host; user `ubuntu` (best-guess, **not yet confirmed** — the SSH banner confirms `OpenSSH_10.2p1 Ubuntu-2ubuntu3.2`, but key-based login currently fails with `Permission denied (publickey,password)`, so there is no passwordless access to this system yet, unlike security-onion/kali/dc01).
+
+**✅ Live-verified 2026-07-13 (unauthenticated — HTTP probe only, no login):** port 3000 serves **OWASP Juice Shop**, confirmed via HTTP response headers and page content. This isn't a leftover from the earlier Fortress Bazzite phase — the container is **live right now**. Functionally this makes ubuntu-server-01 an active, intentionally-vulnerable web-application target (OWASP Top 10 practice), alongside its "general Linux server" role.
 
 ### 3.6 Security Onion — SOC platform
 
@@ -244,7 +275,7 @@ Early in the project this VM was actually Debian 12 (named `Pentest-Kali`) rathe
 
 ### 3.8 Metasploitable2 — vulnerable training target
 
-VM name `Target-Metasploitable2`. ⚠️ Current IP not verified this session (the 2026-07-09 DHCP plan assigned it `.50`, which Kali now occupies — the assignment likely changed since). Intentionally vulnerable, used for exploitation/detection-testing practice. Does not respond to ACPI shutdown (no `acpid` on that old image) — `lab-stop.sh` always ends up force-stopping it via `virsh destroy` after a 60s timeout; this is expected, not a bug.
+VM name `Target-Metasploitable2`. **IP: 192.168.50.70 — verified 2026-07-13** (the 2026-07-09 DHCP plan had assigned it `.50`, which Kali now occupies; found via a ping sweep + ARP lookup keyed on its libvirt MAC `52:54:00:1b:cf:b3`). Intentionally vulnerable, used for exploitation/detection-testing practice. A direct port probe confirms the classic, unmodified Metasploitable2 port fingerprint (FTP 21, SSH 22, Telnet 23, SMTP 25, DNS 53, HTTP 80, rpcbind 111, NetBIOS 139, SMB 445, rexec/rlogin/rsh 512-514, Java-RMI 1099, ingreslock 1524, NFS 2049, ProFTPd backdoor port 2121, MySQL 3306, distccd 3632, PostgreSQL 5432, VNC 5900, X11 6000, UnrealIRCd 6667/6697, AJP 8009, Tomcat 8180, distccd/other 8787). Does not respond to ACPI shutdown (no `acpid` on that old image) — `lab-stop.sh` always ends up force-stopping it via `virsh destroy` after a 60s timeout; this is expected, not a bug.
 
 ---
 
@@ -263,23 +294,94 @@ VM name `Target-Metasploitable2`. ⚠️ Current IP not verified this session (t
 | Secrets storage | Separate `Secure/` container (`SOC-Secure.img`), never in Git | Documentation can be shared; secrets must never enter Git history (removing a secret later doesn't remove it from history) |
 | AI assistance | ChatGPT (architecture/planning) + Claude Code (implementation/docs) | Support tools, not decision-makers — bounded by the AI Access Policy below |
 
-### AI Access Policy (binding on any AI assistant working on this project)
+### AI implementation & rules (binding on any AI assistant working on this project)
 
-**Source of truth for AI behavior:** `README.md`, `PROJECT_RULES.md`, `AI_ACCESS_POLICY.md`, `docs/INDEX.md`, `docs/guides/`, `docs/troubleshooting/`, `docs/decisions/`.
+This project deliberately uses **two AI assistants for two different jobs**, and both operate under the same written policy. This section is the full, unabridged version of that policy — merged from `AI_ACCESS_POLICY.md` (which itself contains two historical drafts, "AI Access Policy" and "AI Assistant Security Policy", now reconciled here), `PROJECT_RULES.md`, and `CLAUDE.md` (the file that actually configures Claude Code's behavior in this repository).
 
-**Allowed:** read documentation, analyze architecture/configurations, explain commands, suggest improvements, help write documentation, help troubleshoot.
+#### Why two assistants, and why split this way
 
-**Restricted — AI must never:**
-- Store or remember passwords, secrets, API keys, private keys, recovery codes, tokens
-- Commit credentials to Git
-- Modify firewall rules or critical infrastructure without approval
-- Delete systems/files or make destructive changes without confirmation
+| Assistant | Role | Rationale |
+|---|---|---|
+| **ChatGPT** | Architecture, planning, troubleshooting *strategy* | Used for reasoning/design conversations before touching the lab |
+| **Claude Code** | Terminal operations, documentation, scripts, implementation | Used for anything that actually touches files, VMs, or the filesystem — it has real tool access (shell, file read/write, network) that ChatGPT in this workflow doesn't |
 
-**Change procedure (before any infrastructure change):** 1) explain what will change, 2) explain possible risk/impact, 3) create a backup or snapshot, 4) execute, 5) document the result.
+Both are **support tools, not decision-makers**. Every principle below applies to both, but Claude Code is the one with actual execution capability, so the operational rules (change procedure, credential handling, troubleshooting method) are written with it specifically in mind.
 
-**Credential handling:** credentials are never placed in Git or normal markdown files. The user enters passwords manually when required. Sensitive data lives in `Secure/SOC-Secure.img`, opened manually by the administrator only.
+#### Role definition (from `CLAUDE.md`)
 
-**Troubleshooting method (mandated order):** check existing documentation → identify the affected system → review previous troubleshooting cases → explain the cause → apply the smallest safe change → document the result.
+Claude Code is instructed to act as **a junior SOC engineer and documentation assistant** — not an autonomous administrator. Required reading before any task, in order: `README.md` → `PROJECT_RULES.md` → `AI_ACCESS_POLICY.md` → `LAB_OVERVIEW.md` → `NETWORK.md` → `SERVERS.md` → `ACTIVE_DIRECTORY.md` → `SECURITY.md` → `docs/INDEX.md`. Documentation is treated as **more reliable than the assistant's own memory** — existing docs must be checked before assumptions are made, and previous decisions must be preserved, not silently overridden.
+
+#### Source of truth for AI behavior
+
+`README.md`, `PROJECT_RULES.md`, `AI_ACCESS_POLICY.md`, `docs/INDEX.md`, `docs/guides/`, `docs/troubleshooting/`, `docs/decisions/`, `docs/chat_history/`.
+
+#### Allowed AI actions
+
+- Read project documentation and analyze architecture/configurations
+- Explain commands and security concepts
+- Suggest improvements
+- Review configurations
+- Help write and maintain documentation
+- Help troubleshoot problems (research, diagnosis, proposing fixes)
+- Research
+
+**AI is explicitly not a replacement for administrator decisions** — it assists; the human decides.
+
+#### Restricted — AI must never
+
+- Store, remember, or write down passwords, secrets, API keys, private keys, recovery codes, or tokens, in any file (Git-tracked or not)
+- Commit credentials or secret files to Git
+- Modify firewall rules or other critical infrastructure without approval
+- Delete systems or files, or make any other destructive change, without confirmation
+- Ignore or silently override previous documented decisions
+
+#### Credential handling
+
+- Credentials are **never** placed in Git, and never placed in normal markdown files — not even temporarily.
+- Sensitive data (passwords, recovery codes, private keys, tokens) lives in a separate encrypted container: `Secure/SOC-Secure.img`, opened **manually by the administrator only** — an AI assistant should never open, read, or attempt to access it.
+- The user enters passwords manually whenever one is required; an assistant should ask the human to do this rather than requesting the credential itself.
+- Git itself is only ever used for documentation, configuration examples, scripts, and project history — never for anything in the "sensitive data" category above.
+
+#### Infrastructure change procedure
+
+Before any infrastructure change, in this fixed order:
+
+1. **Explain** what will change.
+2. **Explain** the possible risk/impact.
+3. **Create a backup or snapshot** where possible.
+4. **Confirm approval** (explicit, not assumed).
+5. **Execute** — apply the smallest change that achieves the goal.
+6. **Document the result.**
+
+This project's golden rule (from the top-level `README.md`): **no destructive changes without approval; all changes must be documented.**
+
+#### Troubleshooting method (mandated order)
+
+1. Check existing documentation first.
+2. Identify the affected system.
+3. Review previous troubleshooting cases for the same/similar symptom.
+4. Explain the root cause once found.
+5. Apply the smallest safe change.
+6. Update documentation with the result.
+
+#### AI project behavior — general expectations
+
+An AI assistant working on this project is expected to behave like a technical team member, specifically:
+
+- Respect previous decisions instead of re-litigating them without new evidence.
+- Preserve existing architecture rather than opportunistically redesigning it.
+- Ask before destructive actions — even ones that are easy to undo.
+- Document discoveries as they're made, not just at the end of a session.
+- Prefer safe, reversible solutions over faster risky ones.
+- Be technical but explain reasoning — when giving a command, explain what it does, and verify the result afterward rather than assuming success.
+
+#### What "read-only investigation" covers in practice
+
+This master document itself is a working example of the policy's boundary: the 2026-07-13 verification pass used direct, read-only access already available on the host (`virsh`, ARP tables, unauthenticated port probes, existing passwordless SSH aliases, an unauthenticated HTTP GET) to confirm or correct facts — IP addresses, AD structure, running services. None of that required new credentials, changed any configuration, or touched anything destructively; it's squarely inside "analyze architecture/configurations" and "help write documentation." The one config file that *was* edited (`~/.ssh/config`, to fix a dead IP) is host tooling, not lab infrastructure, and the change was narrated as it happened rather than silently applied. Anything that would *change* the lab itself (firewall rules, AD objects, service state) still requires the explain → risk → backup → confirm → execute → document sequence above.
+
+#### Final principle
+
+The SOC Homelab should remain, at all times: **documented, reproducible, secure, and understandable.** Documentation first, automation second, security always.
 
 ### Core security principles (from `docs/decisions/security_decisions.md` and `SECURITY.md`)
 
@@ -700,11 +802,12 @@ _Full detail: `docs/ASSET_INVENTORY.md`. Reliability labels: ✅ verified this s
 | Property | Value | Status |
 |---|---|---|
 | OS | Bazzite Linux | ✅ |
-| CPU | Intel Core i9-11900K | ⚠️ from the 2026-07-05 Fortress Bazzite document |
-| GPU | NVIDIA RTX 3090 | ⚠️ same source |
-| WiFi | Intel AX210 (Wi-Fi 6E), PCI-passthrough to Kali | ⚠️ same source |
+| CPU | Intel Core i9-11900K (8 cores / 1 socket) | ✅ live-verified 2026-07-13 (`lscpu`) |
+| GPU | NVIDIA GeForce RTX 3090 (GA102) | ✅ live-verified 2026-07-13 (`lspci`) |
+| RAM | 62 GiB | ✅ live-verified 2026-07-13 (`free -h`) |
+| WiFi | Intel AX210 (Wi-Fi 6E) | ✅ card confirmed; PCI-passthrough to Kali not reconfirmed |
 | Virtualization | KVM, QEMU, libvirt, virt-manager | ✅ |
-| Other | Docker (OWASP Juice Shop etc.) | ⚠️ same source |
+| Other | Docker / OWASP Juice Shop | ⚠️ not found on the host itself — Juice Shop is confirmed live on `ubuntu-server-01` instead |
 
 ### Virtual machines
 
@@ -712,11 +815,11 @@ _Full detail: `docs/ASSET_INVENTORY.md`. Reliability labels: ✅ verified this s
 |---|---|---|---|---|---|
 | `OPNsense-FW` | 192.168.50.1 | `opnsense` | `root` | OPNsense firewall/gateway | ✅ |
 | `DC01` | 192.168.50.10 | `dc01` | `Administrator` | Windows Server 2022, AD DC (PDC Emulator), domain `pentest.lab` | ✅ |
-| `WIN11-01` | 192.168.50.20 | *(none)* | — | Windows 11 workstation | ✅ (IP), ⚠️ (role) |
+| `WIN11-01` | 192.168.50.20 | *(none)* | — | Windows 11 workstation, domain-joined as `DESKTOP-EFKB8GQ`, firewall blocks SMB/RDP/WinRM | ✅ |
 | `SOC-SecurityOnion` | 192.168.50.30 | `security-onion` | `socadmin` | Security Onion 3.1.0 standalone | ✅ |
-| `ubuntu-server-01` | 192.168.50.40 | `ubuntu-server` | `ubuntu` | Ubuntu Server | ✅ (IP), ⚠️ (role) |
+| `ubuntu-server-01` | 192.168.50.100 *(corrected, was `.40`)* | `ubuntu-server` | `ubuntu` (key auth not set up) | Linux server, live OWASP Juice Shop on :3000 | ✅ |
 | ` ATTACK-Kali` (leading space) | 192.168.50.50 | `kali` | `blue1` | Kali Linux, Red Team workstation | ✅ |
-| `Target-Metasploitable2` | ⚠️ unverified | *(none)* | — | Metasploitable2, vulnerable target | ⚠️ |
+| `Target-Metasploitable2` | 192.168.50.70 *(now verified)* | *(none)* | — | Metasploitable2, vulnerable target — stock port fingerprint confirmed | ✅ |
 
 ### Virtual networks
 
@@ -725,6 +828,21 @@ _Full detail: `docs/ASSET_INVENTORY.md`. Reliability labels: ✅ verified this s
 | `pentest-lab` | Isolated bridge | Main network, 192.168.50.0/24 | ✅ |
 | `monitor-net` | Isolated bridge, no IP addressing | Traffic mirroring to Security Onion | ✅ |
 | `default` | Standard libvirt network | Not used by lab VMs | ✅ |
+
+### Active Directory identity inventory
+
+✅ Live-verified 2026-07-13 via read-only `dsquery` over the `dc01` SSH alias. Full detail and gaps: [§3.3](#3-systems-in-detail) and `ACTIVE_DIRECTORY.md`.
+
+| OU | Accounts |
+|---|---|
+| `Domain Controllers` | DC01 |
+| `Admins` | IT Admin 01 (not actually in Domain Admins) |
+| `AD-Users` | soctest, Helpdesk 01, Employee 01, Manager 01, HR 01, Finance 01 |
+| `Service-Accounts` | SQL Service |
+| `Workstations` | *(empty)* |
+| `Servers` | *(empty)* |
+
+Custom groups: `SOC-Analysts` (member: soctest), `Helpdesk` (no members). `Domain Admins` = built-in `Administrator` only.
 
 ### Software versions
 
@@ -750,15 +868,21 @@ _Full detail: `docs/ASSET_INVENTORY.md`. Reliability labels: ✅ verified this s
 
 | Method | Used for |
 |---|---|
-| SSH keys (`~/.ssh/config`) | opnsense, dc01, security-onion, kali, ubuntu-server |
+| SSH keys (`~/.ssh/config`) | dc01, security-onion, kali — confirmed passwordless 2026-07-13. `opnsense` and `ubuntu-server` are configured but currently **not** passwordless (see open items). |
 | Browser session (Playwright, dedicated profile) | Security Onion web UI, Kibana, Fleet |
 | `virsh -c qemu:///system` | VM management from the hypervisor itself |
 
 ### Open verification items
 
-- Exact IP of `Target-Metasploitable2`.
-- Precise role/configuration of `WIN11-01` and `ubuntu-server-01`.
-- Current hardware specs of the Bazzite host (CPU/GPU/WiFi from the 2026-07-05 document, not rechecked).
+Resolved this session (were open, now closed — see inline notes throughout this document): `Target-Metasploitable2`'s IP, `ubuntu-server-01`'s real IP and live role, `WIN11-01`'s domain-join status and network exposure, the host's hardware specs, and the AD OU/group/user structure.
+
+Still open:
+
+- **`opnsense` SSH is not passwordless** despite `docs/PROJECT_STATUS.md` documenting it as working — `Permission denied` on 2026-07-13. Needs manual investigation (web UI, or re-establish key auth).
+- **`ubuntu-server-01` SSH key login doesn't work** — port 22 is open and confirmed Ubuntu, but authentication fails; a password or a fresh `ssh-copy-id` is needed.
+- Exact DHCP ranges and DNS forwarders on OPNsense (blocked on the SSH item above).
+- PCI-passthrough of the WiFi card to Kali — card presence confirmed, passthrough itself not reconfirmed.
+- The *intended purpose* of WIN11-01 within training scenarios (technical facts are now known; the "why" is a scope decision — see [§12](#12-attack-scope-proposals-red-team-test-plan)).
 
 ---
 
@@ -827,18 +951,20 @@ _As of 2026-07-13. Full detail and how to keep this current: `docs/PROJECT_STATU
 - Active Directory operational (DC01, domain `pentest.lab`).
 - Security Onion operational: web UI, Kibana, Fleet, Hunt.
 - DC01 **Healthy** in Fleet with working Windows Event Log, Sysmon, and Elastic Defend telemetry — confirmed to survive an Elastic Agent restart, two DC01 reboots, and a Security Onion reboot.
-- Passwordless SSH to security-onion and kali (opnsense/dc01/ubuntu-server still password-prompt).
+- Passwordless SSH to security-onion, kali, and dc01 (confirmed 2026-07-13).
 - Four working desktop launchers (start/stop lab, SSH to all machines, VM manager, Security Onion browser operator).
 - Read-only web-audit script (`scripts/soc-web-audit.sh`) reporting Fleet status, data streams, and Grid status.
 - The documentation structure this file is compiled from.
+- **(2026-07-13, this pass)** Live network/asset verification: every VM's real IP confirmed via `virsh`/ARP (fixing a second, previously-undocumented IP error on `ubuntu-server-01`), host hardware specs confirmed, and the AD OU/group/user structure discovered to already be built (not just "planned" as the docs said).
 
 ### ⚠️ Not yet done / open
 
-- Exact IP of `Target-Metasploitable2` not verified.
-- Precise role/configuration of `WIN11-01` and `ubuntu-server-01` not documented in detail.
+- **`opnsense` SSH is not passwordless** — regression or never-actually-working; documented as working in `docs/PROJECT_STATUS.md` but denied access 2026-07-13.
+- **`ubuntu-server-01` SSH key login doesn't work** — needs a password or key re-deployment before its exact OS/role can be fully confirmed by login (HTTP-level role — Juice Shop — is already confirmed without login).
+- DHCP ranges and DNS forwarders not documented in detail (blocked on the OPNsense SSH item).
 - Security Onion's own OS-level timezone still UTC (cosmetic only — the web UI already shows Dutch time); requires broader root access than the current narrow `so-firewall` sudo scope.
-- DHCP ranges and DNS forwarders not documented in detail.
-- OPNsense and ubuntu-server may still lack passwordless SSH keys (not rechecked this session).
+- AD structural gaps: `Helpdesk` group has no members despite `Helpdesk 01` existing; `IT Admin 01` isn't actually a Domain Admin; `Employee/Manager/HR/Finance 01` have no differentiating group membership yet; `OU=Workstations`/`OU=Servers` are empty (WIN11-01 not moved in). **Decided 2026-07-13:** these will be deliberately fixed as part of building the AD attack-escalation path — see [§12](#12-attack-scope-proposals-red-team-test-plan) — not left as-is.
+- The Tier 1–3 attack-scope test pass itself, the AD escalation-path build, and the WIN11-01 cleanup/loosening are all **scoped and agreed** ([§12](#12-attack-scope-proposals-red-team-test-plan)) but deliberately **not yet executed** — queued for a dedicated session. Pre-change snapshots (`DC01`: `2026-07-13-pre-ad-escalation-path`, `WIN11-01`: `2026-07-13-pre-target-cleanup`) are already in place for that session.
 
 ### ❌ Planned (from the original Fortress Bazzite design, largely still relevant)
 
@@ -850,6 +976,67 @@ _As of 2026-07-13. Full detail and how to keep this current: `docs/PROJECT_STATU
 ### Keeping this document (and the project) current
 
 On every important change: 1) update the relevant specific document (troubleshooting/guide/network/server doc), 2) update `CHANGELOG.md`, 3) update `docs/PROJECT_STATUS.md`, 4) write a daily report in `docs/daily/YYYY-MM-DD/`, 5) **update this master document** so it doesn't drift from the sources it was compiled from.
+
+---
+
+## 12. Attack scope proposals (Red Team test plan)
+
+**Status: scope agreed with Joost on 2026-07-13, execution deliberately deferred to a later session.** These scenarios are grounded in the actual, live-verified lab state above (not generic examples). The decisions below fix *what* will be tested and in *what order* — none of it has been run yet.
+
+### Agreed scope (decided 2026-07-13)
+
+1. **Execution order: Tier 1 + Tier 2 together, first.** Recon/enumeration and exploitation of the intentionally-vulnerable targets (Metasploitable2, Juice Shop) run as one combined pass — both are low-risk since these boxes exist to be broken.
+2. **Tier 3 (AD attack chain): Option B — build a deliberate privilege-escalation path before attacking it.** The environment currently has no real escalation path (`IT Admin 01` isn't a Domain Admin). Before any Kerberoasting/privilege-escalation practice, a small, deliberate AD-configuration change is needed first: set an SPN on `SQL Service` (to make Kerberoasting meaningful), and give `IT Admin 01` real elevated rights consistent with its name/OU placement. This is an infrastructure change and follows the standard procedure ([§4](#4-architecture--security-decisions)) — explained, snapshotted, then executed as its own task, not bundled into the attack itself.
+3. **WIN11-01: becomes a target too, after cleanup.** Rather than leaving it as a locked-down baseline indefinitely, WIN11-01 will be tidied up first (its computer object moved from the default `Computers` container into the already-existing `OU=Workstations`, and its configuration generally straightened out) and only then have its firewall deliberately loosened to support lateral-movement scenarios (WIN11-01 → DC01). Cleanup precedes exploitability, on purpose.
+
+**Preparation already done (2026-07-13), ahead of any of the above:** fresh VM snapshots taken as the "known-good, roll back to here" point before any AD or firewall changes — `DC01` → `2026-07-13-pre-ad-escalation-path`, `WIN11-01` → `2026-07-13-pre-target-cleanup`. A first recon pass (`nmap -sn` subnet sweep from Kali) was also run and only re-confirmed the IPs already established above; a full-port scan against Metasploitable2 was started and deliberately stopped mid-run at Joost's request — **no exploitation, AD changes, or firewall changes have been executed.** All of it — recon, exploitation, the AD escalation-path build, and the WIN11-01 cleanup/loosening — is scoped and queued for a dedicated session, not folded into documentation work.
+
+Every scenario below is scoped to stay **entirely inside `192.168.50.0/24`**, launched from `ATTACK-Kali` (192.168.50.50), against only the lab's own intentionally-vulnerable or lab-owned systems. Nothing here should ever leave that boundary.
+
+### Tier 1 — Reconnaissance & enumeration (lowest risk, good first step)
+
+Goal: exercise Security Onion's network-detection coverage ([§6.1](#61-what-this-soc-should-detect)) and turn its ⚠️ ("should detect, not confirmed") rows into ✅.
+
+| Scenario | Target | Technique | What it should trigger in Security Onion |
+|---|---|---|---|
+| Full port/service scan | Target-Metasploitable2 (.70) | `nmap -sV -sC -p-` from Kali | TCP SYN scan detection (Suricata), connection-log volume spike (Zeek) |
+| Web app recon | ubuntu-server-01:3000 (Juice Shop) | `nikto`, `gobuster`/`ffuf` directory brute-force | HTTP scanning/brute-force signatures |
+| AD/domain enumeration | DC01 (.10) | `enum4linux-ng`, `crackmapexec smb`, anonymous LDAP bind attempts | SMB enumeration signatures, possibly anomalous LDAP traffic |
+| Network sweep | Whole `.0/24` | `nmap -sn` | ICMP sweep detection |
+
+### Tier 2 — Exploitation of intentionally-vulnerable targets (low risk — these boxes exist to be broken)
+
+| Scenario | Target | Technique | Detection goal |
+|---|---|---|---|
+| vsftpd backdoor | Metasploitable2:21 | `vsftpd_234_backdoor` Metasploit module (already done once historically per [§8](#8-project-timeline) — good repeat/regression test) | Exploit-signature + reverse-shell detection (network + would-be host telemetry if this were a monitored host) |
+| Samba/NFS/RMI exploitation | Metasploitable2 | `usermap_script`, NFS anonymous mount, Java-RMI deserialization | Exploit signatures, anomalous file-share/RPC activity |
+| OWASP Top 10 walkthrough | Juice Shop (ubuntu-server-01:3000) | SQLi, broken auth, IDOR, XSS — Juice Shop has built-in scored challenges that map directly to these | Web-attack rulesets (SQLi/XSS/traversal), abnormal HTTP patterns |
+| UnrealIRCd backdoor | Metasploitable2:6667 | Known backdoor trigger | Exploit signature |
+
+### Tier 3 — Active Directory attack chain (needs a scoping decision first)
+
+This tier is more sensitive because it touches the identity system the rest of the lab's monitoring depends on, and — per the AD gaps found in [§3.3](#3-systems-in-detail) — **the environment doesn't yet have a built-in privilege-escalation path**: `IT Admin 01` isn't actually a Domain Admin, and the role accounts (Employee/Manager/HR/Finance 01) are undifferentiated. Two honest options, worth deciding together rather than assuming:
+
+- **Option A — test detection on the environment as it is.** Password spraying / brute force against the real, existing accounts (`soctest`, `Helpdesk 01`, `Employee 01`, `Manager 01`, `HR 01`, `Finance 01`, `IT Admin 01`) will exercise failed-login detection, but any "compromise" of `IT Admin 01` won't actually lead anywhere, since it has no elevated rights today.
+- **Option B — build a deliberate escalation path first** (e.g. actually grant `IT Admin 01` local-admin-on-WIN11-01 or a real Domain Admin path, link `Helpdesk 01` into the `Helpdesk` group with some real permission, set an SPN on `SQL Service` to make Kerberoasting meaningful), *then* attack it. This is an infrastructure change and needs the standard change procedure (explain → risk → backup → confirm → execute → document) — it's a small AD-configuration task, not a Red Team action.
+
+| Scenario | Target | Technique | Needs Option B first? |
+|---|---|---|---|
+| Password spraying | DC01 (.10) | Common passwords against all known usernames, low attempt-count per account to avoid lockout | No |
+| Kerberoasting | DC01 | Request a TGS for `SQL Service`, crack offline | Yes — needs an SPN set on the account first |
+| AS-REP roasting | DC01 | Only works on accounts with Kerberos pre-auth disabled | Yes — no such account exists yet |
+| Lateral movement | WIN11-01 → DC01 | From an assumed-compromised WIN11-01 foothold, attempt to reach DC01 | Partially — WIN11-01's firewall currently blocks most lateral techniques (§3.4); this itself is worth testing "as-is" first (does it hold?) before deciding whether to loosen it for training purposes |
+| Golden/Silver ticket practice | DC01 | Requires prior privileged access — a capstone scenario, not a starting one | Yes |
+
+### Next session checklist (execution, not documentation)
+
+When the actual test pass happens, in the agreed order:
+
+1. Run Tier 1 (recon) + Tier 2 (exploitation of Metasploitable2/Juice Shop) from Kali; cross-check each against Security Onion Hunt/Detections to flip the relevant ⚠️ rows in [§6.1](#61-what-this-soc-should-detect) to ✅ or ❌.
+2. Build the AD escalation path (SPN on `SQL Service`, elevate `IT Admin 01`) as its own explained/snapshotted/confirmed change — snapshot `2026-07-13-pre-ad-escalation-path` is already in place to roll back to.
+3. Clean up WIN11-01 (move `DESKTOP-EFKB8GQ` into `OU=Workstations`, general tidy-up) — snapshot `2026-07-13-pre-target-cleanup` is already in place — then loosen its firewall deliberately for lateral-movement testing.
+4. Run the Tier 3 AD attack chain against the now-real escalation path, and the WIN11-01 → DC01 lateral-movement scenario.
+5. Update this document (§6.1 status table, §11 status) with what was actually confirmed.
 
 ---
 

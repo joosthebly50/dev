@@ -125,8 +125,26 @@ Geen SSH-server geïnstalleerd — niet bereikbaar via een SSH-alias.
 
 Purpose:
 
-⚠️ Precieze rol binnen het lab nog niet uitgebreid gedocumenteerd —
-mogelijk vervolgpunt.
+Werkstation binnen het domein — vertegenwoordigt een gewone
+domein-gebruikte Windows-client, bedoeld voor endpoint-telemetrie
+(aanmeldingen, processen) richting Security Onion en als doelwit voor
+client-side scenario's (phishing-simulatie, lokale privilege-escalatie).
+
+Aanvullende details (✅ live geverifieerd 2026-07-13, via `dsquery` op
+DC01 en een poortscan vanaf de hypervisor):
+
+- **Domain-joined** aan `pentest.lab`, als computerobject
+  `CN=DESKTOP-EFKB8GQ,CN=Computers,DC=pentest,DC=lab` — de Windows-
+  computernaam is nooit hernoemd naar `WIN11-01` (dat is alleen de
+  libvirt VM-naam) en staat nog in de standaard `Computers`-container,
+  niet verplaatst naar `OU=Workstations` (die OU bestaat al wel, zie
+  `ACTIVE_DIRECTORY.md`).
+- **Netwerkoppervlak:** alleen poort 135 (RPC endpoint mapper)
+  antwoordt vanaf `pentest-lab`. Poorten 445 (SMB), 3389 (RDP), 5985/
+  5986 (WinRM) en 139 zijn dicht/gefilterd — Windows Firewall staat aan
+  en blokkeert alle binnenkomende beheertoegang vanaf het labnetwerk.
+  Er is dus geen SSH, RDP of WinRM-toegang tot dit systeem vanaf de
+  Bazzite-host; beheer moet via de VM-console (virt-manager).
 
 
 ---
@@ -135,20 +153,37 @@ mogelijk vervolgpunt.
 
 Role:
 
-Algemene Linux-server.
+Algemene Linux-server, momenteel actief als Red Team-doelwit.
 
 IP Address:
 
-192.168.50.40
+192.168.50.100
+
+(✅ Gecorrigeerd 2026-07-13 — dit document noemde eerder abusievelijk
+192.168.50.40. Live geverifieerd via `virsh domiflist` (MAC
+`52:54:00:0e:0f:65`) + ARP op `virbr10`. Niets antwoordt meer op .40; de
+SSH-alias `ubuntu-server` in `~/.ssh/config` wees dus al die tijd naar
+een dood adres, wat verklaart waarom de rol nooit eerder geverifieerd
+kon worden. De alias is gecorrigeerd naar .100.)
 
 SSH:
 
-Alias `ubuntu-server`, gebruiker `ubuntu`.
+Alias `ubuntu-server`, gebruiker `ubuntu` (gebruikersnaam nog niet
+bevestigd — poort 22 is open en het SSH-banner bevestigt
+`OpenSSH_10.2p1 Ubuntu-2ubuntu3.2`, maar **key-based login werkt nog
+niet** (`Permission denied (publickey,password)`); er is dus nog geen
+passwordless toegang tot dit systeem zoals er wel is voor opnsense*,
+security-onion en kali. *zie openstaand punt over opnsense hieronder.
 
 Purpose:
 
-⚠️ Precieze rol binnen het lab nog niet uitgebreid gedocumenteerd —
-mogelijk vervolgpunt.
+✅ Live geverifieerd 2026-07-13 (HTTP-response op poort 3000, zonder
+inloggen): draait **OWASP Juice Shop** (poort 3000, bevestigd via
+HTTP-response headers en de Juice Shop-pagina zelf) — dit is dus niet
+alleen "vroeger, tijdens de Fortress Bazzite-fase" zoals eerdere
+documentatie suggereerde, de container **draait nu nog steeds**. Functie:
+opzettelijk kwetsbare webapplicatie voor Red Team-oefening
+(OWASP Top 10-scenario's).
 
 
 ---
@@ -251,7 +286,15 @@ VM-naam (virsh):
 
 IP Address:
 
-⚠️ Niet geverifieerd deze sessie.
+192.168.50.70
+
+(✅ Live geverifieerd 2026-07-13 via een ping-sweep + ARP-tabel op
+`virbr10`, gekoppeld aan het MAC-adres uit `virsh domiflist
+Target-Metasploitable2` (`52:54:00:1b:cf:b3`). Een poortscan bevestigt
+het klassieke Metasploitable2-poortenprofiel: 21, 22, 23, 25, 53, 80,
+111, 139, 445, 512-514, 1099, 1524, 2049, 2121, 3306, 3632, 5432, 5900,
+6000, 6667, 6697, 8009, 8180, 8787 — dit is ontegenzeglijk een
+ongewijzigde, stock Metasploitable2-image.)
 
 
 Purpose:

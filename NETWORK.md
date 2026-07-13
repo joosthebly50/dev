@@ -48,9 +48,8 @@ monitoring (vergelijkbaar met wat Wazuh zou hebben gedaan).
         +----------+----------+-------------+-------------+----------------+
         |          |          |             |             |                |
    OPNsense-FW    DC01   Security Onion  ATTACK-Kali   WIN11-01    ubuntu-server-01   Target-
-   .1 (zelf)     .10        .30            .50           .20            .40         Metasploitable2
-   (root)     (Administrator) (socadmin)  (blue1)     (geen SSH)     (ubuntu)      (IP niet geverifieerd
-                                                                                     deze sessie)
+   .1 (zelf)     .10        .30            .50           .20            .100        Metasploitable2
+   (root)     (Administrator) (socadmin)  (blue1)     (geen SSH)     (ubuntu)         .70
 
                                  |
                                  |  apart, geïsoleerd netwerk: monitor-net
@@ -77,16 +76,20 @@ monitoring (vergelijkbaar met wat Wazuh zou hebben gedaan).
 
 **Bazzite Linux** — de fysieke machine waar alles op draait.
 
-⚠️ Onderstaande hardware-specificaties komen uit het oorspronkelijke
-"Fortress Bazzite"-ontwerpdocument (2026-07-05) en zijn niet deze sessie
-opnieuw geverifieerd:
+✅ Onderstaande hardware-specificaties zijn 2026-07-13 rechtstreeks op de
+host geverifieerd (`lscpu`, `lspci`, `free -h`) — ze kwamen oorspronkelijk
+uit het "Fortress Bazzite"-ontwerpdocument (2026-07-05) en bleken bij
+verificatie exact te kloppen:
 
-- CPU: Intel Core i9-11900K
-- GPU: NVIDIA RTX 3090
-- Wifi: Intel AX210 (Wi-Fi 6E), met PCI-passthrough naar Kali voor
-  monitor mode-testen
+- CPU: Intel Core i9-11900K (8 cores / 1 socket)
+- GPU: NVIDIA GeForce RTX 3090 (GA102)
+- RAM: 62 GiB
+- Wifi: Intel AX210 (Wi-Fi 6E)
 - Virtualisatie: KVM/QEMU/libvirt/virt-manager
-- Ook: Docker (voor OWASP Juice Shop en andere containers)
+- ⚠️ Niet herbevestigd deze sessie: PCI-passthrough van de WiFi-kaart
+  naar Kali, en Docker/OWASP Juice Shop op de host zelf (Juice Shop
+  draait inmiddels bevestigd op `ubuntu-server-01`, niet per se ook nog
+  op de host — zie `SERVERS.md`).
 
 ---
 
@@ -113,9 +116,9 @@ harde evidence) geverifieerd, tenzij anders aangegeven.
 | `DC01` | 192.168.50.10 | `dc01` | `Administrator` | Windows Server 2022, Active Directory Domain Controller (PDC Emulator), domein `pentest.lab` |
 | `WIN11-01` | 192.168.50.20 | *(geen)* | — | Windows 11 werkstation. Geen SSH-server, dus niet via een alias bereikbaar. |
 | `SOC-SecurityOnion` | 192.168.50.30 | `security-onion` | `socadmin` | Security Onion 3.1.0, standalone — SIEM/IDS/Fleet |
-| `ubuntu-server-01` | 192.168.50.40 | `ubuntu-server` | `ubuntu` | Algemene Linux-server |
+| `ubuntu-server-01` | 192.168.50.100 *(✅ gecorrigeerd 2026-07-13, was foutief `.40`)* | `ubuntu-server` | `ubuntu` (key-auth nog niet werkend) | Linux-server, draait actief OWASP Juice Shop op poort 3000 |
 | ` ATTACK-Kali` *(let op: naam heeft een leidende spatie in libvirt — bekende bug, zie troubleshooting)* | 192.168.50.50 | `kali` | `blue1` | Red Team-werkstation, penetratietests |
-| `Target-Metasploitable2` | ⚠️ niet geverifieerd deze sessie | *(geen)* | — | Opzettelijk kwetsbaar doelsysteem, alleen voor exploitatie-oefening |
+| `Target-Metasploitable2` | 192.168.50.70 *(✅ geverifieerd 2026-07-13)* | *(geen)* | — | Opzettelijk kwetsbaar doelsysteem (bevestigd stock Metasploitable2-poortenprofiel), alleen voor exploitatie-oefening |
 
 **Let op de spatie:** de VM-naam ` ATTACK-Kali` begint met een spatie.
 Dit heeft in het verleden een echte bug veroorzaakt in scripts die op
@@ -198,7 +201,13 @@ libvirtd-deadlock-bug.
   OPNsense voor forwarding naar buiten.
 
 ⚠️ Exacte DHCP-ranges en DNS-forwarders zijn nog niet in detail
-gedocumenteerd — mogelijke vervolgstap.
+gedocumenteerd. Poging tot verificatie 2026-07-13: de `opnsense`
+SSH-alias (root, passwordless, eerder in `docs/PROJECT_STATUS.md` als
+werkend genoteerd) gaf nu `Permission denied (publickey,password,
+keyboard-interactive)` — dus geen passwordless toegang meer, of nooit
+daadwerkelijk werkend geweest. Dit moet handmatig gecontroleerd worden
+(bijv. via de OPNsense web-UI) of de SSH-key-toegang moet opnieuw
+ingesteld worden.
 
 ---
 

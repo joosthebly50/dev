@@ -14,11 +14,12 @@ geverifieerd, ⚠️ = niet deze sessie geverifieerd / uit ouder document.
 |---|---|---|
 | Naam | Bazzite-host | — |
 | Besturingssysteem | Bazzite Linux | ✅ |
-| CPU | Intel Core i9-11900K | ⚠️ uit Fortress Bazzite-document (2026-07-05) |
-| GPU | NVIDIA RTX 3090 | ⚠️ uit Fortress Bazzite-document |
-| WiFi | Intel AX210 (Wi-Fi 6E), PCI-passthrough naar Kali | ⚠️ uit Fortress Bazzite-document |
+| CPU | Intel Core i9-11900K (8 cores / 1 socket) | ✅ live geverifieerd 2026-07-13 (`lscpu`) |
+| GPU | NVIDIA GeForce RTX 3090 (GA102) | ✅ live geverifieerd 2026-07-13 (`lspci`) |
+| RAM | 62 GiB | ✅ live geverifieerd 2026-07-13 (`free -h`) |
+| WiFi | Intel AX210 (Wi-Fi 6E) | ✅ live geverifieerd 2026-07-13 (`lspci`) — kaart aanwezig, PCI-passthrough naar Kali niet herbevestigd |
 | Virtualisatie | KVM, QEMU, libvirt, virt-manager | ✅ |
-| Overig | Docker (voor o.a. OWASP Juice Shop) | ⚠️ uit Fortress Bazzite-document |
+| Overig | Docker / OWASP Juice Shop | ⚠️ niet aangetroffen op de host zelf deze sessie — Juice Shop draait bevestigd op `ubuntu-server-01` (zie hieronder), mogelijk was dat altijd al de locatie |
 
 ---
 
@@ -28,11 +29,11 @@ geverifieerd, ⚠️ = niet deze sessie geverifieerd / uit ouder document.
 |---|---|---|---|---|---|
 | `OPNsense-FW` | 192.168.50.1 | `opnsense` | `root` | OPNsense firewall/gateway | ✅ |
 | `DC01` | 192.168.50.10 | `dc01` | `Administrator` | Windows Server 2022, Active Directory Domain Controller (PDC Emulator), domein `pentest.lab` | ✅ |
-| `WIN11-01` | 192.168.50.20 | *(geen SSH)* | — | Windows 11 werkstation | ✅ (IP), ⚠️ (precieze rol) |
+| `WIN11-01` | 192.168.50.20 | *(geen SSH — poort 135 open, 445/3389/5985/139 dicht)* | — | Windows 11 werkstation, domain-joined als `DESKTOP-EFKB8GQ` (nooit hernoemd, staat nog in default `Computers`-container i.p.v. `OU=Workstations`) | ✅ |
 | `SOC-SecurityOnion` | 192.168.50.30 | `security-onion` | `socadmin` | Security Onion 3.1.0 standalone (SIEM/IDS/Fleet) | ✅ |
-| `ubuntu-server-01` | 192.168.50.40 | `ubuntu-server` | `ubuntu` | Ubuntu Server | ✅ (IP), ⚠️ (precieze rol) |
+| `ubuntu-server-01` | 192.168.50.100 *(gecorrigeerd — was foutief `.40`)* | `ubuntu-server` | `ubuntu` (key-auth nog niet werkend — wachtwoord vereist) | Linux-server, draait actief OWASP Juice Shop (poort 3000) | ✅ (IP + rol via poortscan/HTTP), ⚠️ (login) |
 | ` ATTACK-Kali` (let op leidende spatie in naam) | 192.168.50.50 | `kali` | `blue1` | Kali Linux, Red Team-werkstation | ✅ |
-| `Target-Metasploitable2` | ⚠️ niet geverifieerd | *(geen)* | — | Metasploitable2, kwetsbaar oefendoel | ⚠️ |
+| `Target-Metasploitable2` | 192.168.50.70 *(nu geverifieerd)* | *(geen)* | — | Metasploitable2, kwetsbaar oefendoel — poortenprofiel bevestigt stock-image | ✅ |
 
 ---
 
@@ -76,19 +77,49 @@ Volledige uitleg: `docs/guides/desktop_launchers.md`.
 
 | Methode | Gebruikt voor | Documentatie |
 |---|---|---|
-| SSH-sleutels (`~/.ssh/config`) | opnsense, dc01, security-onion, kali, ubuntu-server | — |
+| SSH-sleutels (`~/.ssh/config`) | dc01, security-onion, kali — bevestigd passwordless werkend 2026-07-13. `opnsense` en `ubuntu-server` staan in de config maar loggen momenteel niet passwordless in (zie open punten). | — |
 | Browser-sessie (Playwright, apart profiel) | Security Onion webinterface, Kibana, Fleet | `docs/guides/security_onion_browser_access.md` |
 | `virsh -c qemu:///system` | Beheer van VM's (start/stop/status) vanaf de hypervisor zelf | — |
 
 ---
 
+## Active Directory identiteitsinventaris
+
+✅ Live geverifieerd 2026-07-13 via `dsquery` over de `dc01` SSH-alias
+(read-only). Volledige details en gevonden gaten: zie
+`ACTIVE_DIRECTORY.md`.
+
+| OU | Accounts |
+|---|---|
+| `OU=Domain Controllers` | DC01 |
+| `OU=Admins` | IT Admin 01 |
+| `OU=AD-Users` | soctest, Helpdesk 01, Employee 01, Manager 01, HR 01, Finance 01 |
+| `OU=Service-Accounts` | SQL Service |
+| `OU=Workstations` | *(leeg)* |
+| `OU=Servers` | *(leeg)* |
+
+Custom groepen: `SOC-Analysts` (lid: soctest), `Helpdesk` (geen leden).
+`Domain Admins` bevat alleen het ingebouwde `Administrator`-account.
+
+---
+
 ## Openstaande verificatiepunten
 
-Dingen die nog niet met harde bewijzen zijn vastgesteld deze sessie:
+Opgelost deze sessie (live geverifieerd, zie boven): IP van
+`Target-Metasploitable2` (.70), werkelijk IP van `ubuntu-server-01`
+(.100, niet .40), rol van `ubuntu-server-01` (Juice Shop) en van
+`WIN11-01` (domain-joined client, dichtgetimmerde firewall), hardware-
+specs van de host, en de AD OU/groepsstructuur.
 
-- Exact IP-adres van `Target-Metasploitable2`.
-- Precieze rol/inrichting van `WIN11-01` en `ubuntu-server-01` binnen het
-  lab.
-- Actuele hardware-specificaties van de Bazzite-host (CPU/GPU/WiFi komen
-  uit het oude Fortress Bazzite-document van 2026-07-05, niet opnieuw
-  gecontroleerd).
+Nog open:
+
+- **OPNsense SSH werkt niet meer passwordless** — `docs/PROJECT_STATUS.md`
+  noemt dit als werkend, maar 2026-07-13 gaf de `opnsense`-alias
+  `Permission denied`. Oorzaak niet onderzocht (kan expres zijn).
+- **`ubuntu-server-01` SSH-key-login werkt niet** — poort 22 is open en
+  bevestigt een Ubuntu-host, maar er is geen passwordless toegang zoals
+  bij de andere systemen. Wachtwoord nodig, of key opnieuw uitrollen.
+- Exacte DHCP-ranges en DNS-forwarders op OPNsense (afhankelijk van het
+  SSH-probleem hierboven, of handmatige controle via de web-UI).
+- PCI-passthrough van de WiFi-kaart naar Kali (niet herbevestigd, alleen
+  de aanwezigheid van de kaart op de host).
