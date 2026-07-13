@@ -6,6 +6,10 @@ All important project changes are documented here.
 
 # 2026-07-13
 
+## Master Documentation Trimmed and Restructured (1074 → 577 lines)
+
+Rewrote `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` for readability: cut it roughly in half without losing facts. Removed verbose "this document used to incorrectly say X" narratives (kept as one-line notes with a pointer to the per-topic source doc), dropped rollback code blocks and full verification tables from the troubleshooting section (§7, now a compact table + one detailed case) since that evidence already lives in `docs/troubleshooting/`, condensed the AI rules section (§4) into fewer, tighter subsections without dropping any rule, merged the operational-guide narrative prose down to reference tables and commands, and tightened the project timeline and attack-scope sections. Section numbering/structure (1–12) unchanged so existing cross-references still resolve. Re-rendered the PDF: 49 → 27 pages.
+
 ## Detection Validation Plan Added (§6.3)
 
 Added `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §6.3, "Detection validation plan" — maps every ⚠️ row in §6.1's detection-status table to the specific test that will confirm or refute it, reusing the Tier 1/2/3 attack-scope tiers already agreed in §12 rather than inventing a separate test pass. Also plans one incident-response-runbook (§6.2) dry-run against a real alert generated during that same pass. Planning only — no tests executed. Re-rendered the PDF (49 pages).
