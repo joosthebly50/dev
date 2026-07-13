@@ -86,7 +86,9 @@ Services:
 
 IP Address:
 
-192.168.50.20
+192.168.50.30
+
+(Corrected 2026-07-13 — this document previously said 192.168.50.20, which is actually WIN11-01's IP, not Security Onion's.)
 
 Role:
 

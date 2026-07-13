@@ -366,7 +366,9 @@ SOC monitoring platform
 
 IP:
 
-192.168.50.20
+192.168.50.30
+
+(Corrected 2026-07-13 — previously said .20, which is actually WIN11-01's IP.)
 
 
 ---

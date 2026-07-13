@@ -6,6 +6,16 @@ All important project changes are documented here.
 
 # 2026-07-13
 
+## Master Documentation Compiled + Cross-Document IP/Domain Corrections
+
+Compiled all existing documentation (root docs, decisions, guides, troubleshooting, chat_history, daily logs, asset inventory, glossary) into a single synthesized reference: `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md`, and rendered it to `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.pdf`.
+
+While compiling, found and corrected a stale/incorrect IP that had propagated across multiple older documents: several files listed **Security Onion at 192.168.50.20** — that is actually WIN11-01's IP. Security Onion is `192.168.50.30`. Corrected (with an inline note, not silently) in: `CLAUDE.md`, `docs/INDEX.md`, `docs/guides/virtualization.md`, `docs/guides/opnsense_setup.md`, `docs/guides/security_onion_setup.md`, `docs/troubleshooting/04_security_onion_installation.md`, `docs/chat_history/02_opnsense_network.md`, `docs/chat_history/03_security_onion.md`. (`SERVERS.md` and `NETWORK.md` already had the correct `.30` value with their own correction note from an earlier session.)
+
+Also updated `ACTIVE_DIRECTORY.md`, which still listed the domain as "TO BE DOCUMENTED" — the domain (`pentest.lab`) has existed and been operational since 2026-07-10.
+
+`pentest.lab - by Joost Hebly.md` (an earlier raw, unmerged concatenation built for a portfolio export) was intentionally left unedited — the new master doc supersedes it as the synthesized reference; that file remains useful as the literal per-file archive and its own note points to the new master doc.
+
 ## DC01 Fleet Health and Sysmon Telemetry Fixed
 
 DC01 was Offline in Security Onion's Elastic Fleet with no Windows/Sysmon telemetry reaching Security Onion. Root-caused and fixed three independent, stacked issues:

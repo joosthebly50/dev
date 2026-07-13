@@ -170,4 +170,5 @@ DC01:
 192.168.50.10
 
 Security Onion:
-192.168.50.20
+192.168.50.30
+(Corrected 2026-07-13 — previously said .20, which is actually WIN11-01's IP.)

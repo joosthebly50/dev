@@ -39,9 +39,9 @@ Services:
 
 Domain:
 
-TO BE DOCUMENTED
+pentest.lab
 
-(NetBIOS name and DNS domain will be added after configuration)
+(Updated 2026-07-13 — the domain has existed and been operational since 2026-07-10; this section previously said "TO BE DOCUMENTED". The OU/security-group structure below is still the planned design, not yet built.)
 
 
 # Organizational Units

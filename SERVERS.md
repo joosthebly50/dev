@@ -1,8 +1,14 @@
 # SOC Homelab Server Documentation
 
+Laatst gecontroleerd tegen de werkelijke omgeving: 2026-07-13.
+
 ## Overview
 
 This document contains technical information about all systems inside the SOC Homelab environment.
+
+Voor de volledige lijst met IP's, SSH-aliassen en verificatiestatus in
+één tabel: zie `docs/ASSET_INVENTORY.md`. Dit document beschrijft elk
+systeem in meer detail (rol, functies, doel).
 
 ---
 
@@ -91,6 +97,59 @@ Purpose:
 
 Provide Windows domain environment for security testing and administration practice.
 
+Aanvullende details (✅ geverifieerd 2026-07-13):
+
+- Domeinnaam: `pentest.lab`
+- DC01 is de PDC Emulator van dit domein (enige domeincontroller).
+- SSH: alias `dc01`, gebruiker `Administrator`.
+- Tijdzone: `W. Europe Standard Time` (Amsterdam/CEST). Zie
+  `docs/troubleshooting/06_dc01_fleet_health_and_sysmon.md` voor de
+  reden — DC01 had een terugkerend klokprobleem dat via NTP is opgelost.
+
+
+---
+
+## WIN11-01
+
+Role:
+
+Windows 11 werkstation.
+
+IP Address:
+
+192.168.50.20
+
+SSH:
+
+Geen SSH-server geïnstalleerd — niet bereikbaar via een SSH-alias.
+
+Purpose:
+
+⚠️ Precieze rol binnen het lab nog niet uitgebreid gedocumenteerd —
+mogelijk vervolgpunt.
+
+
+---
+
+## ubuntu-server-01
+
+Role:
+
+Algemene Linux-server.
+
+IP Address:
+
+192.168.50.40
+
+SSH:
+
+Alias `ubuntu-server`, gebruiker `ubuntu`.
+
+Purpose:
+
+⚠️ Precieze rol binnen het lab nog niet uitgebreid gedocumenteerd —
+mogelijk vervolgpunt.
+
 
 ---
 
@@ -102,9 +161,24 @@ Role:
 
 Security Operations Center platform.
 
+VM-naam (virsh):
+
+`SOC-SecurityOnion`
+
 IP Address:
 
-192.168.50.20
+192.168.50.30
+
+(✅ Geverifieerd 2026-07-13 — dit document noemde eerder abusievelijk
+192.168.50.20, wat het IP van WIN11-01 is, niet van Security Onion.)
+
+Versie:
+
+Security Onion 3.1.0, standalone-installatie.
+
+SSH:
+
+Alias `security-onion`, gebruiker `socadmin`.
 
 
 Functions:
@@ -132,6 +206,21 @@ Role:
 
 Penetration testing workstation.
 
+VM-naam (virsh):
+
+` ATTACK-Kali` — let op: deze naam begint met een spatie. Dit is een
+bekende eigenaardigheid die eerder een echte bug veroorzaakte in scripts
+die op VM-naam zochten (zie troubleshooting-geschiedenis van
+`soc-mirror.sh`).
+
+IP Address:
+
+192.168.50.50
+
+SSH:
+
+Alias `kali`, gebruiker `blue1`.
+
 
 Functions:
 
@@ -155,6 +244,14 @@ Authorized security testing only.
 Role:
 
 Intentionally vulnerable machine.
+
+VM-naam (virsh):
+
+`Target-Metasploitable2`
+
+IP Address:
+
+⚠️ Niet geverifieerd deze sessie.
 
 
 Purpose:

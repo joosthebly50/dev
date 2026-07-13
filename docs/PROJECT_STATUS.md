@@ -1,0 +1,133 @@
+# Project-status: SOC Homelab (voorheen "Fortress Bazzite")
+
+Dit is de centrale pagina om te zien: wat is af, wat loopt er nu, en wat
+is gepland? Laatst bijgewerkt: 2026-07-13.
+
+Voor de dag-op-dag geschiedenis: `docs/daily/`.
+Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
+
+---
+
+## Geschiedenis in het kort
+
+| Periode | Naam van het project | Wat er gebeurde |
+|---|---|---|
+| Vóór 2026-07-05 | Fortress Bazzite | Eerste opzet: virt-manager, Kali, Ubuntu Server, Metasploitable2, Docker, Juice Shop, Burp Suite, Metasploit. Ontwerpdocument geschreven met plan voor Suricata + Zeek + Wazuh. |
+| 2026-07-08 t/m 2026-07-09 | Overgang naar "SOC Homelab" | Security Onion gekozen als platform (in plaats van los Suricata/Zeek/Wazuh op te zetten). Eerste git-repository aangemaakt. |
+| 2026-07-10 | — | DC01 (Active Directory) toegevoegd aan het netwerk en ingeschreven bij Security Onion's Fleet. |
+| 2026-07-11 | — | Volledige documentatiestructuur opgezet (README, regels, netwerk-, server- en AD-documentatie, troubleshooting-geschiedenis). |
+| 2026-07-12 | — | Geheim (`Secure/SOC-Secure.img`) uit git-geschiedenis verwijderd. Desktop-launchers gebouwd. Event-driven traffic mirroring (`soc-mirror.service`) herschreven. Browser-automatisering voor Security Onion gebouwd. |
+| 2026-07-13 | — | DC01's Fleet-storing volledig opgelost (firewall, klok, Sysmon). Documentatiestructuur flink uitgebreid: dagrapporten, asset-inventaris, glossarium, netwerk-/poortoverzicht, incident-response-runbook, detectie-use-cases. |
+
+---
+
+## Wat is af (werkt, getest, gedocumenteerd)
+
+- ✅ Basisinfrastructuur: OPNsense, DC01, Security Onion, Kali, WIN11-01,
+  ubuntu-server-01, Metasploitable2 — allemaal draaiend op
+  `pentest-lab` (192.168.50.0/24).
+- ✅ Traffic mirroring naar Security Onion, event-driven (geen
+  polling/timer), overleeft VM-herstarts.
+- ✅ Active Directory werkt (DC01, domein `pentest.lab`).
+- ✅ Security Onion is operationeel: webinterface, Kibana, Fleet, Hunt.
+- ✅ DC01 is **Healthy** in Fleet, met werkende Windows Event Log-,
+  Sysmon- en Elastic Defend-telemetrie. Bevestigd bestand tegen:
+  Elastic Agent-herstart, DC01-herstart (x2), Security Onion-herstart.
+- ✅ Passwordless SSH-toegang tot opnsense, dc01, security-onion, kali,
+  ubuntu-server.
+- ✅ Vier werkende desktop-launchers (start/stop lab, SSH naar alle
+  machines, VM-manager, Security Onion browser-operator).
+- ✅ Read-only web-audit script (`scripts/soc-web-audit.sh`) dat Fleet-
+  status, data streams en Grid-status rapporteert.
+- ✅ Uitgebreide documentatiestructuur (zie hieronder).
+
+---
+
+## Wat nog niet af is / open staat
+
+- ⚠️ Exact IP van `Target-Metasploitable2` niet geverifieerd.
+- ⚠️ Precieze rol/inrichting van `WIN11-01` en `ubuntu-server-01` niet
+  uitgebreid gedocumenteerd.
+- ⚠️ Security Onion's eigen OS-tijdzone staat nog op UTC (niet
+  Nederlandse tijd) — de webinterface toont al wel Nederlandse tijd aan
+  gebruikers, dus dit is puur cosmetisch voor wie rechtstreeks via SSH
+  werkt. Vereist root-toegang die momenteel beperkt is tot een smalle
+  `so-firewall`-regel.
+- ⚠️ DHCP-ranges en DNS-forwarders zijn niet in detail gedocumenteerd.
+- ⚠️ OPNsense en ubuntu-server hadden oorspronkelijk nog geen
+  passwordless SSH-key opgezet (uit een eerdere sessie — status niet
+  opnieuw gecontroleerd deze sessie).
+
+---
+
+## Wat gepland staat (uit het oorspronkelijke Fortress Bazzite-plan)
+
+Deze roadmap komt oorspronkelijk uit het Fortress Bazzite-ontwerpdocument
+(2026-07-05) en is nog grotendeels actueel, ook al is de onderliggende
+techniek veranderd (Security Onion in plaats van losse Suricata/Zeek/
+Wazuh):
+
+### Detectie (deels al aanwezig via Security Onion, deels nog te verfijnen)
+
+Zie `docs/guides/detection_use_cases.md` voor de volledige lijst en
+status per detectietype.
+
+### Dashboard
+
+Het oorspronkelijke plan beschreef een dashboard met: systeemgezondheid
+(CPU/GPU/RAM/temperaturen), virtualisatiestatus, security-metrics (open
+alerts, top source/destination IP's, portscan-detecties), en zelfs
+gaming-gerelateerde metrics (latency, packet loss). Security Onion's
+eigen dashboards dekken het security-gedeelte al grotendeels; een
+gecombineerd dashboard met host-/gaming-metrics is nog niet gebouwd.
+
+### Alarmniveaus
+
+Het oorspronkelijke plan definieerde vier niveaus: INFO, WARNING, HIGH,
+CRITICAL, met als einddoel automatische doorsturing van HIGH/CRITICAL
+naar Discord of Telegram. Nog niet geïmplementeerd in dit lab.
+
+### Overig
+
+- VLAN-segmentatie
+- Apart beheernetwerk en apart aanvalsnetwerk
+- Extra Windows-clients
+- Honeypots
+- Periodieke Purple Team-validaties (jezelf aanvallen en kijken of
+  Security Onion het ziet)
+
+---
+
+## Documentatie-overzicht
+
+Alles wat er nu is, op één plek:
+
+| Document | Inhoud |
+|---|---|
+| `README.md`, `LAB_OVERVIEW.md`, `PROJECT_RULES.md`, `AI_ACCESS_POLICY.md` | Projectbasis en regels |
+| `NETWORK.md` | Netwerkkaart, IP's, firewall-hostgroups |
+| `SERVERS.md` | Gedetailleerde serverbeschrijvingen |
+| `ACTIVE_DIRECTORY.md`, `SECURITY.md` | AD- en beveiligingsdocumentatie |
+| `CHANGELOG.md` | Chronologisch overzicht van belangrijke wijzigingen |
+| `docs/PROJECT_STATUS.md` | Dit document |
+| `docs/ASSET_INVENTORY.md` | Alle systemen in één tabel |
+| `docs/GLOSSARY.md` | Uitleg van vaktermen |
+| `docs/guides/` | Technische handleidingen (setup, launchers, netwerk/poorten, detectie, incident response, quick reference) |
+| `docs/decisions/` | Architectuur- en beveiligingskeuzes |
+| `docs/troubleshooting/` | Opgeloste problemen, met bewijs |
+| `docs/daily/` | Dagrapporten en commandologs, één map per dag |
+| `docs/chat_history/` | Logs van eerdere sessies |
+| `docs/screenshots/` | Visueel bewijsmateriaal |
+
+---
+
+## Hoe dit document actueel te houden
+
+Bij elke belangrijke wijziging:
+
+1. Werk het relevante document bij (troubleshooting, guide, of network/
+   server-documentatie).
+2. Werk `CHANGELOG.md` bij.
+3. Werk dit document (`PROJECT_STATUS.md`) bij als de status van een
+   punt in de lijst hierboven verandert.
+4. Schrijf een dagrapport in `docs/daily/JJJJ-MM-DD/`.

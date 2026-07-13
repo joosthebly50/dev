@@ -32,6 +32,38 @@ DC01's Elastic Agent showed as **Offline** in Security Onion's Elastic Fleet. No
 
 Goal: make DC01 permanently Healthy in Fleet, with Windows/Sysmon telemetry flowing, surviving both a DC01 reboot and a Security Onion reboot.
 
+## This is a recurring issue — important prior history
+
+Recovered on 2026-07-13 from the user's own saved documents
+(`SOC_Lab Prograss Report10-7-2026.docx`, `SOC_Lab_Probleemrapport_48_uur.docx`):
+this exact symptom (DC01 unable to reach Fleet Server on port 8220, and
+separately Elastic Defend stuck `DEGRADED`) was **already diagnosed once
+before, on 2026-07-10**. At that time it was fixed with a direct,
+manual rule:
+
+```
+sudo iptables -I DOCKER-USER 1 -s 192.168.50.10/32 -p tcp --dport 8220 -j ACCEPT
+```
+
+This fix was never persistent — it modified the live `iptables` state
+directly, bypassing Security Onion's own salt-managed firewall
+configuration (`so-firewall` / the pillar files under
+`/opt/so/saltstack/local/pillar/firewall/`). Any subsequent
+`so-firewall apply`, or a Security Onion reboot (which re-applies the
+salt-managed firewall state from scratch), would silently discard this
+rule — which is almost certainly why the exact same symptom was back by
+2026-07-13. The fix documented below (`so-firewall includehost ...`)
+does not have this weakness, because it's written into the same
+salt-managed configuration that `so-firewall apply` and every reboot
+read from — this is also *why* it was explicitly verified across
+multiple reboots below, rather than trusting a single successful test.
+
+Elastic Defend's `DEGRADED` status was, on 2026-07-10, investigated
+without finding a network cause and was deliberately parked ("voorlopig
+parkeren, verder bouwen"). It turned out to have the same root cause
+category as port 8220: a missing firewall hostgroup (`endgame`, port
+3765) — see Root Cause 1 below.
+
 ---
 
 # Root Cause 1 - Firewall hostgroups
