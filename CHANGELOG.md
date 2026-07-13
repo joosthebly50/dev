@@ -6,6 +6,10 @@ All important project changes are documented here.
 
 # 2026-07-13
 
+## Detection Validation Plan Added (§6.3)
+
+Added `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §6.3, "Detection validation plan" — maps every ⚠️ row in §6.1's detection-status table to the specific test that will confirm or refute it, reusing the Tier 1/2/3 attack-scope tiers already agreed in §12 rather than inventing a separate test pass. Also plans one incident-response-runbook (§6.2) dry-run against a real alert generated during that same pass. Planning only — no tests executed. Re-rendered the PDF (49 pages).
+
 ## Attack Scope Agreed With Joost + Safety Snapshots Taken (Execution Deferred)
 
 Follow-up to the live verification pass (below). Reviewed the §12 attack-scope proposals with Joost and got three concrete decisions: (1) Tier 1 recon + Tier 2 exploitation of Metasploitable2/Juice Shop run together, first; (2) Tier 3 AD attack chain uses Option B — deliberately build a privilege-escalation path (SPN on `SQL Service`, elevate `IT Admin 01`) before attacking it, rather than testing the current no-privilege-path state; (3) WIN11-01 becomes a target too, but only after being tidied up (moved into `OU=Workstations`, general cleanup) and then having its firewall deliberately loosened for lateral-movement practice.

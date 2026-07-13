@@ -662,6 +662,32 @@ Is this IP a system that's supposed to exist in this lab ([§9](#9-asset-invento
 
 **⚠️ Case note:** hostnames are indexed lowercase in Security Onion (`dc01`, not `DC01`), even though the Fleet page displays it capitalized.
 
+### 6.3 Detection validation plan
+
+**Status: planned, execution deferred to the same dedicated session as [§12](#12-attack-scope-proposals-red-team-test-plan).** Every ⚠️ row in [§6.1](#61-what-this-soc-should-detect) has a real, concrete cause: it hasn't been deliberately triggered and checked in Hunt yet, not that it's known to be broken. This plan maps each one to the specific test that will close it, reusing the attack-scope tiers already agreed in §12 rather than inventing a separate test pass.
+
+**Method for every row below (Purple Team style):** run the technique from Kali (or the relevant lab VM) → immediately check Security Onion Hunt/Detections for a matching alert → record the result by flipping the status to ✅ (fired as expected) or ❌ (didn't fire — becomes a real detection-engineering task, not just a documentation update) → note the exact Hunt query and evidence used, so it can be reproduced.
+
+| §6.1 item | Test that validates it | Covered by |
+|---|---|---|
+| ICMP ping sweeps | `nmap -sn 192.168.50.0/24` from Kali (already dry-run once informally, 2026-07-13 — not yet checked against Hunt) | Tier 1 |
+| TCP SYN/FIN/NULL/XMAS scans | `nmap -sS`/`-sF`/`-sN`/`-sX` against Metasploitable2 | Tier 1 |
+| UDP scans | `nmap -sU` against Metasploitable2 | Tier 1 |
+| OS fingerprinting / banner grabbing | `nmap -O`, `nc`/`nmap -sV` banner grabs | Tier 1 |
+| SSH brute force | Repeated failed SSH logins against ubuntu-server-01 or Metasploitable2 (example command already in [§6.1](#61-what-this-soc-should-detect)) | Tier 1/2 |
+| FTP brute force | Failed logins against Metasploitable2:21 (vsftpd) | Tier 2 |
+| SMB brute force | Failed SMB auth — against Metasploitable2 first (no risk); against DC01 only as part of the Tier 3 AD chain, since that's identity-sensitive | Tier 2 now, Tier 3 for DC01 specifically |
+| Suspicious DNS requests | DNS queries for known-bad-looking / high-entropy domains from Kali, cross-checked in Zeek `dns.log` and (for DC01) Sysmon event ID 22 | Tier 1 |
+| Known exploit signatures | `vsftpd_234_backdoor` and `usermap_script` Metasploit modules against Metasploitable2 (first one repeats the historical exploit from [§8](#8-project-timeline) — good regression test) | Tier 2 |
+| Reverse shells | Any Metasploitable2 exploit that pops a shell (network-side Suricata check now; host-side Sysmon check once WIN11-01 is a target, per §12) | Tier 2 (network), Tier 3 (host) |
+| Metasploit/Meterpreter indicators | Meterpreter payload during the Metasploitable2 exploitation pass | Tier 2 |
+| SQLi / command injection / directory traversal | Juice Shop's own scored OWASP Top 10 challenges (SQLi login bypass, directory traversal, etc.) | Tier 2 |
+| Sysmon "other" event IDs (registry, image load, etc.) | Targeted test actions on a monitored Windows host (registry key change, DLL load) — needs a Sysmon-monitored *target* host, which is exactly what WIN11-01 becomes after the §12 cleanup; DC01 could also be used sooner since it already has working Sysmon telemetry | Can start immediately on DC01, or wait for WIN11-01 |
+
+**Also planned — a dry run of the incident-response runbook ([§6.2](#62-incident-response-runbook)) itself**, not just individual detections: pick one alert generated during the Tier 1/2 pass and walk it through Steps 1–4 for real (confirm → context → host check → write-up in `docs/daily/`), to confirm the runbook is actually usable in practice, not just on paper.
+
+**Definition of done for this plan:** every row above has a ✅ or ❌ (with evidence) instead of ⚠️, and at least one full runbook dry-run is logged in `docs/daily/`. At that point [§6.1](#61-what-this-soc-should-detect)'s status table gets updated to match, and this subsection can be marked complete.
+
 ---
 
 ## 7. Troubleshooting history
