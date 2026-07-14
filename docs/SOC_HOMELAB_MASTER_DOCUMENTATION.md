@@ -77,7 +77,7 @@ Security Onion has two NICs: `pentest-lab` (.30, Fleet/Kibana/SSH/web) and `moni
 | 192.168.50.10 | DC01 (AD, PDC Emulator, domain `pentest.lab`) | `DC01` | `dc01` | `Administrator` | ✅ |
 | 192.168.50.20 | WIN11-01 (domain-joined as `DESKTOP-EFKB8GQ`) | `WIN11-01` | `win11-01` | `pentest\administrator` (key auth confirmed working) | ✅ |
 | 192.168.50.30 | Security Onion 3.1.0 (SIEM/IDS/Fleet) | `SOC-SecurityOnion` | `security-onion` | `socadmin` | ✅ |
-| 192.168.50.40 | ubuntu-server-01 (live OWASP Juice Shop on :3000) | `ubuntu-server-01` | `ubuntu-server` | `ubuntu` (key auth not set up) | ✅ |
+| 192.168.50.40 | ubuntu-server-01 (live OWASP Juice Shop on :3000) | `ubuntu-server-01` | `ubuntu-server` | `sysadmin` (key auth confirmed working) | ✅ |
 | 192.168.50.50 | Kali Linux (Red Team) | ` ATTACK-Kali` ⚠️ *leading space in the name* | `kali` | `blue1` | ✅ |
 | 192.168.50.70 | Metasploitable2 (vulnerable target) | `Target-Metasploitable2` | *(none)* | — | ✅ |
 
@@ -164,7 +164,7 @@ IP `.20`, SSH alias `win11-01` (`pentest\administrator`, key auth confirmed work
 
 ### 3.5 ubuntu-server-01 — Linux server, active Red Team target
 
-IP `.40` — confirmed via OPNsense's own Kea DHCP reservation database plus a fresh live re-check ([§4](#4-architecture-security--ai-rules)/`docs/OPNSENSE_AUDIT_2026-07-13.md`); briefly seen on `.100` (dynamic pool) earlier the same day, before its reservation was honored. SSH alias `ubuntu-server`/`ubuntu`; key auth not yet working — password or `ssh-copy-id` needed. Runs **OWASP Juice Shop live** on port 3000 (HTTP-confirmed, not a leftover — it's up right now).
+IP `.40` — confirmed via OPNsense's own Kea DHCP reservation database. Previously seen drifting to `.100` (dynamic pool) after a reboot; **root cause proven and fixed 2026-07-14** (`docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`) — this Ubuntu image runs two DHCP negotiations per boot (an early dracut-fallback one, then the real netplan one), and without `dhcp-identifier: mac` the second used a non-MAC client identifier that Kea's reservation didn't match. Fixed with one netplan line; validated across a full reboot. SSH alias `ubuntu-server`/`sysadmin` (not `ubuntu` as earlier documented); key auth confirmed working. Elastic Agent installed and Healthy in Fleet (log/metrics-only, same scope as the Bazzite host) — `docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`. Runs **OWASP Juice Shop live** on port 3000 (HTTP-confirmed, not a leftover — it's up right now).
 
 ### 3.6 Security Onion — SOC platform
 
@@ -245,8 +245,9 @@ ssh dc01
 ssh security-onion
 ssh kali
 ssh ubuntu-server
+ssh win11-01
 ```
-**Homelab VM Manager** opens virt-manager on `qemu:///system`. **Key status:** only `kali`, `security-onion`, `dc01` are passwordless; `opnsense` and `ubuntu-server` still prompt/fail — see [§9](#9-asset-inventory) open items.
+**Homelab VM Manager** opens virt-manager on `qemu:///system`. **Key status:** `kali`, `security-onion`, `dc01`, `ubuntu-server`, and `win11-01` are all passwordless; only `opnsense` still prompts (password-only by design, not a regression — see [§9](#9-asset-inventory)).
 
 ### 5.3 Security Onion / Kibana / Fleet in the browser
 
@@ -299,7 +300,7 @@ Bazzite has no `gnome-terminal` — all terminal launchers use Konsole specifica
 | `dc01` | .10 | Administrator | Key auth works |
 | `security-onion` | .30 | socadmin | Key auth works |
 | `kali` | .50 | blue1 | Key auth works |
-| `ubuntu-server` | .40 | ubuntu | Key auth not set up |
+| `ubuntu-server` | .40 | sysadmin | Key auth confirmed working (2026-07-14) |
 | `win11-01` | .20 | `pentest\administrator` | Added 2026-07-14, key auth confirmed working (see `docs/troubleshooting/09_win11-01_ssh_access.md`) |
 
 ### 5.6 Quick reference
@@ -422,7 +423,7 @@ _Full detail: `docs/ASSET_INVENTORY.md`._
 | `DC01` | .10 | `dc01`/Administrator | Windows Server 2022, AD DC, domain `pentest.lab` |
 | `WIN11-01` | .20 | `win11-01`/`pentest\administrator` | Windows 11, domain-joined as `DESKTOP-EFKB8GQ` |
 | `SOC-SecurityOnion` | .30 | `security-onion`/socadmin | Security Onion 3.1.0 standalone |
-| `ubuntu-server-01` | .40 | `ubuntu-server`/ubuntu (no key auth) | Linux server, live Juice Shop on :3000 |
+| `ubuntu-server-01` | .40 | `ubuntu-server`/sysadmin (key auth works) | Linux server, live Juice Shop on :3000 |
 | ` ATTACK-Kali` | .50 | `kali`/blue1 | Red Team workstation |
 | `Target-Metasploitable2` | .70 | none | Vulnerable target, stock fingerprint |
 
@@ -444,14 +445,14 @@ Security Onion 3.1.0 · Elastic Agent 9.3.3+build202604082258 · Sysmon 15.21 (s
 
 ### Access methods (no passwords stored here)
 
-SSH keys (`~/.ssh/config`) — passwordless for dc01/security-onion/kali; broken for opnsense/ubuntu-server. Browser session (Playwright, dedicated profile) for Security Onion/Kibana/Fleet. `virsh -c qemu:///system` for VM management.
+SSH keys (`~/.ssh/config`) — passwordless for dc01/security-onion/kali/ubuntu-server/win11-01; password-only by design for opnsense. Browser session (Playwright, dedicated profile) for Security Onion/Kibana/Fleet, and a separate one for OPNsense (`browser/launch-opnsense-daemon.mjs`, port 9333). `virsh -c qemu:///system` for VM management.
 
 ### Open items
 
 - `opnsense` SSH password-only by design (confirmed via audit, not a regression) — key auth could still be added for convenience if desired.
 - OPNsense's own config-revision history is empty (no built-in rollback safety net) and it hasn't checked for firmware updates since install — see `docs/OPNSENSE_AUDIT_2026-07-13.md`.
 - The `KALI` firewall alias in OPNsense still points at Kali's old IP (`.157`) — harmless (unused in any active rule) but worth cleaning up.
-- `ubuntu-server-01` SSH key login doesn't work — needs a password or fresh `ssh-copy-id`.
+- ~~`ubuntu-server-01` SSH key login doesn't work~~ — resolved 2026-07-14, key auth confirmed working (user `sysadmin`, not `ubuntu`).
 - WiFi PCI-passthrough to Kali not reconfirmed.
 - WIN11-01's intended training purpose — see [§12](#12-attack-scope-agreed-red-team-test-plan).
 
@@ -513,11 +514,11 @@ _Full detail: `docs/PROJECT_STATUS.md`._
 
 ### ✅ Done
 
-Base infrastructure (all 7 VMs on `pentest-lab`) · event-driven traffic mirroring · AD operational · Security Onion operational (web UI, Kibana, Fleet, Hunt) · DC01 Healthy in Fleet, survives restarts/reboots · passwordless SSH to security-onion/kali/dc01 · four desktop launchers · read-only web-audit script · this documentation structure · live network/asset/AD verification pass (2026-07-13) · read-only OPNsense configuration audit (2026-07-13) · Elastic Agent on the Bazzite host itself, Healthy, confirmed reboot-survival, plus a central health-check script covering it and all 7 lab VMs (2026-07-14) · SSH access to WIN11-01 (2026-07-14) — OpenSSH Server enabled, integrated into `~/.ssh/config` and `lab-ssh-all.sh`/`soc-health-check.sh`, giving it the same admin path as the other lab systems · Elastic Agent + Sysmon on WIN11-01 (2026-07-14) — Healthy in Fleet, Elastic Defend/osquery/winlog/Sysmon/metrics all confirmed, telemetry verified in Hunt; endpoint-monitoring priority 1 of `docs/ROADMAP_ENDPOINT_MONITORING.md` done, `ubuntu-server-01`/Kali still open.
+Base infrastructure (all 7 VMs on `pentest-lab`) · event-driven traffic mirroring · AD operational · Security Onion operational (web UI, Kibana, Fleet, Hunt) · DC01 Healthy in Fleet, survives restarts/reboots · passwordless SSH to security-onion/kali/dc01 · four desktop launchers · read-only web-audit script · this documentation structure · live network/asset/AD verification pass (2026-07-13) · read-only OPNsense configuration audit (2026-07-13) · Elastic Agent on the Bazzite host itself, Healthy, confirmed reboot-survival, plus a central health-check script covering it and all 7 lab VMs (2026-07-14) · SSH access to WIN11-01 (2026-07-14) — OpenSSH Server enabled, integrated into `~/.ssh/config` and `lab-ssh-all.sh`/`soc-health-check.sh`, giving it the same admin path as the other lab systems · Elastic Agent + Sysmon on WIN11-01 (2026-07-14) — Healthy in Fleet, Elastic Defend/osquery/winlog/Sysmon/metrics all confirmed, telemetry verified in Hunt; endpoint-monitoring priority 1 of `docs/ROADMAP_ENDPOINT_MONITORING.md` done · Elastic Agent on ubuntu-server-01 (2026-07-14) — Healthy in Fleet, log/metrics-only, telemetry verified in Hunt; priority 2 done, Kali still open (deliberately) · ubuntu-server-01's long-standing `.100`-drift DHCP bug root-caused and fixed (2026-07-14) — see `docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`.
 
 ### ⚠️ Open
 
-`ubuntu-server-01` SSH key login broken · Security Onion OS-level timezone still UTC (cosmetic, blocked on root scope) · AD structural gaps (empty `Helpdesk` group, `IT Admin 01` not elevated, undifferentiated role accounts, empty `Workstations`/`Servers` OUs) — **to be deliberately fixed as part of [§12](#12-attack-scope-agreed-red-team-test-plan)**, not left as-is · the full §12 test pass, AD escalation-path build, and WIN11-01 cleanup are scoped and agreed but **not yet executed** — pre-change snapshots already taken (`DC01`: `2026-07-13-pre-ad-escalation-path`, `WIN11-01`: `2026-07-13-pre-target-cleanup`) · `ubuntu-server-01`/Kali still have no Elastic Agent (WIN11-01 done 2026-07-14) — rollout order and reasoning: `docs/ROADMAP_ENDPOINT_MONITORING.md`; the endpoint-monitoring phase as a whole is not complete until these are too · the Bazzite host's own Elastic Agent's log delivery is now verified end-to-end into Elasticsearch (see `docs/troubleshooting/08_bazzite_host_elastic_agent.md`), but not yet re-confirmed across a reboot cycle.
+`ubuntu-server-01` SSH key login broken · Security Onion OS-level timezone still UTC (cosmetic, blocked on root scope) · AD structural gaps (empty `Helpdesk` group, `IT Admin 01` not elevated, undifferentiated role accounts, empty `Workstations`/`Servers` OUs) — **to be deliberately fixed as part of [§12](#12-attack-scope-agreed-red-team-test-plan)**, not left as-is · the full §12 test pass, AD escalation-path build, and WIN11-01 cleanup are scoped and agreed but **not yet executed** — pre-change snapshots already taken (`DC01`: `2026-07-13-pre-ad-escalation-path`, `WIN11-01`: `2026-07-13-pre-target-cleanup`) · Kali still has no Elastic Agent (WIN11-01 and ubuntu-server-01 both done 2026-07-14) — deliberately deferred pending a scope/privacy decision on capturing attack-tool activity, see `docs/ROADMAP_ENDPOINT_MONITORING.md`; the endpoint-monitoring phase as a whole is not complete until Kali is addressed (rolled out or formally out-of-scope) · the Bazzite host's own Elastic Agent's log delivery is now verified end-to-end into Elasticsearch (see `docs/troubleshooting/08_bazzite_host_elastic_agent.md`), but not yet re-confirmed across a reboot cycle.
 
 ### ❌ Planned
 

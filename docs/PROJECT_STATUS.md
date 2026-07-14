@@ -89,6 +89,28 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   claim gedaan. Zie `docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`.
   Dit rondt prioriteit 1 van de endpoint-monitoringfase af — `ubuntu-server-01`
   en Kali staan nog open, zie `docs/ROADMAP_ENDPOINT_MONITORING.md`.
+- ✅ Sysmon-vrije Elastic Agent uitgerold naar `ubuntu-server-01`
+  (log/metrics-only via `linux-endpoints-initial`, zelfde scope als de
+  Bazzite-host), Healthy in Fleet, bevestigd in Hunt. Onderweg: `/tmp`
+  bleek een te kleine tmpfs (opgelost via `/var/tmp`), twee losse
+  enrollment-token-blootstellingen (`bash -x`, en apart `sudo`/PAM
+  command-auditing) — beide tokens direct ingetrokken, audit-trail bewust
+  intact gelaten, tokenwaarden nergens gedocumenteerd. Ontbrekende
+  Security Onion-hostgroup voor `.40` gevonden en gefixt (dit was ditmaal
+  wél een echte fix, 0→2 nieuwe firewall-log-regels). Zie
+  `docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`.
+- ✅ **Definitieve root cause gevonden en opgelost** voor het al langer
+  bekende "ubuntu-server-01 krijgt soms `.100` i.p.v. de gereserveerde
+  `.40`"-probleem: elke boot doet twee DHCP-onderhandelingen (dracut-
+  fallback, dan de echte netplan-config) met verschillende DHCPv4
+  client-identifiers; zonder `dhcp-identifier: mac` matcht Kea's
+  MAC-gebaseerde reservation de tweede onderhandeling niet. Bevestigd
+  rechtstreeks in Kea's eigen log (verschillende `cid=`, verschillend
+  resultaat). Fix: één regel in netplan; gevalideerd met een volledige
+  reboot (beide DHCP-fases kregen `.40`). Zie
+  `docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md` en
+  de nieuwe standaardregel in `docs/decisions/architecture_decisions.md`
+  voor toekomstige Linux-endpoints.
 
 ---
 
@@ -103,13 +125,16 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   werkt. Vereist root-toegang die momenteel beperkt is tot een smalle
   `so-firewall`-regel.
 - ⚠️ DHCP-ranges en DNS-forwarders zijn niet in detail gedocumenteerd.
-- ⚠️ OPNsense en ubuntu-server hadden oorspronkelijk nog geen
-  passwordless SSH-key opgezet (uit een eerdere sessie — status niet
-  opnieuw gecontroleerd deze sessie).
-- ⚠️ `ubuntu-server-01` en Kali hebben nog geen Elastic Agent (WIN11-01 is
-  klaar, zie hierboven). Uitrolvolgorde en motivatie:
+- ⚠️ OPNsense heeft nog geen passwordless SSH-key opgezet (bewuste
+  password-only-instelling, geen open punt — zie `docs/OPNSENSE_AUDIT_2026-07-13.md`).
+  `ubuntu-server` heeft dit inmiddels wel (2026-07-14, gebruiker `sysadmin`).
+- ⚠️ Kali heeft nog geen Elastic Agent (WIN11-01 en `ubuntu-server-01`
+  zijn klaar). Bewust uitgesteld — een Red Team-machine volledig
+  monitoren legt aanvalstools/commando's vast, wat eerst een bewuste
+  scope/privacy-afweging vraagt, geen standaard uitrol. Zie
   `docs/ROADMAP_ENDPOINT_MONITORING.md`. De endpoint-monitoringfase als
-  geheel is pas afgerond zodra ook deze twee klaar zijn.
+  geheel is pas afgerond zodra ook Kali is opgepakt (of bewust buiten
+  scope wordt verklaard).
 
 ---
 

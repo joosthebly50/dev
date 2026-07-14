@@ -254,6 +254,36 @@ AI must not:
 
 ---
 
+# Decision: `dhcp-identifier: mac` Required for Any Dracut-Based Linux Endpoint with a DHCP Reservation
+
+## Choice
+
+Every Ubuntu (or other dracut/netplan-based) lab VM that has a static DHCP reservation on OPNsense must set `dhcp-identifier: mac` for its reserved interface in netplan.
+
+## Reason
+
+Found and proven on 2026-07-14 (`docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`): these images perform **two** separate DHCP negotiations per boot — an early one driven by dracut's own fallback network config (which already correctly sends the plain MAC as the DHCPv4 client identifier), and a second, real one driven by netplan's generated config once the root filesystem is fully up. Without `dhcp-identifier: mac`, the second negotiation falls back to systemd-networkd's default RFC 4361 IAID+DUID client identifier — a different value than the MAC-based one the reservation is keyed on — and OPNsense's Kea DHCP server hands out a dynamic-pool address instead of honoring the reservation. Confirmed directly in Kea's own log: identical MAC, different client-id, different outcome.
+
+## Why DHCP reservations, not static IPs
+
+A static IP set inside the guest would have made this specific symptom disappear without fixing anything — and would have moved this one host's addressing out of the central, auditable OPNsense reservation table that every other IP in this lab is planned from (`docs/OPNSENSE_AUDIT_2026-07-13.md` §4). Rejected as a fix for exactly that reason: it trades a visible, centrally-managed configuration for an invisible, per-guest one.
+
+## Why MAC-based client identifiers specifically
+
+Kea's reservations in this lab are keyed on hardware address. DHCP theory says a MAC-keyed reservation should still match via the packet's `chaddr` field even if a different client-id (option 61) is sent — in practice, proven directly in Kea's own log (see the troubleshooting doc), it does not. Rather than rely on that theoretical guarantee, every reserved host's client identifier is made to explicitly match what the reservation is keyed on.
+
+## Benefits
+
+- The reservation is honored on **every** boot, not just sometimes — no more "IP drifted to the dynamic pool" surprises after a reboot.
+- One line in netplan (`dhcp-identifier: mac`), no OPNsense/Kea-side change needed.
+
+## Applies to
+
+- `ubuntu-server-01` (fixed 2026-07-14).
+- Any future Linux endpoint added to the reservation table (e.g. if Kali is ever given one) — set this from the start rather than discovering the bug after the fact.
+
+---
+
 # Overall Architecture Goal
 
 The SOC Homelab is designed to simulate a small enterprise environment.

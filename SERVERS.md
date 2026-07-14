@@ -177,30 +177,30 @@ IP Address:
 
 192.168.50.40
 
-(Tweede correctie op 2026-07-13. Eerder vandaag hier gewijzigd naar
-`.100` op basis van een `virsh domiflist`/ARP-snapshot op dat moment.
-Een OPNsense-audit (read-only, via de webinterface) liet daarna zien
-dat OPNsense's eigen Kea DHCP-reservation database dit systeem al die
-tijd correct als `192.168.50.40` (hostname `ubuntu-server-01`, MAC
-`52:54:00:0e:0f:65`) had geconfigureerd — en een verse live-check
-(ping/nmap/ssh/curl) bevestigde dat `.40` nu weer het enige adres is
-dat reageert; `.100` reageert nergens meer op. Vermoedelijke verklaring:
-de VM had tijdelijk een dynamisch adres uit de DHCP-pool
-(`192.168.50.100`–`200`) voordat de reservation werd gehonoreerd —
-bijvoorbeeld door een boot vóór de reservation actief was, of een
-lease-renewal-vertraging. Zie `docs/OPNSENSE_AUDIT_2026-07-13.md` voor
-het volledige bewijs. **Les:** een IP live bevestigen op één moment is
-geen garantie dat het blijvend correct is bij een systeem met een
-DHCP-reservation — de reservation zelf is de autoritatieve bron.)
+(Tweede correctie op 2026-07-13, zie `docs/OPNSENSE_AUDIT_2026-07-13.md`
+voor het volledige bewijs van toen. **Definitief root-cause bewezen
+2026-07-14** — dit was geen eenmalige timing-toevalligheid: elke boot
+doet twee losse DHCP-onderhandelingen (een vroege dracut-fallback, dan
+de echte netplan-config), en zonder `dhcp-identifier: mac` gebruikte de
+tweede onderhandeling een RFC4361 IAID/DUID-identifier in plaats van het
+kale MAC-adres — Kea's reservation matcht daar niet op, en de host kreeg
+dan `.100` uit de dynamische pool. Bevestigd rechtstreeks in Kea's eigen
+log (verschillende `cid=` per onderhandeling, verschillend resultaat).
+**Fix:** `dhcp-identifier: mac` toegevoegd aan
+`/etc/netplan/00-installer-config.yaml` voor `enp1s0`; geverifieerd met
+een volledige reboot — beide DHCP-fases in die boot kregen `.40`. Zie
+`docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md` en
+`docs/decisions/architecture_decisions.md` (nieuwe standaardregel voor
+elke toekomstige Linux-endpoint met een reservation).)
 
 SSH:
 
-Alias `ubuntu-server`, gebruiker `ubuntu` (gebruikersnaam nog niet
-bevestigd — poort 22 is open en het SSH-banner bevestigt
-`OpenSSH_10.2p1 Ubuntu-2ubuntu3.2`, maar **key-based login werkt nog
-niet** (`Permission denied (publickey,password)`); er is dus nog geen
-passwordless toegang tot dit systeem zoals er wel is voor
-security-onion, kali en dc01.
+Alias `ubuntu-server`, gebruiker `sysadmin` (✅ gecorrigeerd 2026-07-14 —
+eerder stond hier `ubuntu`, dat bleek onjuist). **Key-auth bevestigd
+werkend** sinds 2026-07-14 (Joost heeft de public key zelf geplaatst) —
+`ubuntu-server` is vanaf nu de standaard SSH-toegang, net als bij de
+overige lab-systemen. Zie
+`docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`.
 
 Purpose:
 

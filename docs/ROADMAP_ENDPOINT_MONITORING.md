@@ -1,8 +1,10 @@
 # Roadmap: Elastic Agent-uitrol naar overige endpoints
 
-**Status: WIN11-01 (prioriteit 1) is uitgevoerd en geverifieerd
-(2026-07-14, zie `docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`).
-`ubuntu-server-01` en Kali staan nog als planning/niet uitgevoerd.** Dit
+**Status: WIN11-01 (prioriteit 1) én `ubuntu-server-01` (prioriteit 2)
+zijn uitgevoerd en geverifieerd (2026-07-14, zie
+`docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md` en
+`docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`).
+Kali staat bewust nog als niet-uitgevoerd — zie prioriteit 3 hieronder.** Dit
 document beschrijft welke endpoints nog geen Elastic Agent-telemetrie naar
 Security Onion sturen, welke daarvan kandidaat zijn voor uitrol, in welke
 volgorde, en welke bewust buiten scope blijven — als vervolg op de agent
@@ -23,7 +25,7 @@ normale procedure: uitleggen → risico → bevestiging van Joost → uitvoeren
 | Bazzite-host (.1-net, host zelf) | ✅ Ja, Healthy | journald (`system.auth`, `system.syslog`), system-metrics — **geen** Elastic Defend, bewuste scope-keuze | `elastic_agent_endpoint`, `beats_endpoint` (geen `endgame` — geen Elastic Defend geconfigureerd) |
 | `SOC-SecurityOnion` (.30) | N.v.t. — dit ís het platform | — | — |
 | `WIN11-01` (.20) | ✅ Ja, **Healthy** in Fleet (2026-07-14) | Windows Event Logs, Sysmon (SwiftOnSecurity-config), Elastic Defend, osquery, metrics — zelfde `endpoints-initial`-policy als DC01 | `elastic_agent_endpoint`, `beats_endpoint`, `endgame` |
-| `ubuntu-server-01` (.40) | ❌ Nee | — | — |
+| `ubuntu-server-01` (.40) | ✅ Ja, **Healthy** in Fleet (2026-07-14) | journald (`system.auth`, `system.syslog`), system-metrics — **geen** Elastic Defend, zelfde scope-keuze als de Bazzite-host | `elastic_agent_endpoint`, `beats_endpoint` (geen `endgame`) |
 | ` ATTACK-Kali` (.50) | ❌ Nee | — | — |
 | `OPNsense-FW` (.1) | ❌ Nee, niet van toepassing | — | — |
 | `Target-Metasploitable2` (.70) | ❌ Nee, bewust nooit | — | — |
@@ -74,29 +76,25 @@ goedkeuringsmomenten. Pas **na** de agent-uitrol en vóór het bewust
 verzwakken van de firewall voor de lateral-movement-test, zodat de
 telemetrie al staat voordat de aanval erop wordt losgelaten.
 
-### 2. ubuntu-server-01 — gemiddelde prioriteit
+### 2. ubuntu-server-01 — gemiddelde prioriteit — ✅ UITGEVOERD 2026-07-14
 
-**Waarom:** actief Tier 1/2-doelwit (Juice Shop-exploitatie). Netwerk-
-verkeer wordt al gezien via mirroring, maar host-niveau telemetrie
-(auth-pogingen, gewijzigde processen tijdens exploitatie) ontbreekt nog.
+**Uitgevoerd en geverifieerd** — Elastic Agent 9.3.3 draait, enrolled in
+`linux-endpoints-initial` (journald `system.auth`/`system.syslog` +
+system-metrics, geen Elastic Defend). Healthy in Fleet binnen ~2 minuten.
+Onderweg drie losse, opgeloste issues: een te kleine `/tmp`-tmpfs, twee
+enrollment-token-blootstellingen (beide ingetrokken), en een ontbrekende
+Security Onion-hostgroup voor `.40`. Volledig verhaal:
+`docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`.
 
-**Aanpak:** aanzienlijk minder werk dan WIN11-01 — `browser/fleet-setup-
-linux-agent.mjs` is al expliciet gebouwd om herbruikt te worden voor
-"elke toekomstige Linux-endpoint (ubuntu-server-01, Kali)" (zie het
-scriptcommentaar). Stappen:
-1. Script draaien (agentpolicy/enrollment-token bestaan al of worden
-   hergebruikt — idempotent).
-2. Enrollment-token + Fleet-URL gebruiken voor `elastic-agent install`
-   op ubuntu-server-01, als root via SSH (met wachtwoord — key-auth
-   werkt daar nog niet, zie open punt in `docs/ASSET_INVENTORY.md`).
-3. Hostgroups: `elastic_agent_endpoint`, `beats_endpoint` (geen
-   `endgame` — zelfde log/metrics-only scope-keuze als de Bazzite-host).
-4. Verifiëren: Healthy in Fleet, journald-data stroomt binnen.
+**Aanvullend, apart onderzocht en opgelost:** een al langer bekend
+DHCP-reservation-probleem (host kreeg soms `.100` i.p.v. `.40` na een
+reboot) kreeg tijdens deze rollout een definitief bewezen root cause en
+fix — `docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`.
 
-**Afweging:** dit systeem wordt actief kapotgemaakt/geëxploiteerd tijdens
-Tier 1/2-oefeningen — een agent erop is precies waardevol om te zien wat
-een exploit *op het systeem zelf* achterlaat (niet alleen op het
-netwerk), dus dit is een reële meerwaarde, niet alleen consistentie.
+**Afweging (achteraf bevestigd):** dit systeem wordt actief
+kapotgemaakt/geëxploiteerd tijdens Tier 1/2-oefeningen — een agent erop
+is precies waardevol om te zien wat een exploit *op het systeem zelf*
+achterlaat (niet alleen op het netwerk).
 
 ### 3. ATTACK-Kali — laag/optioneel
 
@@ -111,9 +109,14 @@ generieke Linux-policy, zelfde script, Kali heeft al werkende
 passwordless SSH (`kali`-alias), dus dit is het laagste-frictie endpoint
 om aan toe te voegen als het ooit relevant wordt.
 
-**Aanbeveling:** niet nu doen — wacht tot er een concrete Purple Team-
-oefening gepland is waar "wat deed de aanvaller lokaal" een vraag is die
-beantwoord moet worden. Tot die tijd voegt het weinig toe.
+**Aanbeveling, herbevestigd 2026-07-14:** bewust nog niet doen. Volledige
+endpoint-monitoring op een Red Team-machine legt aanvalstools, commando's
+en testgedrag vast — nuttig voor Purple Team-oefeningen, maar de scope en
+privacy van die testdata moeten eerst bewust gekozen worden (welke
+datasets, hoe lang bewaard, wie heeft toegang), niet als bijvangst van
+een standaard-uitrol. Wacht tot er een concrete Purple Team-oefening
+gepland is waar "wat deed de aanvaller lokaal" een vraag is die
+beantwoord moet worden én die scope-afweging expliciet is gemaakt.
 
 ---
 
@@ -142,16 +145,19 @@ beantwoord moet worden. Tot die tijd voegt het weinig toe.
    `docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`. De
    §12-WIN11-01-opschoonstap (verplaatsen naar `OU=Workstations`, etc.)
    staat nog los open, zie de master doc §12.
-2. **ubuntu-server-01** — nog te doen. Lage moeite (bestaand, herbruikbaar
-   script), reële meerwaarde tijdens Tier 1/2-oefeningen.
-3. **ATTACK-Kali** — optioneel, uitstellen tot een concrete Purple Team-
-   oefening erom vraagt.
+2. **ubuntu-server-01** — ✅ **uitgevoerd 2026-07-14**, zie
+   `docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`
+   (plus een apart opgeloste, langlopende DHCP-reservation-bug:
+   `docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`).
+3. **ATTACK-Kali** — bewust nog niet gedaan, zie de scope/privacy-
+   afweging hierboven. Uitstellen tot een concrete Purple Team-oefening
+   erom vraagt én de databewaar-/toegangsscope expliciet is besproken.
 4. OPNsense, Metasploitable2, MGMT-Debian — bewust niet gepland (zie
    redenen hierboven).
 
-**De endpoint-monitoringfase als geheel is pas afgerond zodra ook
-`ubuntu-server-01` (en, indien opgepakt, Kali) klaar zijn** — WIN11-01
-alleen is prioriteit 1, niet de hele fase.
+**De endpoint-monitoringfase als geheel is pas volledig afgerond zodra
+ook Kali is opgepakt (of bewust definitief buiten scope wordt
+verklaard)** — prioriteit 1 én 2 zijn nu klaar, dat is niet de hele fase.
 
 Elke stap hierboven vereist, wanneer die daadwerkelijk wordt uitgevoerd:
 een aparte, expliciete goedkeuring — dit document is de planning, niet de

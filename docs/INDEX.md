@@ -312,6 +312,32 @@ Covers:
 
 ---
 
+## 11_ubuntu-server-01_elastic_agent_rollout.md
+
+Covers:
+
+- SSH key-auth prerequisite and a username correction (`sysadmin`, not `ubuntu`)
+- `/tmp` tmpfs ran out of space during install — fixed by using `/var/tmp`
+- Two separate enrollment-token exposures (`bash -x`, and separately `sudo`/PAM command auditing) — both tokens revoked immediately, audit trail deliberately left intact, token values never documented
+- Missing Security Onion firewall hostgroup for `.40` (a real fix, unlike the WIN11-01 no-op) — Fleet Server port 8220 unreachable until fixed
+- A false "Hunt shows no data" alarm caused by a stale/cached browser tab, not a real ingest gap
+
+
+---
+
+## 12_ubuntu-server-01_dhcp_reservation_fix.md
+
+Covers:
+
+- Proven root cause (via Kea's own log, not inference) for why ubuntu-server-01 sometimes ended up on `.100` instead of its reserved `.40` after a reboot
+- Several hypotheses tested and rejected with evidence: Kea reservation misconfigured (no), Dnsmasq DHCP also enabled (no), stale persisted lease (no)
+- Confirmed mechanism: two DHCP negotiations per boot (dracut fallback, then real netplan config) send different DHCPv4 client identifiers; only the MAC-based one matches the reservation
+- Fix: `dhcp-identifier: mac` in netplan — see also `docs/decisions/architecture_decisions.md` for the standing rule this sets for future Linux endpoints
+- Single full reboot validation, with Kea log proof of the corrected DORA exchange
+
+
+---
+
 # Screenshots
 
 Location:

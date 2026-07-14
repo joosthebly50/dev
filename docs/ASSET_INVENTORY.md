@@ -31,7 +31,7 @@ geverifieerd, ⚠️ = niet deze sessie geverifieerd / uit ouder document.
 | `DC01` | 192.168.50.10 | `dc01` | `Administrator` | Windows Server 2022, Active Directory Domain Controller (PDC Emulator), domein `pentest.lab` | ✅ |
 | `WIN11-01` | 192.168.50.20 | `win11-01` *(✅ toegevoegd 2026-07-14 — OpenSSH Server door Joost ingeschakeld via VM-console; poort 22 nu open, was dicht)* | `pentest\administrator` (✅ key-auth bevestigd werkend, later 2026-07-14 — non-interactieve publickey-only test slaagt zonder wachtwoord) | Windows 11 werkstation, domain-joined als `DESKTOP-EFKB8GQ` (nooit hernoemd, staat nog in default `Computers`-container i.p.v. `OU=Workstations`) | ✅ |
 | `SOC-SecurityOnion` | 192.168.50.30 | `security-onion` | `socadmin` | Security Onion 3.1.0 standalone (SIEM/IDS/Fleet) | ✅ |
-| `ubuntu-server-01` | 192.168.50.40 *(definitief bevestigd via Kea DHCP-reservation + live-check, zie `docs/OPNSENSE_AUDIT_2026-07-13.md`)* | `ubuntu-server` | `ubuntu` (key-auth nog niet werkend — wachtwoord vereist) | Linux-server, draait actief OWASP Juice Shop (poort 3000) | ✅ (IP + rol via poortscan/HTTP), ⚠️ (login) |
+| `ubuntu-server-01` | 192.168.50.40 *(✅ reservation-drift root-cause opgelost 2026-07-14, zie `docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`)* | `ubuntu-server` | `sysadmin` (✅ key-auth bevestigd werkend, 2026-07-14) | Linux-server, draait actief OWASP Juice Shop (poort 3000) | ✅ |
 | ` ATTACK-Kali` (let op leidende spatie in naam) | 192.168.50.50 | `kali` | `blue1` | Kali Linux, Red Team-werkstation | ✅ |
 | `Target-Metasploitable2` | 192.168.50.70 *(nu geverifieerd)* | *(geen)* | — | Metasploitable2, kwetsbaar oefendoel — poortenprofiel bevestigt stock-image | ✅ |
 
@@ -57,6 +57,7 @@ geverifieerd, ⚠️ = niet deze sessie geverifieerd / uit ouder document.
 | Sysmon-configuratie | SwiftOnSecurity, schema 4.50 | ✅ |
 | Windows Server (DC01) | Windows Server 2022 Standard Evaluation | ✅ |
 | Elastic Agent (op WIN11-01) | 9.3.3 | ✅, Healthy in Fleet, geïnstalleerd + geverifieerd 2026-07-14 (zie `docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`) |
+| Elastic Agent (op ubuntu-server-01) | 9.3.3 | ✅, Healthy in Fleet (`linux-endpoints-initial`-policy, log/metrics-only), geïnstalleerd + geverifieerd 2026-07-14 (zie `docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`) |
 | Sysmon (op WIN11-01) | 15.21 (schema 4.91), SwiftOnSecurity-config | ✅, geïnstalleerd 2026-07-14 |
 | Windows 11 (WIN11-01) | Windows 11 Enterprise Evaluation | ✅ |
 
@@ -126,9 +127,10 @@ Nog open:
   tonen wachtwoord-login als de bedoelde, normale toegangsmethode voor
   `root` — er is nooit key-auth ingesteld voor dit systeem, dat is geen
   fout.
-- **`ubuntu-server-01` SSH-key-login werkt niet** — poort 22 is open en
-  bevestigt een Ubuntu-host, maar er is geen passwordless toegang zoals
-  bij de andere systemen. Wachtwoord nodig, of key opnieuw uitrollen.
+- ~~`ubuntu-server-01` SSH-key-login werkt niet~~ — **opgelost 2026-07-14**:
+  key-auth is nu bevestigd werkend (gebruiker `sysadmin`, niet `ubuntu`
+  zoals eerder gedocumenteerd). Zie
+  `docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`.
 - Exacte DHCP-ranges en DNS-forwarders op OPNsense (afhankelijk van het
   SSH-probleem hierboven, of handmatige controle via de web-UI).
 - PCI-passthrough van de WiFi-kaart naar Kali (niet herbevestigd, alleen
