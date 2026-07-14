@@ -173,6 +173,28 @@ console — to be confirmed once that rollout is actually attempted.
 
 ---
 
+# Addendum: key-auth confirmed working (later 2026-07-14)
+
+Later the same day, ahead of the WIN11-01 Sysmon + Elastic Agent rollout
+(`docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`), Joost placed
+the public key on WIN11-01 himself (outside AI access, same reasoning as
+enabling OpenSSH Server above). Independent verification, following the
+same standing rule as everywhere else in this file (test before trusting):
+
+```
+$ ssh -o PreferredAuthentications=publickey -o BatchMode=yes win11-01 whoami
+pentest\administrator
+```
+
+`BatchMode=yes` blocks any interactive password fallback, so this proves
+actual key-based login, not just that a password prompt was avoided.
+`win11-01` is from this point the standard SSH access path for this host,
+same as every other lab system. `~/.ssh/config` needed no changes beyond
+its comment — the `IdentityFile` line was already present from the
+original entry above.
+
+---
+
 # Lessons learned
 
 - A user's claim that "X now works" is a strong signal to test, not a

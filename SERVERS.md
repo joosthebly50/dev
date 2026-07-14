@@ -126,10 +126,17 @@ NetBIOS-vorm). **Gewijzigd 2026-07-14** — voorheen geen SSH-server; Joost
 heeft OpenSSH Server zelf ingeschakeld via de VM-console (geen AI-toegang
 tot die console, dus niet door mij uitgevoerd). Onafhankelijk bevestigd:
 poort 22 is open (was dicht) en een SSH-verbinding bereikt de auth-fase.
-Interactieve wachtwoord-login is door Joost zelf getest en werkt; net als
-bij `dc01`/`ubuntu-server` is er nog **geen key-auth** ingesteld — een
-wachtwoord blijft nodig. Volledig verhaal:
-`docs/troubleshooting/09_win11-01_ssh_access.md`.
+Interactieve wachtwoord-login is door Joost zelf getest en werkt.
+
+**Update, later dezelfde dag (2026-07-14):** key-auth is nu ook bevestigd
+werkend — een non-interactieve test (`PreferredAuthentications=publickey`,
+`BatchMode=yes`, dus geen wachtwoordprompt mogelijk) logt succesvol in als
+`pentest\administrator` zonder wachtwoord. `~/.ssh/config` had de
+`IdentityFile`-regel voor `win11-01` al staan (voorbereid, zoals bij
+`dc01`/`ubuntu-server`); Joost heeft de publieke sleutel zelf op WIN11-01
+geplaatst. `win11-01` is dus vanaf nu de standaard SSH-toegang voor
+beheerwerk op dit systeem, net als bij Bazzite en Security Onion. Volledig
+verhaal: `docs/troubleshooting/09_win11-01_ssh_access.md`.
 
 Purpose:
 

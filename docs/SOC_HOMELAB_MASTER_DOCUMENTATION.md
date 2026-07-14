@@ -75,7 +75,7 @@ Security Onion has two NICs: `pentest-lab` (.30, Fleet/Kibana/SSH/web) and `moni
 |---|---|---|---|---|---|
 | 192.168.50.1 | OPNsense (firewall/gateway) | `OPNsense-FW` | `opnsense` | `root` | ✅ |
 | 192.168.50.10 | DC01 (AD, PDC Emulator, domain `pentest.lab`) | `DC01` | `dc01` | `Administrator` | ✅ |
-| 192.168.50.20 | WIN11-01 (domain-joined as `DESKTOP-EFKB8GQ`) | `WIN11-01` | `win11-01` | `pentest\administrator` (key auth not set up) | ✅ |
+| 192.168.50.20 | WIN11-01 (domain-joined as `DESKTOP-EFKB8GQ`) | `WIN11-01` | `win11-01` | `pentest\administrator` (key auth confirmed working) | ✅ |
 | 192.168.50.30 | Security Onion 3.1.0 (SIEM/IDS/Fleet) | `SOC-SecurityOnion` | `security-onion` | `socadmin` | ✅ |
 | 192.168.50.40 | ubuntu-server-01 (live OWASP Juice Shop on :3000) | `ubuntu-server-01` | `ubuntu-server` | `ubuntu` (key auth not set up) | ✅ |
 | 192.168.50.50 | Kali Linux (Red Team) | ` ATTACK-Kali` ⚠️ *leading space in the name* | `kali` | `blue1` | ✅ |
@@ -298,7 +298,7 @@ Bazzite has no `gnome-terminal` — all terminal launchers use Konsole specifica
 | `security-onion` | .30 | socadmin | Key auth works |
 | `kali` | .50 | blue1 | Key auth works |
 | `ubuntu-server` | .40 | ubuntu | Key auth not set up |
-| `win11-01` | .20 | `pentest\administrator` | Added 2026-07-14, key auth not set up (see `docs/troubleshooting/09_win11-01_ssh_access.md`) |
+| `win11-01` | .20 | `pentest\administrator` | Added 2026-07-14, key auth confirmed working (see `docs/troubleshooting/09_win11-01_ssh_access.md`) |
 
 ### 5.6 Quick reference
 

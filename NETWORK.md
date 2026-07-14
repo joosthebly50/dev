@@ -114,7 +114,7 @@ harde evidence) geverifieerd, tenzij anders aangegeven.
 |---|---|---|---|---|
 | `OPNsense-FW` | 192.168.50.1 | `opnsense` | `root` | Firewall, gateway, DHCP, DNS-forwarding |
 | `DC01` | 192.168.50.10 | `dc01` | `Administrator` | Windows Server 2022, Active Directory Domain Controller (PDC Emulator), domein `pentest.lab` |
-| `WIN11-01` | 192.168.50.20 | `win11-01` *(✅ toegevoegd 2026-07-14, zie `docs/troubleshooting/09_win11-01_ssh_access.md`)* | `pentest\administrator` (key-auth nog niet werkend) | Windows 11 werkstation. |
+| `WIN11-01` | 192.168.50.20 | `win11-01` *(✅ toegevoegd 2026-07-14, zie `docs/troubleshooting/09_win11-01_ssh_access.md`)* | `pentest\administrator` (✅ key-auth bevestigd werkend, later 2026-07-14) | Windows 11 werkstation. |
 | `SOC-SecurityOnion` | 192.168.50.30 | `security-onion` | `socadmin` | Security Onion 3.1.0, standalone — SIEM/IDS/Fleet |
 | `ubuntu-server-01` | 192.168.50.40 *(✅ definitief bevestigd 2026-07-13 via OPNsense's Kea DHCP-reservation database + verse live-check — zie `docs/OPNSENSE_AUDIT_2026-07-13.md`; eerder op de dag kort gezien op `.100`, een tijdelijk dynamisch-pool-adres)* | `ubuntu-server` | `ubuntu` (key-auth nog niet werkend) | Linux-server, draait actief OWASP Juice Shop op poort 3000 |
 | ` ATTACK-Kali` *(let op: naam heeft een leidende spatie in libvirt — bekende bug, zie troubleshooting)* | 192.168.50.50 | `kali` | `blue1` | Red Team-werkstation, penetratietests |

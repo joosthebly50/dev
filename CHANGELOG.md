@@ -16,6 +16,10 @@ Full detail, including the exact verification commands and what was deliberately
 
 This directly unblocks the WIN11-01 Elastic Agent + Sysmon rollout (`docs/ROADMAP_ENDPOINT_MONITORING.md`, priority 1 of the endpoint-monitoring phase) — that install can now potentially be scripted/assisted over SSH instead of requiring every command typed manually into the VM console.
 
+## Update (later 2026-07-14): WIN11-01 key-based SSH auth confirmed working
+
+Joost placed the AI's public key on WIN11-01 himself (same reasoning as enabling OpenSSH Server above — outside AI console access). Independently re-verified, non-interactively, before relying on it: `ssh -o BatchMode=yes -o PasswordAuthentication=no win11-01 whoami` succeeds with no password prompt and returns `pentest\administrator`. `win11-01` is from this point the standard SSH access path for this host, same as every other lab system — the "key auth not yet set up" note above is superseded. Docs corrected for consistency: `docs/ASSET_INVENTORY.md`, `docs/guides/desktop_launchers.md`, `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md`, `docs/PROJECT_STATUS.md`, `docs/troubleshooting/09_win11-01_ssh_access.md` (addendum). `SERVERS.md`/`NETWORK.md`/`~/.ssh/config` were already updated ahead of this entry.
+
 ## Elastic Agent on the Bazzite Host + Central Health-Check Script + Endpoint Monitoring Roadmap
 
 Extended host-level monitoring beyond DC01 to the Bazzite host itself (the physical KVM/QEMU virtualization host, not a VM). New troubleshooting doc: `docs/troubleshooting/08_bazzite_host_elastic_agent.md`.

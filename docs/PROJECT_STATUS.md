@@ -66,8 +66,10 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   Joost heeft OpenSSH Server zelf ingeschakeld via de VM-console;
   onafhankelijk geverifieerd vóór enige config/documentatiewijziging.
   Geïntegreerd in `~/.ssh/config`, `scripts/lab-ssh-all.sh` en
-  `scripts/soc-health-check.sh`. Key-auth nog niet ingesteld (zelfde open
-  punt als `ubuntu-server-01`). Zie
+  `scripts/soc-health-check.sh`. **Update, later dezelfde dag:** key-auth
+  is nu ook bevestigd werkend (non-interactieve publickey-only test,
+  geen wachtwoord nodig) — `win11-01` is vanaf nu de standaard
+  SSH-toegang voor dit systeem, net als bij Bazzite/security-onion. Zie
   `docs/troubleshooting/09_win11-01_ssh_access.md`.
 
 ---

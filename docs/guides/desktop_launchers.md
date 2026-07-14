@@ -78,7 +78,7 @@ connection test, not assumed):
 | `security-onion` | 192.168.50.30 | socadmin | SSH confirmed, key auth already works |
 | `kali` | 192.168.50.50 | blue1 | SSH confirmed, key auth already works |
 | `ubuntu-server` | 192.168.50.40 | ubuntu | SSH port confirmed open; **username not verified**, edit if wrong |
-| `win11-01` | 192.168.50.20 | `pentest\administrator` | Added 2026-07-14 -- SSH port confirmed open, connection reaches the auth stage; interactive password login tested and confirmed working by Joost. Key auth not yet set up. See `docs/troubleshooting/09_win11-01_ssh_access.md`. |
+| `win11-01` | 192.168.50.20 | `pentest\administrator` | Added 2026-07-14 -- SSH confirmed, key auth already works (confirmed later the same day: non-interactive publickey-only test logs in with no password). See `docs/troubleshooting/09_win11-01_ssh_access.md`. |
 
 Previously, `WIN11-01` (192.168.50.20) was checked and excluded: port 22
 didn't respond (no SSH server -- normal default state for a Windows 11
