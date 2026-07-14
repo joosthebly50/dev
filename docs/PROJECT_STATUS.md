@@ -1,7 +1,7 @@
 # Project-status: SOC Homelab (voorheen "Fortress Bazzite")
 
 Dit is de centrale pagina om te zien: wat is af, wat loopt er nu, en wat
-is gepland? Laatst bijgewerkt: 2026-07-13.
+is gepland? Laatst bijgewerkt: 2026-07-14.
 
 Voor de dag-op-dag geschiedenis: `docs/daily/`.
 Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
@@ -17,7 +17,8 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
 | 2026-07-10 | — | DC01 (Active Directory) toegevoegd aan het netwerk en ingeschreven bij Security Onion's Fleet. |
 | 2026-07-11 | — | Volledige documentatiestructuur opgezet (README, regels, netwerk-, server- en AD-documentatie, troubleshooting-geschiedenis). |
 | 2026-07-12 | — | Geheim (`Secure/SOC-Secure.img`) uit git-geschiedenis verwijderd. Desktop-launchers gebouwd. Event-driven traffic mirroring (`soc-mirror.service`) herschreven. Browser-automatisering voor Security Onion gebouwd. |
-| 2026-07-13 | — | DC01's Fleet-storing volledig opgelost (firewall, klok, Sysmon). Documentatiestructuur flink uitgebreid: dagrapporten, asset-inventaris, glossarium, netwerk-/poortoverzicht, incident-response-runbook, detectie-use-cases. |
+| 2026-07-13 | — | DC01's Fleet-storing volledig opgelost (firewall, klok, Sysmon). Documentatiestructuur flink uitgebreid: dagrapporten, asset-inventaris, glossarium, netwerk-/poortoverzicht, incident-response-runbook, detectie-use-cases. Read-only OPNsense-audit uitgevoerd. |
+| 2026-07-14 | — | Elastic Agent geïnstalleerd op de Bazzite-host zelf (log/metrics-only, geen Elastic Defend), bevestigd Healthy in Fleet en bevestigd dat dit een host-reboot overleeft. Centraal health-check script (`scripts/soc-health-check.sh`) en een roadmap voor uitrol naar overige endpoints (`docs/ROADMAP_ENDPOINT_MONITORING.md`) toegevoegd. |
 
 ---
 
@@ -39,7 +40,28 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   machines, VM-manager, Security Onion browser-operator).
 - ✅ Read-only web-audit script (`scripts/soc-web-audit.sh`) dat Fleet-
   status, data streams en Grid-status rapporteert.
+- ✅ Elastic Agent op de Bazzite-host zelf (log/metrics-only via journald,
+  geen Elastic Defend), Healthy in Fleet, bevestigd bestand tegen een
+  volledige host-reboot. Zie
+  `docs/troubleshooting/08_bazzite_host_elastic_agent.md`.
+- ✅ Centraal health-check script (`scripts/soc-health-check.sh`):
+  libvirt-status, ping en SSH-bereikbaarheid van alle 7 lab-VM's plus de
+  Elastic Agent-status van de Bazzite-host, in één commando.
 - ✅ Uitgebreide documentatiestructuur (zie hieronder).
+- ✅ Bazzite-host's journald-logaflevering (`system.auth`/`system.syslog`)
+  geverifieerd tot en met Elasticsearch zelf — niet alleen Fleet-status.
+  Een eerdere sessie-conclusie dat deze logs nooit aankwamen bleek een
+  meetfout (verkeerde diagnose-API), geen echt probleem: een gerichte
+  packet capture + Hunt-query op de exacte testvensters bevestigde alle
+  3 test-events end-to-end, zonder TCP-resets. Zie
+  `docs/troubleshooting/08_bazzite_host_elastic_agent.md`.
+- ✅ Beide vereiste reboot-cycli (Bazzite-host + Security Onion) uitgevoerd
+  en bevestigd: in beide gevallen werd een verse `logger`-marker na de
+  herstart end-to-end teruggevonden in Elasticsearch via Hunt, zonder
+  configuratiewijzigingen. De standaard twee-cycli-reproduceerbaarheidseis
+  voor deze pipeline is hiermee volledig afgerond. Zie
+  `docs/troubleshooting/08_bazzite_host_elastic_agent.md` ("Reboot cycle
+  2/2 confirmed").
 
 ---
 
@@ -57,6 +79,8 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
 - ⚠️ OPNsense en ubuntu-server hadden oorspronkelijk nog geen
   passwordless SSH-key opgezet (uit een eerdere sessie — status niet
   opnieuw gecontroleerd deze sessie).
+- ⚠️ WIN11-01, ubuntu-server-01 en Kali hebben nog geen Elastic Agent.
+  Uitrolvolgorde en motivatie: `docs/ROADMAP_ENDPOINT_MONITORING.md`.
 
 ---
 
@@ -111,6 +135,7 @@ Alles wat er nu is, op één plek:
 | `CHANGELOG.md` | Chronologisch overzicht van belangrijke wijzigingen |
 | `docs/PROJECT_STATUS.md` | Dit document |
 | `docs/ASSET_INVENTORY.md` | Alle systemen in één tabel |
+| `docs/ROADMAP_ENDPOINT_MONITORING.md` | Planning: Elastic Agent-uitrol naar overige endpoints |
 | `docs/GLOSSARY.md` | Uitleg van vaktermen |
 | `docs/guides/` | Technische handleidingen (setup, launchers, netwerk/poorten, detectie, incident response, quick reference) |
 | `docs/decisions/` | Architectuur- en beveiligingskeuzes |

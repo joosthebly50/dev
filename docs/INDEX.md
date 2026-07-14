@@ -277,6 +277,17 @@ Problems:
 
 ---
 
+## 08_bazzite_host_elastic_agent.md
+
+Covers:
+
+- Elastic Agent installed on the Bazzite host itself (log/metrics-only, no Elastic Defend)
+- Confirmed Healthy/Connected in Fleet, confirmed reboot-survival
+- Known gaps: ingest-side (Elasticsearch) not independently re-verified, exact Security Onion hostgroup membership not re-confirmed via direct file read
+
+
+---
+
 # Screenshots
 
 Location:

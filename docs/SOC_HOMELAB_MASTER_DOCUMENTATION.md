@@ -53,7 +53,7 @@ Focus areas: **Blue Team** (Security Onion/Kibana monitoring, incident response,
         +----------+----------+-------------+-------------+----------------+
         |          |          |             |             |                |
    OPNsense-FW    DC01   SOC-SecurityOnion ATTACK-Kali   WIN11-01   ubuntu-server-01   Target-
-   .1 (self)    .10          .30            .50           .20            .100        Metasploitable2
+   .1 (self)    .10          .30            .50           .20            .40         Metasploitable2
    (root)   (Administrator) (socadmin)    (blue1)      (no SSH)       (ubuntu)          .70
 
                                  |
@@ -77,7 +77,7 @@ Security Onion has two NICs: `pentest-lab` (.30, Fleet/Kibana/SSH/web) and `moni
 | 192.168.50.10 | DC01 (AD, PDC Emulator, domain `pentest.lab`) | `DC01` | `dc01` | `Administrator` | ✅ |
 | 192.168.50.20 | WIN11-01 (domain-joined as `DESKTOP-EFKB8GQ`) | `WIN11-01` | *(none — no SSH)* | — | ✅ |
 | 192.168.50.30 | Security Onion 3.1.0 (SIEM/IDS/Fleet) | `SOC-SecurityOnion` | `security-onion` | `socadmin` | ✅ |
-| 192.168.50.100 | ubuntu-server-01 (live OWASP Juice Shop on :3000) | `ubuntu-server-01` | `ubuntu-server` | `ubuntu` (key auth not set up) | ✅ |
+| 192.168.50.40 | ubuntu-server-01 (live OWASP Juice Shop on :3000) | `ubuntu-server-01` | `ubuntu-server` | `ubuntu` (key auth not set up) | ✅ |
 | 192.168.50.50 | Kali Linux (Red Team) | ` ATTACK-Kali` ⚠️ *leading space in the name* | `kali` | `blue1` | ✅ |
 | 192.168.50.70 | Metasploitable2 (vulnerable target) | `Target-Metasploitable2` | *(none)* | — | ✅ |
 
@@ -103,7 +103,7 @@ Event-driven (`scripts/soc-mirror.sh`, triggered by a libvirt qemu hook on every
 
 ### DNS and DHCP
 
-DHCP: OPNsense only. DNS: DC01 (AD DNS) for `pentest.lab`, OPNsense forwards externally. ⚠️ Exact DHCP ranges/DNS forwarders undocumented — blocked on `opnsense` SSH currently returning `Permission denied` (see [§9](#9-asset-inventory) open items).
+**DHCP:** Kea DHCPv4 on OPNsense, LAN interface only. Subnet `192.168.50.0/24`, dynamic pool `.100`–`.200`, 7 static reservations (one per lab VM by MAC — the canonical IP plan, see [§9](#9-asset-inventory)). Option 6 pushes `192.168.50.10` (DC01) as DNS server. Kea DHCPv6 exists but has no interface assigned (inactive). **DNS:** DC01 (AD DNS) authoritative for `pentest.lab`; OPNsense's Unbound forwards the `pentest.lab` domain specifically to `192.168.50.10` and has one host override (`dc01.pentest.lab` → `.10`), everything else resolved/forwarded normally. Confirmed 2026-07-13 via a full read-only OPNsense audit — full detail: `docs/OPNSENSE_AUDIT_2026-07-13.md`.
 
 ### Security principles
 
@@ -129,9 +129,11 @@ virsh shutdown VMNAME       # graceful; --destroy only if stuck
 ```
 ⚠️ QEMU guest agent isn't configured by default per VM — install/enable in-guest before relying on guest-management features.
 
+**Own Elastic Agent (2026-07-14):** the host itself (IP `192.168.50.254` on the `virbr10`/`pentest-lab` bridge — distinct from OPNsense's `.1`) runs a log/metrics-only Elastic Agent (journald `system.auth`/`system.syslog` + system/metrics, no Elastic Defend by design — this is the machine every VM depends on). Confirmed Healthy/Connected in Fleet, confirmed to survive a full host reboot with zero manual steps. Ingest-side verified end-to-end the same day: a deliberate packet capture (zero TCP resets) plus a targeted Elasticsearch/Hunt query for the exact test window confirmed all 3 test `sudo` events fully indexed with correct field-level detail. An earlier same-day finding that journald logs never arrived was itself wrong — a diagnostic-method problem (the Fleet data-streams API doesn't reliably surface this bursty dataset), not a real delivery failure. Full investigation and methodology notes: `docs/troubleshooting/08_bazzite_host_elastic_agent.md`. Quick health check across this host + all 7 lab VMs: `scripts/soc-health-check.sh`.
+
 ### 3.2 OPNsense (firewall/gateway)
 
-Central firewall/gateway for 192.168.50.0/24 — firewall, routing, DHCP, DNS forwarding. IP `.1`. SSH alias `opnsense`, user `root`, **currently not passwordless** (open item).
+Central firewall/gateway for 192.168.50.0/24 — firewall, routing, DHCP, DNS forwarding. IP `.1`. SSH alias `opnsense`, user `root`, password-only login by design (no key auth configured — confirmed via the OPNsense audit, not a regression). OPNsense 26.1.11_6-amd64 / FreeBSD 14.3. No custom firewall rules beyond the LAN/WAN defaults (no inter-VM segmentation at this layer), no VPN configured, single local admin user. Full configuration audit: `docs/OPNSENSE_AUDIT_2026-07-13.md`.
 
 ### 3.3 DC01 — Active Directory Domain Controller
 
@@ -160,7 +162,7 @@ IP `.20`, no SSH. Domain-joined as `DESKTOP-EFKB8GQ` (never renamed, still in de
 
 ### 3.5 ubuntu-server-01 — Linux server, active Red Team target
 
-IP `.100` (SSH alias `ubuntu-server`/`ubuntu`; key auth not yet working — password or `ssh-copy-id` needed). Runs **OWASP Juice Shop live** on port 3000 (HTTP-confirmed, not a leftover — it's up right now).
+IP `.40` — confirmed via OPNsense's own Kea DHCP reservation database plus a fresh live re-check ([§4](#4-architecture-security--ai-rules)/`docs/OPNSENSE_AUDIT_2026-07-13.md`); briefly seen on `.100` (dynamic pool) earlier the same day, before its reservation was honored. SSH alias `ubuntu-server`/`ubuntu`; key auth not yet working — password or `ssh-copy-id` needed. Runs **OWASP Juice Shop live** on port 3000 (HTTP-confirmed, not a leftover — it's up right now).
 
 ### 3.6 Security Onion — SOC platform
 
@@ -295,7 +297,7 @@ Bazzite has no `gnome-terminal` — all terminal launchers use Konsole specifica
 | `dc01` | .10 | Administrator | Key auth works |
 | `security-onion` | .30 | socadmin | Key auth works |
 | `kali` | .50 | blue1 | Key auth works |
-| `ubuntu-server` | .100 | ubuntu | Key auth not set up |
+| `ubuntu-server` | .40 | ubuntu | Key auth not set up |
 
 WIN11-01 excluded (no SSH server, normal for Windows 11).
 
@@ -331,8 +333,8 @@ ssh security-onion "tail -20 /opt/so/log/so-firewall.log"
 
 **How to test (Purple Team style):** run a harmless version of the technique from Kali, check Security Onion Hunt/Detections. Example:
 ```bash
-for i in 1 2 3 4 5; do ssh -o ConnectTimeout=3 -o BatchMode=yes nope@192.168.50.100; done
-# Hunt: destination.ip:"192.168.50.100" AND event.dataset:*ssh*
+for i in 1 2 3 4 5; do ssh -o ConnectTimeout=3 -o BatchMode=yes nope@192.168.50.40; done
+# Hunt: destination.ip:"192.168.50.40" AND event.dataset:*ssh*
 ```
 
 ### 6.2 Incident response runbook
@@ -419,7 +421,7 @@ _Full detail: `docs/ASSET_INVENTORY.md`._
 | `DC01` | .10 | `dc01`/Administrator | Windows Server 2022, AD DC, domain `pentest.lab` |
 | `WIN11-01` | .20 | none | Windows 11, domain-joined as `DESKTOP-EFKB8GQ` |
 | `SOC-SecurityOnion` | .30 | `security-onion`/socadmin | Security Onion 3.1.0 standalone |
-| `ubuntu-server-01` | .100 | `ubuntu-server`/ubuntu (no key auth) | Linux server, live Juice Shop on :3000 |
+| `ubuntu-server-01` | .40 | `ubuntu-server`/ubuntu (no key auth) | Linux server, live Juice Shop on :3000 |
 | ` ATTACK-Kali` | .50 | `kali`/blue1 | Red Team workstation |
 | `Target-Metasploitable2` | .70 | none | Vulnerable target, stock fingerprint |
 
@@ -445,9 +447,10 @@ SSH keys (`~/.ssh/config`) — passwordless for dc01/security-onion/kali; broken
 
 ### Open items
 
-- `opnsense` SSH not passwordless (regression or never worked) — needs web UI or key re-deployment.
+- `opnsense` SSH password-only by design (confirmed via audit, not a regression) — key auth could still be added for convenience if desired.
+- OPNsense's own config-revision history is empty (no built-in rollback safety net) and it hasn't checked for firmware updates since install — see `docs/OPNSENSE_AUDIT_2026-07-13.md`.
+- The `KALI` firewall alias in OPNsense still points at Kali's old IP (`.157`) — harmless (unused in any active rule) but worth cleaning up.
 - `ubuntu-server-01` SSH key login doesn't work — needs a password or fresh `ssh-copy-id`.
-- Exact DHCP ranges / DNS forwarders (blocked on the item above).
 - WiFi PCI-passthrough to Kali not reconfirmed.
 - WIN11-01's intended training purpose — see [§12](#12-attack-scope-agreed-red-team-test-plan).
 
@@ -509,11 +512,11 @@ _Full detail: `docs/PROJECT_STATUS.md`._
 
 ### ✅ Done
 
-Base infrastructure (all 7 VMs on `pentest-lab`) · event-driven traffic mirroring · AD operational · Security Onion operational (web UI, Kibana, Fleet, Hunt) · DC01 Healthy in Fleet, survives restarts/reboots · passwordless SSH to security-onion/kali/dc01 · four desktop launchers · read-only web-audit script · this documentation structure · live network/asset/AD verification pass (2026-07-13).
+Base infrastructure (all 7 VMs on `pentest-lab`) · event-driven traffic mirroring · AD operational · Security Onion operational (web UI, Kibana, Fleet, Hunt) · DC01 Healthy in Fleet, survives restarts/reboots · passwordless SSH to security-onion/kali/dc01 · four desktop launchers · read-only web-audit script · this documentation structure · live network/asset/AD verification pass (2026-07-13) · read-only OPNsense configuration audit (2026-07-13) · Elastic Agent on the Bazzite host itself, Healthy, confirmed reboot-survival, plus a central health-check script covering it and all 7 lab VMs (2026-07-14).
 
 ### ⚠️ Open
 
-`opnsense` SSH not passwordless · `ubuntu-server-01` SSH key login broken · DHCP ranges/DNS forwarders undocumented · Security Onion OS-level timezone still UTC (cosmetic, blocked on root scope) · AD structural gaps (empty `Helpdesk` group, `IT Admin 01` not elevated, undifferentiated role accounts, empty `Workstations`/`Servers` OUs) — **to be deliberately fixed as part of [§12](#12-attack-scope-agreed-red-team-test-plan)**, not left as-is · the full §12 test pass, AD escalation-path build, and WIN11-01 cleanup are scoped and agreed but **not yet executed** — pre-change snapshots already taken (`DC01`: `2026-07-13-pre-ad-escalation-path`, `WIN11-01`: `2026-07-13-pre-target-cleanup`).
+`ubuntu-server-01` SSH key login broken · Security Onion OS-level timezone still UTC (cosmetic, blocked on root scope) · AD structural gaps (empty `Helpdesk` group, `IT Admin 01` not elevated, undifferentiated role accounts, empty `Workstations`/`Servers` OUs) — **to be deliberately fixed as part of [§12](#12-attack-scope-agreed-red-team-test-plan)**, not left as-is · the full §12 test pass, AD escalation-path build, and WIN11-01 cleanup are scoped and agreed but **not yet executed** — pre-change snapshots already taken (`DC01`: `2026-07-13-pre-ad-escalation-path`, `WIN11-01`: `2026-07-13-pre-target-cleanup`) · WIN11-01/`ubuntu-server-01`/Kali have no Elastic Agent yet — rollout order and reasoning: `docs/ROADMAP_ENDPOINT_MONITORING.md` · the Bazzite host's own Elastic Agent's log delivery is now verified end-to-end into Elasticsearch (see `docs/troubleshooting/08_bazzite_host_elastic_agent.md`), but not yet re-confirmed across a reboot cycle.
 
 ### ❌ Planned
 
@@ -542,7 +545,7 @@ Every important change: update the specific source doc → `CHANGELOG.md` → `d
 | Scenario | Target | Technique |
 |---|---|---|
 | Full port/service scan | Metasploitable2 (.70) | `nmap -sV -sC -p-` |
-| Web app recon | Juice Shop (.100:3000) | `nikto`, `gobuster`/`ffuf` |
+| Web app recon | Juice Shop (.40:3000) | `nikto`, `gobuster`/`ffuf` |
 | AD/domain enumeration | DC01 (.10) | `enum4linux-ng`, `netexec smb`, anonymous LDAP |
 | Network sweep | `.0/24` | `nmap -sn` |
 
@@ -572,6 +575,6 @@ Every important change: update the specific source doc → `CHANGELOG.md` → `d
 ## Document index
 
 Root: `README.md`, `LAB_OVERVIEW.md`, `PROJECT_RULES.md`, `AI_ACCESS_POLICY.md`, `NETWORK.md`, `SERVERS.md`, `SECURITY.md`, `ACTIVE_DIRECTORY.md`, `CHANGELOG.md`.
-`docs/`: `INDEX.md`, `ASSET_INVENTORY.md`, `GLOSSARY.md`, `PROJECT_STATUS.md`, `decisions/*.md`, `guides/*.md` (11 files), `troubleshooting/01`–`06`, `chat_history/*.md` (6 files), `daily/*/`.
+`docs/`: `INDEX.md`, `ASSET_INVENTORY.md`, `GLOSSARY.md`, `PROJECT_STATUS.md`, `OPNSENSE_AUDIT_2026-07-13.md`, `ROADMAP_ENDPOINT_MONITORING.md`, `decisions/*.md`, `guides/*.md` (11 files), `troubleshooting/01`–`08`, `chat_history/*.md` (6 files), `daily/*/`.
 
 `pentest.lab - by Joost Hebly.md` (repo root) is an earlier, unmerged concatenation of the same sources, built for the portfolio deliverable — this document supersedes it as the synthesized reference.

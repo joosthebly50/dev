@@ -4,7 +4,69 @@ All important project changes are documented here.
 
 ---
 
+# 2026-07-14
+
+## Elastic Agent on the Bazzite Host + Central Health-Check Script + Endpoint Monitoring Roadmap
+
+Extended host-level monitoring beyond DC01 to the Bazzite host itself (the physical KVM/QEMU virtualization host, not a VM). New troubleshooting doc: `docs/troubleshooting/08_bazzite_host_elastic_agent.md`.
+
+**Elastic Agent on the Bazzite host:** log/metrics-only via the `system` integration (journald-based `system.auth`/`system.syslog` plus system/metrics) — deliberately **no Elastic Defend**, since this is the one machine every VM in the lab depends on. Policy/enrollment handled by a new, reusable script, `browser/fleet-setup-linux-agent.mjs` (idempotent — reuses the `linux-endpoints-initial` Fleet policy by name so it can be re-run for future Linux endpoints without duplicating). Confirmed **Healthy/Connected** in Fleet, all components (journald, system/metrics, filestream-monitoring) healthy.
+
+**Reboot test:** the Bazzite host was rebooted (for unrelated reasons) during this same session — `elastic-agent.service` (enabled in systemd) came back up automatically and re-showed Healthy/Connected with zero manual intervention, doubling as the reboot-survival test DC01 also needed.
+
+**New script:** `scripts/soc-health-check.sh` — a fast, read-only central health check covering all 7 lab VMs (libvirt state, ping, SSH:22) plus the Bazzite host's own Elastic Agent status. Deliberately does not flag WIN11-01's missing ping response as an issue (Windows blocks ICMP by default — expected, not a fault). Complements the existing, deeper `scripts/soc-web-audit.sh` (which needs a logged-in browser session).
+
+**New roadmap doc:** `docs/ROADMAP_ENDPOINT_MONITORING.md` — planning only, nothing executed. Recommends WIN11-01 next (ties directly into the already-agreed §12 lateral-movement test plan — bundle with the planned WIN11-01 cleanup step), then `ubuntu-server-01` (low effort, reuses the same script), with Kali deferred until a concrete Purple Team exercise needs it. OPNsense, Metasploitable2, and MGMT-Debian explicitly out of scope, with reasons.
+
+## Reboot Cycle 1/2: Bazzite Host Journald Pipeline Re-Verified
+
+Deliberate reboot of both the Bazzite host and Security Onion (first of the two full cycles required by the standing reproducibility rule). Confirmed post-reboot, end to end: a distinctive `logger -p auth.info` marker (no sudo needed) written on the Bazzite host was found in Elasticsearch's `system.auth` dataset via Security Onion's Hunt UI, correct timestamp and PID, no data loss. New reusable diagnostic: `browser/diag-hunt-reboot-verify.mjs`. One more reboot cycle still needed to close out the reproducibility requirement — see `docs/troubleshooting/08_bazzite_host_elastic_agent.md`.
+
+**Known gap, not closed this session:** whether events are actually landing in Security Onion's Elasticsearch (ingest side) wasn't independently confirmed — needs a logged-in browser session. Local agent/Fleet health is solid either way. Exact Security Onion hostgroup membership for the host's IP (`192.168.50.254` on `virbr10` — distinct from OPNsense's `.1`) also wasn't re-verified via direct file read (`socadmin`'s sudo scope doesn't cover the firewall pillar files); the agent's own healthy status is strong indirect evidence, not a direct confirmation.
+
+## Reboot Cycle 2/2: Bazzite Host Journald Pipeline Re-Verified — Reproducibility Bar Met
+
+Second and final deliberate reboot of both the Bazzite host and Security Onion, closing out the standing two-cycle reproducibility rule for this pipeline. Same method as cycle 1: a fresh `logger -p auth.info` marker written on the Bazzite host post-reboot, confirmed locally in the journal, then confirmed end-to-end in Elasticsearch via Hunt — correct timestamp, correct PID, no data loss, no configuration changes made anywhere. Methodology note: the exact `host.name`+quoted-message query again produced a false negative (as it did once during cycle 1); the broader `message:*marker*` wildcard query found it immediately, confirming that pattern as the reliable one for this dataset going forward. New one-off diagnostic: `browser/diag-hunt-reboot-verify2.mjs`. See `docs/troubleshooting/08_bazzite_host_elastic_agent.md` ("Reboot cycle 2/2 confirmed") for full detail. This closes the reproducibility item — no further action needed on this pipeline unless it's touched again by a future change.
+
+## Follow-up: Bazzite Elastic Agent ingest verified — logs are not arriving (real, open problem)
+
+Using an already-logged-in Security Onion browser session, checked Fleet's data-streams API (new one-off script `browser/diag-joost-host-data.mjs`; the older console-proxy-based `diag-es-indices.mjs` approach returns HTTP 400 — `/api/console/proxy` is confirmed disabled on this Kibana, not a request-format bug).
+
+**Split result:** metrics genuinely flow (all 13 `metrics-system.*` data streams fresh within single-digit seconds, repeatedly). Logs do not — zero `logs-system.auth-*`/`logs-system.syslog-*` data streams exist at all, despite confirmed local source data (`journalctl -t sudo` shows real auth events). Root cause found in the agent's own logs: the journald output component repeatedly hits `connection reset by peer` on port 5055, an ongoing/current failure — while the metrics component has zero such errors (only unrelated local NTP-metricset timeouts). Working theory: `192.168.50.254` was likely never added to Security Onion's `beats_endpoint` hostgroup (port 5055) — the same fix DC01 needed on 2026-07-13 — but this is **not confirmed**, since `socadmin` lacks read access to the firewall pillar files to check directly.
+
+**No infrastructure change made.** This is documented as an open, real problem in `docs/troubleshooting/08_bazzite_host_elastic_agent.md`, pending either elevated read access to confirm the hostgroup theory, or Joost running the check/fix himself.
+
+## Correction: the above was a false alarm — journald log delivery works, no fix needed
+
+Joost confirmed directly on Security Onion that both hostgroups already included `192.168.50.254` — ruling out the leading theory above. A follow-up root-cause pass (harvester counters, Logstash pipeline stats, Elasticsearch index templates, Logstash's own logs) ruled out every other pipeline stage, isolating the question to the journald component's connection specifically — still without a confirmed *why* for the `connection reset by peer` errors.
+
+Joost then ran a targeted packet capture himself (`tcpdump` on port 5055, `virbr10`) while generating three deliberate `sudo` events at 17:15:01/:05/:10 CEST: **zero TCP resets anywhere in the capture.** A dedicated connection (source port 50106) opened seconds after the burst, delivered ~7 KB, closed cleanly. Correlated directly against the agent's own component logs (matching published/acked event counts in the same windows) and directly against Elasticsearch itself via a targeted Hunt query for the exact test window: **all three `sudo` events found, fully indexed** with correct field-level detail (PIDs, user, TTY, command, PAM session pairs).
+
+**The original "zero documents ever" finding was a methodology problem, not a real one.** Fleet's `/api/fleet/data_streams` API — checked repeatedly across roughly 30 minutes — never surfaced this dataset, for reasons not fully understood but now known not to reflect reality once queried directly. Lesson for future sessions: for sparse/bursty datasets, use a direct Hunt/Elasticsearch query, not Fleet's data-streams summary.
+
+No configuration was changed anywhere in this entire investigation. Full evidence chain and the analysis-plan methodology (useful for any future connection-diagnosis work) are in `docs/troubleshooting/08_bazzite_host_elastic_agent.md`. Two full reboot cycles to confirm this durably survives restarts are still pending — not yet scheduled.
+
+---
+
 # 2026-07-13
+
+## Read-Only OPNsense Configuration Audit + Second ubuntu-server-01 IP Correction
+
+Performed a full read-only audit of the OPNsense web UI (Joost logged in manually; a separate, dedicated Playwright browser profile was used — `browser/profile-opnsense/`, gitignored). Strictly navigation and reading: no Save/Apply/Delete/Reset was ever clicked, no config changed. New document: `docs/OPNSENSE_AUDIT_2026-07-13.md`, covering Interfaces, Gateways, DHCP, static reservations, DNS/overrides, firewall rules, NAT, aliases, VLANs, VPN, certificates, users, backups, services, system settings, logging, and monitoring.
+
+**Self-correction, found by the audit itself:** earlier today `ubuntu-server-01` was "corrected" from `.40` to `.100` based on a live ARP/nmap snapshot. The audit's read of OPNsense's own Kea DHCP reservation database showed `.40` was the correctly configured, intended address the whole time; a fresh re-check (ping/nmap/ssh/curl) confirmed `.40` responds and `.100` no longer does. Reverted across `~/.ssh/config`, `NETWORK.md`, `SERVERS.md`, `docs/ASSET_INVENTORY.md`, and the master doc. Likely explanation: the VM briefly held a dynamic-pool address before its reservation was honored. Lesson recorded in the audit doc: for systems with a DHCP reservation, the reservation config — not a live snapshot — is the authoritative source.
+
+**Also corrected:** the earlier "opnsense SSH regression" finding was itself wrong — that test used `ssh -o BatchMode=yes`, which blocks password prompts and will always report `Permission denied` for a password-only account. OPNsense's own SSH settings (confirmed via the audit) show password-only login for `root` is the intended, existing configuration, not a regression.
+
+**New findings from the audit, not previously documented:**
+- DHCP is specifically **Kea** (not ISC/dnsmasq), pool `192.168.50.100`–`.200`, with 7 static reservations forming the canonical IP plan (matches current docs for all 6 active lab VMs; also includes a reservation for `MGMT-Debian`, a separate, currently shut-off legacy VM).
+- Unbound forwards the `pentest.lab` domain specifically to DC01 (`.10`) and has one host override (`dc01.pentest.lab` → `.10`, confirmed correct via OPNsense's own API — an earlier text-scrape misread this as `.101`, a read error, not a real config issue).
+- No custom firewall rules exist on LAN/WAN/Floating beyond the defaults — no inter-VM segmentation is enforced at the OPNsense layer today.
+- No VPN configured at all (OpenVPN/IPsec/WireGuard all empty).
+- OPNsense's own configuration-revision history is empty (no built-in rollback safety net) and firmware updates have never been checked since install.
+- A stale firewall alias `KALI` still points at Kali's old IP (`.157`) — not fixed (would require a real config change, out of scope for a read-only audit), flagged as a cleanup item for Joost.
+
+`docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` updated throughout (§2, §3.2, §3.5, §9, §11, document index) and PDF re-rendered.
 
 ## Master Documentation Trimmed and Restructured (1074 → 577 lines)
 
