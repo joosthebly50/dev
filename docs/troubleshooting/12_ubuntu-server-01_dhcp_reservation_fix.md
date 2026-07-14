@@ -1,8 +1,28 @@
 # Troubleshooting - ubuntu-server-01 DHCP Reservation Not Honored After Reboot
 
+## Status: ✅ CLOSED — permanently resolved and validated across three independent boot cycles
+
 ## Date
 
-2026-07-14
+2026-07-14 (opened and fixed) — 2026-07-15 (final cold-boot validation, closed)
+
+---
+
+# Executive Summary
+
+**Problem:** ubuntu-server-01 intermittently came back up on `192.168.50.100` (the dynamic pool) instead of its reserved `192.168.50.40` after a reboot, breaking the `ssh ubuntu-server` alias. Every other reserved host in the lab always got its reservation; this one host did not, reliably.
+
+**Root cause:** this Ubuntu image performs two separate DHCP negotiations per boot — an early one driven by dracut's initramfs fallback network config, and the real one driven by netplan once the root filesystem is up. The dracut config explicitly sent the plain MAC address as the DHCPv4 client identifier (option 61); the netplan-generated config did not, so it fell back to systemd-networkd's default RFC 4361 IAID+DUID identifier — a different value than the MAC-based one OPNsense's Kea reservation is keyed on. The second, real negotiation's mismatched identifier caused Kea to fall through to the dynamic pool instead of honoring the reservation.
+
+**Hypotheses investigated:** eight in total — Kea reservation misconfigured, a rogue second DHCP server, Security Onion firewall involvement, OPNsense's Dnsmasq DHCP service also active, a stale locally-persisted lease, a changed MAC address, a Kea allocation bug, and (confirmed) a DHCP client-identifier mismatch between the two per-boot negotiations. Full detail in section 3 below.
+
+**Why the first seven were rejected:** each was tested directly against real state — the OPNsense Reservations UI, Kea's own log history, lease files, service enable-flags, and `networkctl` output — and none matched the evidence. Kea's log in particular showed **zero** DHCPACK/DHCPOFFER for `.100` for this MAC across its entire history, which ruled out the DHCP server itself and reframed the investigation toward the client side.
+
+**Final solution:** one line added to `/etc/netplan/00-installer-config.yaml` — `dhcp-identifier: mac` — making the real, netplan-managed DHCP negotiation present the same MAC-based identifier the dracut fallback already used correctly. No static IP, no OPNsense/Kea-side change; the reservation remains the single source of truth.
+
+**How it was validated:** three independent, full boot cycles after the fix — a warm reboot immediately after applying it, a second standalone reboot after the fix was committed to Git, and a full cold power-cycle (shutdown → start) to specifically rule out any dependency on a warm-boot code path. In every cycle: `.40` acquired within 10 seconds, both DHCP negotiations confirmed via `journalctl` to get `.40`, the `ssh ubuntu-server` alias worked with no manual changes, Elastic Agent recovered automatically and Fleet reported all components `HEALTHY`, and — for every cycle — OPNsense's own Kea log independently confirmed the full DISCOVER → OFFER → REQUEST → ACK exchange allocating `.40` with the MAC-based client identifier. No regressions were observed on any other lab system in any of the three cycles.
+
+**Why this is considered permanently resolved, not just currently working:** the fix addresses the actual mechanism (proven in Kea's own log, not inferred), not a symptom — and it was validated against the specific condition most likely to reveal a partial fix (a full cold boot, not just a warm reboot), which is the scenario a "works most of the time" bug would be most likely to fail under. The underlying cause is a property of the base OS image, not a one-off state — as recorded in the accompanying Architecture Decision (section 9), it's now a standing rule applied at VM-creation time for any future host of this kind, not something that needs to be rediscovered.
 
 ---
 
@@ -236,15 +256,60 @@ One clean reboot (`virsh reboot ubuntu-server-01`) after the fix:
 
 - **No packet capture was needed or taken for this investigation** — Kea's own log, read directly, was sufficient and more precise (it shows the client-id string itself, which a packet capture would also show but with more manual decoding).
 - **No change was made to OPNsense/Kea configuration.** Every real fix was on the Ubuntu side. The one OPNsense-side action taken the same day (re-running `so-firewall includehost` for `.40`'s hostgroups) was a **separate, already-resolved issue** (Fleet Server port 8220 reachability, see `docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`) and is explicitly not conflated with this DHCP fix — see hypothesis 3 above for why that distinction mattered during the investigation itself.
-- **No further changes were made to this specific fix** after the first reboot validation succeeded — this item was marked resolved pending only the independent second-reboot confirmation in section 10.
+- **No further changes were made to this specific fix** after the first reboot validation succeeded — the two additional cycles in section 10 were independent confirmation, not further debugging.
 
 ---
 
-# 10. Independent final confirmation (second, standalone reboot after committing)
+# 10. Independent final confirmation (two additional cycles, after committing)
 
-Per explicit instruction, one additional, fully independent reboot cycle was run *after* the fix was committed to Git, specifically to confirm persistence rather than to find anything new. If this section found a regression, the fix above would need to be reopened — it did not.
+Per explicit instruction, two additional, fully independent boot cycles were run *after* the fix was committed to Git (`8e5e135`), specifically to confirm persistence rather than to find anything new.
 
-*(Results recorded immediately below as they were produced, after the commit referenced in the changelog.)*
+## 10a. Second standalone reboot (warm)
+
+- Host reachable within 10 seconds; `.40` immediately, no `.100`.
+- `networkctl status enp1s0`: `DHCPv4 Client ID: 52:54:00:0e:0f:65`.
+- `journalctl -u systemd-networkd -b`: both DHCP negotiations (PID 353 and PID 1115) acquired `192.168.50.40`.
+- `ssh ubuntu-server` worked with zero manual changes.
+- Elastic Agent `active`; Fleet: `online`, all 3 components `HEALTHY`.
+
+## 10b. Full cold power-cycle (`virsh shutdown` → confirmed `shut off` → `virsh start`)
+
+Requested specifically to rule out any dependency on a warm-reboot code path — a full power-off means the entire boot sequence, including dracut's initramfs stage, runs from scratch rather than resuming any warm state.
+
+- VM confirmed fully `shut off` before starting again (not just rebooted).
+- Host reachable within **10 seconds** of start — same speed as a warm reboot, no cold-boot penalty on addressing.
+- `.40` immediately; `192.168.50.100` confirmed **unreachable** (`ping` — no response).
+- `networkctl status enp1s0`: `DHCPv4 Client ID: 52:54:00:0e:0f:65`, `Address: 192.168.50.40`.
+- `journalctl -u systemd-networkd -b`: both negotiations (PID 354, PID 1114) acquired `.40`.
+- `ssh ubuntu-server` worked immediately, no manual changes.
+- **Fleet's server-side view took ~5 minutes to report `HEALTHY`** (longer than the ~2 minutes seen on the prior warm reboots) while showing `STARTING` for all 3 components the whole time. This was **not** treated as a failure without checking first — the same "Fleet display lag" pattern already documented for WIN11-01 (`docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`). Confirmed benign two ways before waiting it out: (1) `ss -tnp` on ubuntu-server-01 showed 4 already-established TCP connections to Security Onion (3× port 5055, 1× port 8220) throughout the "STARTING" window — the agent was genuinely connected the whole time; (2) a fresh test marker (`logger -p auth.info "SOC_HOMELAB_COLDBOOT_VERIFY_..."`) was found in Hunt (via a new browser tab, avoiding the earlier-documented tab-caching pitfall) within seconds of being written, proving live telemetry delivery independent of what Fleet's UI happened to be showing. Fleet's status did subsequently catch up to `HEALTHY`/all components healthy on its own, with no intervention.
+- **OPNsense's own Kea log, read directly, is unambiguous for this cycle:**
+
+```
+DHCP4_RELEASE            [...52:54:00:0e:0f:65], cid=[01:52:54:00:0e:0f:65]: address 192.168.50.40 was released properly.
+DHCP4_RELEASE_EXPIRED    [...]: address 192.168.50.40 expired on release.
+-- (clean shutdown released the lease; VM restarted) --
+DHCP4_PACKET_RECEIVED    [...]: DHCPDISCOVER received on interface vtnet1
+DHCP4_LEASE_OFFER        [...]: lease 192.168.50.40 will be offered
+DHCP4_PACKET_SEND        [...]: DHCPOFFER ... to 192.168.50.40:68
+DHCP4_PACKET_RECEIVED    [...]: DHCPREQUEST received
+DHCP4_LEASE_ALLOC        [...]: lease 192.168.50.40 has been allocated for 4000 seconds
+DHCP4_PACKET_SEND        [...]: DHCPACK ... to 192.168.50.40:68
+-- (second negotiation, 3 seconds later) --
+DHCP4_PACKET_RECEIVED    [...]: DHCPDISCOVER received on interface vtnet1
+DHCP4_LEASE_OFFER        [...]: lease 192.168.50.40 will be offered
+DHCP4_LEASE_REUSE        [...]: lease 192.168.50.40 has been reused for 3997 seconds
+DHCP4_PACKET_RECEIVED    [...]: DHCPREQUEST received
+DHCP4_LEASE_ALLOC        [...]: lease 192.168.50.40 has been allocated for 4000 seconds
+DHCP4_LEASE_REUSE        [...]: lease 192.168.50.40 has been reused for 3997 seconds
+DHCP4_PACKET_SEND        [...]: DHCPACK ... to 192.168.50.40:68
+```
+
+Every single log line for this MAC across the entire cold-boot cycle — both negotiations — carries `cid=[01:52:54:00:0e:0f:65]` (the MAC-based identifier) and results in `.40`. The clean `DHCP4_RELEASE` pair at shutdown additionally confirms systemd-networkd politely released its lease on power-off (as expected for a graceful shutdown, distinct from a reboot where the lease is typically just abandoned) — and the reservation was still honored correctly on the fresh request that followed, with no dependency on the old lease being reused opportunistically.
+
+**No regressions observed anywhere** — `scripts/soc-health-check.sh` run immediately after this cycle showed all 7 lab VMs `running`, pingable (or expected-no-ICMP for WIN11-01), and with SSH:22 open where applicable.
+
+This closes the loop across three independent, physically distinct boot scenarios (immediate post-fix warm reboot, standalone post-commit warm reboot, and a full cold power-cycle) — the fix holds in every one, including the specific scenario (cold boot) most likely to have exposed a partial or timing-dependent fix if the underlying cause hadn't actually been the client identifier.
 
 ---
 
@@ -253,5 +318,7 @@ Per explicit instruction, one additional, fully independent reboot cycle was run
 - **A plausible, precedent-matching hypothesis can still be wrong, and only checking whether a fix actually changed anything (not just whether it "succeeded") reveals that.** The `so-firewall includehost` re-run for WIN11-01 earlier the same day looked identical to this investigation's hypothesis 3, but turned out to be a no-op there too — until the reservation itself was directly verified correct in the UI here, independently.
 - **`dracut`-based Ubuntu images perform two independent DHCP negotiations per boot** (an early dracut-managed one, then the real netplan-managed one) — any future Linux VM in this lab built from a similar cloud image should have `dhcp-identifier: mac` set from the start if it has a DHCP reservation, per the ADR in section 9.
 - **Kea's own log is the authoritative source for "did the DHCP server actually do X"** — reading it directly (rather than inferring server-side behavior from client-side symptoms) turned "probably a Kea quirk" into a disproven hypothesis and a proven client-side one, in one step.
+- **Fleet's server-side "Starting" status can lag real, healthy local state for several minutes — longer still after a cold boot than a warm one** — confirmed benign for the second time this session (first WIN11-01, ~12 minutes; here, a cold boot, ~5 minutes) via the same two independent signals: established TCP connections to Security Onion, and a fresh test marker found immediately in Hunt via a new browser tab. Worth treating as a known, recurring pattern rather than re-investigating from scratch each time it appears.
+- **A full cold power-cycle is a meaningfully stronger validation than a warm reboot** for a fix like this one, precisely because it forces the entire boot sequence — including the dracut initramfs stage — to run from scratch rather than potentially resuming any warm state. Where the fix genuinely addresses the root mechanism, this is the test most likely to have caught a partial fix; it didn't, which is itself part of the evidence that the fix is complete.
 - **`netplan apply` does not retroactively change an already-active DHCP client's identifier** — a live reload is not equivalent to a fresh boot for this class of setting; validating this kind of fix requires reproducing the actual code path (a reboot), not just applying the config and checking the immediate result.
 - **Two real, unrelated problems occurring on the same host on the same day (the Fleet-firewall-hostgroup fix and this DHCP fix) both involved OPNsense/Security Onion firewall-adjacent language** ("so-firewall", "hostgroup", "reservation") — keeping them explicitly, narratively separate (hypothesis 3 above) prevented the investigation from accidentally borrowing false confidence from one already-solved problem to explain a different one.

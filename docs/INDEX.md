@@ -325,15 +325,14 @@ Covers:
 
 ---
 
-## 12_ubuntu-server-01_dhcp_reservation_fix.md
+## 12_ubuntu-server-01_dhcp_reservation_fix.md — ✅ CLOSED
 
 Covers:
 
-- Proven root cause (via Kea's own log, not inference) for why ubuntu-server-01 sometimes ended up on `.100` instead of its reserved `.40` after a reboot
-- Several hypotheses tested and rejected with evidence: Kea reservation misconfigured (no), Dnsmasq DHCP also enabled (no), stale persisted lease (no)
-- Confirmed mechanism: two DHCP negotiations per boot (dracut fallback, then real netplan config) send different DHCPv4 client identifiers; only the MAC-based one matches the reservation
+- Executive Summary + proven root cause (via Kea's own log, not inference) for why ubuntu-server-01 sometimes ended up on `.100` instead of its reserved `.40` after a reboot
+- All eight hypotheses investigated, each with its own test and evidence: Kea reservation misconfigured, rogue DHCP server, Security Onion firewall, Dnsmasq DHCP also enabled, stale persisted lease, changed MAC, Kea allocation bug (all rejected), and the confirmed one — mismatched DHCPv4 client identifiers between the two per-boot DHCP negotiations (dracut fallback vs. real netplan config)
 - Fix: `dhcp-identifier: mac` in netplan — see also `docs/decisions/architecture_decisions.md` for the standing rule this sets for future Linux endpoints
-- Single full reboot validation, with Kea log proof of the corrected DORA exchange
+- **Three** independent full boot-cycle validations (two warm reboots, one full cold power-cycle) — Kea log proof of the corrected DORA exchange in every cycle, no regressions
 
 
 ---

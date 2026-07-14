@@ -4,6 +4,14 @@ All important project changes are documented here.
 
 ---
 
+# 2026-07-15
+
+## ubuntu-server-01 DHCP Reservation Fix: CLOSED After Cold-Boot Validation
+
+Two additional, independent boot cycles run after the `dhcp-identifier: mac` fix was committed (`8e5e135`): a second standalone warm reboot, and — specifically to rule out any dependency on a warm-boot code path — a full cold power-cycle (`virsh shutdown`, confirmed `shut off`, then `virsh start`). Both cycles: `.40` acquired within 10 seconds, both per-boot DHCP negotiations confirmed via `journalctl` to get `.40`, `ssh ubuntu-server` worked with zero manual changes, Elastic Agent recovered automatically, and Fleet reported all components `HEALTHY` (the cold boot took ~5 minutes to show Healthy in Fleet's UI — confirmed benign via established TCP connections and a fresh Hunt-verified marker in the meantime, the same server-side display-lag pattern already seen for WIN11-01). OPNsense's own Kea log independently confirmed the full DISCOVER→OFFER→REQUEST→ACK exchange for `.40` in both cycles, including a clean `DHCP4_RELEASE` pair at the cold shutdown. No regressions on any other lab system in either cycle.
+
+This closes the incident: root cause proven (not inferred), fix validated across three independent boot scenarios including the one most likely to expose a partial fix. Full record, including an Executive Summary and all eight investigated hypotheses: `docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`.
+
 # 2026-07-14
 
 ## ubuntu-server-01: Elastic Agent Rolled Out, Two Token Exposures Contained, Long-Standing DHCP Reservation Bug Root-Caused and Fixed
