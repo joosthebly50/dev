@@ -282,8 +282,20 @@ Problems:
 Covers:
 
 - Elastic Agent installed on the Bazzite host itself (log/metrics-only, no Elastic Defend)
-- Confirmed Healthy/Connected in Fleet, confirmed reboot-survival
-- Known gaps: ingest-side (Elasticsearch) not independently re-verified, exact Security Onion hostgroup membership not re-confirmed via direct file read
+- Confirmed Healthy/Connected in Fleet, ingest-side verified end-to-end into Elasticsearch
+- Two full reboot cycles (Bazzite host + Security Onion) confirmed the pipeline survives restarts — reproducibility bar closed, no configuration changes needed anywhere
+
+
+---
+
+## 09_win11-01_ssh_access.md
+
+Covers:
+
+- OpenSSH Server enabled on WIN11-01 (by Joost, via VM console — no other ports touched)
+- Independent verification of the new SSH access before any config/doc change
+- `~/.ssh/config`, `scripts/lab-ssh-all.sh`, `scripts/soc-health-check.sh` all updated to include WIN11-01 like every other lab host
+- Key auth not yet set up (password still required, same open item as `ubuntu-server-01`)
 
 
 ---

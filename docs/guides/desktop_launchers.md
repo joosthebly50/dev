@@ -78,11 +78,15 @@ connection test, not assumed):
 | `security-onion` | 192.168.50.30 | socadmin | SSH confirmed, key auth already works |
 | `kali` | 192.168.50.50 | blue1 | SSH confirmed, key auth already works |
 | `ubuntu-server` | 192.168.50.40 | ubuntu | SSH port confirmed open; **username not verified**, edit if wrong |
+| `win11-01` | 192.168.50.20 | `pentest\administrator` | Added 2026-07-14 -- SSH port confirmed open, connection reaches the auth stage; interactive password login tested and confirmed working by Joost. Key auth not yet set up. See `docs/troubleshooting/09_win11-01_ssh_access.md`. |
 
-`WIN11-01` (192.168.50.20) was checked and excluded: port 22 doesn't respond
-(no SSH server -- normal for a Windows 11 client, nothing was installed/changed
-on it). The previous aliases `onion` (192.168.50.9) and `kali` (192.168.50.157)
-were stale; both addresses have moved since they were set.
+Previously, `WIN11-01` (192.168.50.20) was checked and excluded: port 22
+didn't respond (no SSH server -- normal default state for a Windows 11
+client). That changed on 2026-07-14: Joost enabled OpenSSH Server on
+WIN11-01 himself via the VM console, and it's now included in
+`lab-ssh-all.sh` like every other reachable host. The previous aliases
+`onion` (192.168.50.9) and `kali` (192.168.50.157) were stale; both
+addresses have moved since they were set.
 
 ---
 

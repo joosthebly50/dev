@@ -14,17 +14,19 @@ TABSFILE="/tmp/homelab-ssh-tabs.txt"
 
 # alias -> label. Only live-verified, SSH-reachable hosts (checked
 # 2026-07-12 via ARP + an SSH-level connection test, not assumed). Aliases
-# come from ~/.ssh/config. WIN11-01 is deliberately excluded: port 22
-# doesn't respond there (no SSH server on that Windows 11 client, and
-# nothing was installed/changed on it to add one).
+# come from ~/.ssh/config. WIN11-01 added 2026-07-14: OpenSSH Server is now
+# active there (Joost enabled it via the VM console), port 22 confirmed
+# open and the alias reaches the auth stage -- see
+# docs/troubleshooting/09_win11-01_ssh_access.md.
 declare -A LABELS=(
   [opnsense]="OPNsense-FW"
   [security-onion]="Security Onion"
   [kali]="Kali"
   [dc01]="DC01"
   [ubuntu-server]="Ubuntu Server"
+  [win11-01]="WIN11-01"
 )
-ALIASES=(opnsense security-onion kali dc01 ubuntu-server)
+ALIASES=(opnsense security-onion kali dc01 ubuntu-server win11-01)
 
 # --- worker mode: runs inside a single Konsole tab for one host ---
 if [ "${1:-}" = "--pane-worker" ]; then

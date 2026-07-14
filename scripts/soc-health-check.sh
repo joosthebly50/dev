@@ -17,7 +17,7 @@ VMS=(
   "DC01|DC01|192.168.50.10|dc01"
   "SOC-SecurityOnion|Security Onion|192.168.50.30|security-onion"
   " ATTACK-Kali|Kali|192.168.50.50|kali"
-  "WIN11-01|WIN11-01|192.168.50.20|"
+  "WIN11-01|WIN11-01|192.168.50.20|win11-01"
   "ubuntu-server-01|Ubuntu Server|192.168.50.40|ubuntu-server"
   "Target-Metasploitable2|Metasploitable2|192.168.50.70|"
 )

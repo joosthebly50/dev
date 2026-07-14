@@ -121,7 +121,15 @@ IP Address:
 
 SSH:
 
-Geen SSH-server geïnstalleerd — niet bereikbaar via een SSH-alias.
+Alias `win11-01`, gebruiker `pentest\administrator` (domain-gekwalificeerd,
+NetBIOS-vorm). **Gewijzigd 2026-07-14** — voorheen geen SSH-server; Joost
+heeft OpenSSH Server zelf ingeschakeld via de VM-console (geen AI-toegang
+tot die console, dus niet door mij uitgevoerd). Onafhankelijk bevestigd:
+poort 22 is open (was dicht) en een SSH-verbinding bereikt de auth-fase.
+Interactieve wachtwoord-login is door Joost zelf getest en werkt; net als
+bij `dc01`/`ubuntu-server` is er nog **geen key-auth** ingesteld — een
+wachtwoord blijft nodig. Volledig verhaal:
+`docs/troubleshooting/09_win11-01_ssh_access.md`.
 
 Purpose:
 
@@ -131,7 +139,8 @@ domein-gebruikte Windows-client, bedoeld voor endpoint-telemetrie
 client-side scenario's (phishing-simulatie, lokale privilege-escalatie).
 
 Aanvullende details (✅ live geverifieerd 2026-07-13, via `dsquery` op
-DC01 en een poortscan vanaf de hypervisor):
+DC01 en een poortscan vanaf de hypervisor; SSH-toegang toegevoegd en
+herverifieerd 2026-07-14):
 
 - **Domain-joined** aan `pentest.lab`, als computerobject
   `CN=DESKTOP-EFKB8GQ,CN=Computers,DC=pentest,DC=lab` — de Windows-
@@ -139,12 +148,14 @@ DC01 en een poortscan vanaf de hypervisor):
   libvirt VM-naam) en staat nog in de standaard `Computers`-container,
   niet verplaatst naar `OU=Workstations` (die OU bestaat al wel, zie
   `ACTIVE_DIRECTORY.md`).
-- **Netwerkoppervlak:** alleen poort 135 (RPC endpoint mapper)
-  antwoordt vanaf `pentest-lab`. Poorten 445 (SMB), 3389 (RDP), 5985/
-  5986 (WinRM) en 139 zijn dicht/gefilterd — Windows Firewall staat aan
-  en blokkeert alle binnenkomende beheertoegang vanaf het labnetwerk.
-  Er is dus geen SSH, RDP of WinRM-toegang tot dit systeem vanaf de
-  Bazzite-host; beheer moet via de VM-console (virt-manager).
+- **Netwerkoppervlak (2026-07-13 meting):** alleen poort 135 (RPC
+  endpoint mapper) antwoordt vanaf `pentest-lab`. Poorten 445 (SMB),
+  3389 (RDP), 5985/5986 (WinRM) en 139 waren dicht/gefilterd.
+- **Netwerkoppervlak (2026-07-14, bijgewerkt):** poort 22 (SSH) staat nu
+  ook open — bewust door Joost toegevoegd via de VM-console, geen
+  regressie of onbedoelde wijziging. SMB/RDP/WinRM/139 zijn niet
+  herverifieerd deze sessie, aangenomen ongewijzigd (niet aangeraakt).
+  Beheer buiten SSH om moet nog steeds via de VM-console (virt-manager).
 
 
 ---

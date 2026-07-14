@@ -6,6 +6,16 @@ All important project changes are documented here.
 
 # 2026-07-14
 
+## WIN11-01 Gets an SSH Admin Path Like Every Other Lab System
+
+Joost enabled OpenSSH Server on WIN11-01 himself via the VM console (the AI assistant has no console access, so this was necessarily his action, not an AI-initiated firewall change). Before touching any config or documentation, independently re-verified from the Bazzite host: port 22 went from closed/filtered (2026-07-13 measurement) to open, and a direct SSH connection reaches the authentication stage (`Permission denied (publickey,password,keyboard-interactive)` rather than a timeout) — confirms a real SSH server, not a false positive. Joost separately confirmed a full interactive login works with `pentest\administrator`.
+
+Integrated WIN11-01 into the existing SSH structure the same way every other host is set up, no parallel/duplicate config: added a `win11-01` entry to `~/.ssh/config` (backed up first), re-tested via the alias itself (not the raw IP) with an identical result to the direct-IP test, added it to `scripts/lab-ssh-all.sh` (now gets its own Konsole tab) and `scripts/soc-health-check.sh` (SSH:22 check now runs for it too — confirmed ✅ open in a full health-check run). Key-based auth is not yet set up (same open item as `ubuntu-server-01`) — password login still required, matching the pattern for every other Windows/Linux host without deployed keys.
+
+Full detail, including the exact verification commands and what was deliberately not touched (SMB/RDP/WinRM/139 not re-checked, no key auth added): `docs/troubleshooting/09_win11-01_ssh_access.md`. Docs updated for consistency: `SERVERS.md`, `NETWORK.md`, `docs/ASSET_INVENTORY.md`, `docs/guides/desktop_launchers.md`, `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` (5 locations), `docs/INDEX.md`.
+
+This directly unblocks the WIN11-01 Elastic Agent + Sysmon rollout (`docs/ROADMAP_ENDPOINT_MONITORING.md`, priority 1 of the endpoint-monitoring phase) — that install can now potentially be scripted/assisted over SSH instead of requiring every command typed manually into the VM console.
+
 ## Elastic Agent on the Bazzite Host + Central Health-Check Script + Endpoint Monitoring Roadmap
 
 Extended host-level monitoring beyond DC01 to the Bazzite host itself (the physical KVM/QEMU virtualization host, not a VM). New troubleshooting doc: `docs/troubleshooting/08_bazzite_host_elastic_agent.md`.

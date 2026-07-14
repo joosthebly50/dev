@@ -62,6 +62,13 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   voor deze pipeline is hiermee volledig afgerond. Zie
   `docs/troubleshooting/08_bazzite_host_elastic_agent.md` ("Reboot cycle
   2/2 confirmed").
+- ✅ WIN11-01 heeft nu een SSH-beheerpad, net als de overige lab-systemen.
+  Joost heeft OpenSSH Server zelf ingeschakeld via de VM-console;
+  onafhankelijk geverifieerd vóór enige config/documentatiewijziging.
+  Geïntegreerd in `~/.ssh/config`, `scripts/lab-ssh-all.sh` en
+  `scripts/soc-health-check.sh`. Key-auth nog niet ingesteld (zelfde open
+  punt als `ubuntu-server-01`). Zie
+  `docs/troubleshooting/09_win11-01_ssh_access.md`.
 
 ---
 

@@ -54,7 +54,7 @@ Focus areas: **Blue Team** (Security Onion/Kibana monitoring, incident response,
         |          |          |             |             |                |
    OPNsense-FW    DC01   SOC-SecurityOnion ATTACK-Kali   WIN11-01   ubuntu-server-01   Target-
    .1 (self)    .10          .30            .50           .20            .40         Metasploitable2
-   (root)   (Administrator) (socadmin)    (blue1)      (no SSH)       (ubuntu)          .70
+   (root)   (Administrator) (socadmin)    (blue1)   (pentest\admin)    (ubuntu)          .70
 
                                  |
                                  |  separate, isolated network: monitor-net
@@ -75,7 +75,7 @@ Security Onion has two NICs: `pentest-lab` (.30, Fleet/Kibana/SSH/web) and `moni
 |---|---|---|---|---|---|
 | 192.168.50.1 | OPNsense (firewall/gateway) | `OPNsense-FW` | `opnsense` | `root` | ✅ |
 | 192.168.50.10 | DC01 (AD, PDC Emulator, domain `pentest.lab`) | `DC01` | `dc01` | `Administrator` | ✅ |
-| 192.168.50.20 | WIN11-01 (domain-joined as `DESKTOP-EFKB8GQ`) | `WIN11-01` | *(none — no SSH)* | — | ✅ |
+| 192.168.50.20 | WIN11-01 (domain-joined as `DESKTOP-EFKB8GQ`) | `WIN11-01` | `win11-01` | `pentest\administrator` (key auth not set up) | ✅ |
 | 192.168.50.30 | Security Onion 3.1.0 (SIEM/IDS/Fleet) | `SOC-SecurityOnion` | `security-onion` | `socadmin` | ✅ |
 | 192.168.50.40 | ubuntu-server-01 (live OWASP Juice Shop on :3000) | `ubuntu-server-01` | `ubuntu-server` | `ubuntu` (key auth not set up) | ✅ |
 | 192.168.50.50 | Kali Linux (Red Team) | ` ATTACK-Kali` ⚠️ *leading space in the name* | `kali` | `blue1` | ✅ |
@@ -158,7 +158,7 @@ DC=pentest,DC=lab
 
 ### 3.4 WIN11-01 — Windows 11 workstation
 
-IP `.20`, no SSH. Domain-joined as `DESKTOP-EFKB8GQ` (never renamed, still in default `Computers` container). Only TCP 135 reachable — Windows Firewall blocks SMB/RDP/WinRM/139 from the lab network; no remote-admin path except the VM console. ⚠️ Intended training purpose still undecided beyond "becomes a target after cleanup" — [§12](#12-attack-scope-agreed-red-team-test-plan).
+IP `.20`, SSH alias `win11-01` (`pentest\administrator`, added 2026-07-14 — see `docs/troubleshooting/09_win11-01_ssh_access.md`). Domain-joined as `DESKTOP-EFKB8GQ` (never renamed, still in default `Computers` container). As of 2026-07-13, only TCP 135 was reachable; SMB/RDP/WinRM/139 were blocked by Windows Firewall. As of 2026-07-14, port 22 (SSH) is also open — Joost enabled OpenSSH Server himself via the VM console, a deliberate change, not a regression. Other ports not re-verified this session, assumed unchanged. ⚠️ Intended training purpose still undecided beyond "becomes a target after cleanup" — [§12](#12-attack-scope-agreed-red-team-test-plan).
 
 ### 3.5 ubuntu-server-01 — Linux server, active Red Team target
 
@@ -298,8 +298,7 @@ Bazzite has no `gnome-terminal` — all terminal launchers use Konsole specifica
 | `security-onion` | .30 | socadmin | Key auth works |
 | `kali` | .50 | blue1 | Key auth works |
 | `ubuntu-server` | .40 | ubuntu | Key auth not set up |
-
-WIN11-01 excluded (no SSH server, normal for Windows 11).
+| `win11-01` | .20 | `pentest\administrator` | Added 2026-07-14, key auth not set up (see `docs/troubleshooting/09_win11-01_ssh_access.md`) |
 
 ### 5.6 Quick reference
 
@@ -419,7 +418,7 @@ _Full detail: `docs/ASSET_INVENTORY.md`._
 |---|---|---|---|
 | `OPNsense-FW` | .1 | `opnsense`/root | Firewall/gateway |
 | `DC01` | .10 | `dc01`/Administrator | Windows Server 2022, AD DC, domain `pentest.lab` |
-| `WIN11-01` | .20 | none | Windows 11, domain-joined as `DESKTOP-EFKB8GQ` |
+| `WIN11-01` | .20 | `win11-01`/`pentest\administrator` | Windows 11, domain-joined as `DESKTOP-EFKB8GQ` |
 | `SOC-SecurityOnion` | .30 | `security-onion`/socadmin | Security Onion 3.1.0 standalone |
 | `ubuntu-server-01` | .40 | `ubuntu-server`/ubuntu (no key auth) | Linux server, live Juice Shop on :3000 |
 | ` ATTACK-Kali` | .50 | `kali`/blue1 | Red Team workstation |
@@ -512,7 +511,7 @@ _Full detail: `docs/PROJECT_STATUS.md`._
 
 ### ✅ Done
 
-Base infrastructure (all 7 VMs on `pentest-lab`) · event-driven traffic mirroring · AD operational · Security Onion operational (web UI, Kibana, Fleet, Hunt) · DC01 Healthy in Fleet, survives restarts/reboots · passwordless SSH to security-onion/kali/dc01 · four desktop launchers · read-only web-audit script · this documentation structure · live network/asset/AD verification pass (2026-07-13) · read-only OPNsense configuration audit (2026-07-13) · Elastic Agent on the Bazzite host itself, Healthy, confirmed reboot-survival, plus a central health-check script covering it and all 7 lab VMs (2026-07-14).
+Base infrastructure (all 7 VMs on `pentest-lab`) · event-driven traffic mirroring · AD operational · Security Onion operational (web UI, Kibana, Fleet, Hunt) · DC01 Healthy in Fleet, survives restarts/reboots · passwordless SSH to security-onion/kali/dc01 · four desktop launchers · read-only web-audit script · this documentation structure · live network/asset/AD verification pass (2026-07-13) · read-only OPNsense configuration audit (2026-07-13) · Elastic Agent on the Bazzite host itself, Healthy, confirmed reboot-survival, plus a central health-check script covering it and all 7 lab VMs (2026-07-14) · SSH access to WIN11-01 (2026-07-14) — OpenSSH Server enabled, integrated into `~/.ssh/config` and `lab-ssh-all.sh`/`soc-health-check.sh`, giving it the same admin path as the other lab systems.
 
 ### ⚠️ Open
 

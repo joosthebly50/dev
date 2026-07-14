@@ -29,7 +29,7 @@ geverifieerd, ⚠️ = niet deze sessie geverifieerd / uit ouder document.
 |---|---|---|---|---|---|
 | `OPNsense-FW` | 192.168.50.1 | `opnsense` | `root` | OPNsense firewall/gateway | ✅ |
 | `DC01` | 192.168.50.10 | `dc01` | `Administrator` | Windows Server 2022, Active Directory Domain Controller (PDC Emulator), domein `pentest.lab` | ✅ |
-| `WIN11-01` | 192.168.50.20 | *(geen SSH — poort 135 open, 445/3389/5985/139 dicht)* | — | Windows 11 werkstation, domain-joined als `DESKTOP-EFKB8GQ` (nooit hernoemd, staat nog in default `Computers`-container i.p.v. `OU=Workstations`) | ✅ |
+| `WIN11-01` | 192.168.50.20 | `win11-01` *(✅ toegevoegd 2026-07-14 — OpenSSH Server door Joost ingeschakeld via VM-console; poort 22 nu open, was dicht)* | `pentest\administrator` (key-auth nog niet werkend — wachtwoord vereist) | Windows 11 werkstation, domain-joined als `DESKTOP-EFKB8GQ` (nooit hernoemd, staat nog in default `Computers`-container i.p.v. `OU=Workstations`) | ✅ |
 | `SOC-SecurityOnion` | 192.168.50.30 | `security-onion` | `socadmin` | Security Onion 3.1.0 standalone (SIEM/IDS/Fleet) | ✅ |
 | `ubuntu-server-01` | 192.168.50.40 *(definitief bevestigd via Kea DHCP-reservation + live-check, zie `docs/OPNSENSE_AUDIT_2026-07-13.md`)* | `ubuntu-server` | `ubuntu` (key-auth nog niet werkend — wachtwoord vereist) | Linux-server, draait actief OWASP Juice Shop (poort 3000) | ✅ (IP + rol via poortscan/HTTP), ⚠️ (login) |
 | ` ATTACK-Kali` (let op leidende spatie in naam) | 192.168.50.50 | `kali` | `blue1` | Kali Linux, Red Team-werkstation | ✅ |
