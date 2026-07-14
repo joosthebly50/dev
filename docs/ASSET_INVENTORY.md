@@ -31,7 +31,7 @@ geverifieerd, ⚠️ = niet deze sessie geverifieerd / uit ouder document.
 | `DC01` | 192.168.50.10 | `dc01` | `Administrator` | Windows Server 2022, Active Directory Domain Controller (PDC Emulator), domein `pentest.lab` | ✅ |
 | `WIN11-01` | 192.168.50.20 | *(geen SSH — poort 135 open, 445/3389/5985/139 dicht)* | — | Windows 11 werkstation, domain-joined als `DESKTOP-EFKB8GQ` (nooit hernoemd, staat nog in default `Computers`-container i.p.v. `OU=Workstations`) | ✅ |
 | `SOC-SecurityOnion` | 192.168.50.30 | `security-onion` | `socadmin` | Security Onion 3.1.0 standalone (SIEM/IDS/Fleet) | ✅ |
-| `ubuntu-server-01` | 192.168.50.100 *(gecorrigeerd — was foutief `.40`)* | `ubuntu-server` | `ubuntu` (key-auth nog niet werkend — wachtwoord vereist) | Linux-server, draait actief OWASP Juice Shop (poort 3000) | ✅ (IP + rol via poortscan/HTTP), ⚠️ (login) |
+| `ubuntu-server-01` | 192.168.50.40 *(definitief bevestigd via Kea DHCP-reservation + live-check, zie `docs/OPNSENSE_AUDIT_2026-07-13.md`)* | `ubuntu-server` | `ubuntu` (key-auth nog niet werkend — wachtwoord vereist) | Linux-server, draait actief OWASP Juice Shop (poort 3000) | ✅ (IP + rol via poortscan/HTTP), ⚠️ (login) |
 | ` ATTACK-Kali` (let op leidende spatie in naam) | 192.168.50.50 | `kali` | `blue1` | Kali Linux, Red Team-werkstation | ✅ |
 | `Target-Metasploitable2` | 192.168.50.70 *(nu geverifieerd)* | *(geen)* | — | Metasploitable2, kwetsbaar oefendoel — poortenprofiel bevestigt stock-image | ✅ |
 
@@ -106,16 +106,23 @@ Custom groepen: `SOC-Analysts` (lid: soctest), `Helpdesk` (geen leden).
 ## Openstaande verificatiepunten
 
 Opgelost deze sessie (live geverifieerd, zie boven): IP van
-`Target-Metasploitable2` (.70), werkelijk IP van `ubuntu-server-01`
-(.100, niet .40), rol van `ubuntu-server-01` (Juice Shop) en van
-`WIN11-01` (domain-joined client, dichtgetimmerde firewall), hardware-
-specs van de host, en de AD OU/groepsstructuur.
+`Target-Metasploitable2` (.70), IP van `ubuntu-server-01` (.40,
+bevestigd — inclusief een tussentijdse zelf-correctie na een OPNsense-
+audit, zie `docs/OPNSENSE_AUDIT_2026-07-13.md`), rol van
+`ubuntu-server-01` (Juice Shop) en van `WIN11-01` (domain-joined
+client, dichtgetimmerde firewall), hardware-specs van de host, de AD
+OU/groepsstructuur, en de volledige OPNsense-configuratie.
 
 Nog open:
 
-- **OPNsense SSH werkt niet meer passwordless** — `docs/PROJECT_STATUS.md`
-  noemt dit als werkend, maar 2026-07-13 gaf de `opnsense`-alias
-  `Permission denied`. Oorzaak niet onderzocht (kan expres zijn).
+- ~~OPNsense SSH werkt niet meer passwordless~~ — **opgehelderd 2026-07-13**:
+  geen regressie. De eerdere `Permission denied` kwam doordat de test met
+  `ssh -o BatchMode=yes` draaide, wat wachtwoord-prompts blokkeert.
+  OPNsense's eigen Secure Shell-instellingen (bevestigd via de
+  read-only webinterface-audit, `docs/OPNSENSE_AUDIT_2026-07-13.md`)
+  tonen wachtwoord-login als de bedoelde, normale toegangsmethode voor
+  `root` — er is nooit key-auth ingesteld voor dit systeem, dat is geen
+  fout.
 - **`ubuntu-server-01` SSH-key-login werkt niet** — poort 22 is open en
   bevestigt een Ubuntu-host, maar er is geen passwordless toegang zoals
   bij de andere systemen. Wachtwoord nodig, of key opnieuw uitrollen.

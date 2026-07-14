@@ -48,7 +48,7 @@ monitoring (vergelijkbaar met wat Wazuh zou hebben gedaan).
         +----------+----------+-------------+-------------+----------------+
         |          |          |             |             |                |
    OPNsense-FW    DC01   Security Onion  ATTACK-Kali   WIN11-01    ubuntu-server-01   Target-
-   .1 (zelf)     .10        .30            .50           .20            .100        Metasploitable2
+   .1 (zelf)     .10        .30            .50           .20            .40         Metasploitable2
    (root)     (Administrator) (socadmin)  (blue1)     (geen SSH)     (ubuntu)         .70
 
                                  |
@@ -116,7 +116,7 @@ harde evidence) geverifieerd, tenzij anders aangegeven.
 | `DC01` | 192.168.50.10 | `dc01` | `Administrator` | Windows Server 2022, Active Directory Domain Controller (PDC Emulator), domein `pentest.lab` |
 | `WIN11-01` | 192.168.50.20 | *(geen)* | — | Windows 11 werkstation. Geen SSH-server, dus niet via een alias bereikbaar. |
 | `SOC-SecurityOnion` | 192.168.50.30 | `security-onion` | `socadmin` | Security Onion 3.1.0, standalone — SIEM/IDS/Fleet |
-| `ubuntu-server-01` | 192.168.50.100 *(✅ gecorrigeerd 2026-07-13, was foutief `.40`)* | `ubuntu-server` | `ubuntu` (key-auth nog niet werkend) | Linux-server, draait actief OWASP Juice Shop op poort 3000 |
+| `ubuntu-server-01` | 192.168.50.40 *(✅ definitief bevestigd 2026-07-13 via OPNsense's Kea DHCP-reservation database + verse live-check — zie `docs/OPNSENSE_AUDIT_2026-07-13.md`; eerder op de dag kort gezien op `.100`, een tijdelijk dynamisch-pool-adres)* | `ubuntu-server` | `ubuntu` (key-auth nog niet werkend) | Linux-server, draait actief OWASP Juice Shop op poort 3000 |
 | ` ATTACK-Kali` *(let op: naam heeft een leidende spatie in libvirt — bekende bug, zie troubleshooting)* | 192.168.50.50 | `kali` | `blue1` | Red Team-werkstation, penetratietests |
 | `Target-Metasploitable2` | 192.168.50.70 *(✅ geverifieerd 2026-07-13)* | *(geen)* | — | Opzettelijk kwetsbaar doelsysteem (bevestigd stock Metasploitable2-poortenprofiel), alleen voor exploitatie-oefening |
 

@@ -7,5 +7,6 @@ evidence/
 # live here once logged in) and captured screenshots/reports -- never
 # committed, regardless of how the browser/ directory structure evolves.
 browser/profile/
+browser/profile-opnsense/
 browser/artifacts/
 browser/node_modules/
