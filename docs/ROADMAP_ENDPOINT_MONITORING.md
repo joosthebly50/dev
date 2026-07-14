@@ -1,11 +1,13 @@
 # Roadmap: Elastic Agent-uitrol naar overige endpoints
 
-**Status: voorstel/planning, niets hiervan is uitgevoerd.** Dit document
-beschrijft welke endpoints nog geen Elastic Agent-telemetrie naar Security
-Onion sturen, welke daarvan kandidaat zijn voor uitrol, in welke volgorde,
-en welke bewust buiten scope blijven — als vervolg op de agent die nu op
-de Bazzite-host zelf draait (log/metrics-only, journald-based, zie
-`browser/fleet-setup-linux-agent.mjs`).
+**Status: WIN11-01 (prioriteit 1) is uitgevoerd en geverifieerd
+(2026-07-14, zie `docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`).
+`ubuntu-server-01` en Kali staan nog als planning/niet uitgevoerd.** Dit
+document beschrijft welke endpoints nog geen Elastic Agent-telemetrie naar
+Security Onion sturen, welke daarvan kandidaat zijn voor uitrol, in welke
+volgorde, en welke bewust buiten scope blijven — als vervolg op de agent
+die nu op de Bazzite-host zelf draait (log/metrics-only, journald-based,
+zie `browser/fleet-setup-linux-agent.mjs`).
 
 Elke daadwerkelijke uitrol is een infrastructuurwijziging en volgt de
 normale procedure: uitleggen → risico → bevestiging van Joost → uitvoeren
@@ -20,7 +22,7 @@ normale procedure: uitleggen → risico → bevestiging van Joost → uitvoeren
 | `DC01` (.10) | ✅ Ja, **Healthy** in Fleet | Windows Event Logs, Sysmon (SwiftOnSecurity-config), metrics | `elastic_agent_endpoint`, `beats_endpoint`, `endgame` (zie `docs/guides/network_ports_and_hostgroups.md`) |
 | Bazzite-host (.1-net, host zelf) | ✅ Ja, Healthy | journald (`system.auth`, `system.syslog`), system-metrics — **geen** Elastic Defend, bewuste scope-keuze | `elastic_agent_endpoint`, `beats_endpoint` (geen `endgame` — geen Elastic Defend geconfigureerd) |
 | `SOC-SecurityOnion` (.30) | N.v.t. — dit ís het platform | — | — |
-| `WIN11-01` (.20) | ❌ Nee | — | — |
+| `WIN11-01` (.20) | ✅ Ja, **Healthy** in Fleet (2026-07-14) | Windows Event Logs, Sysmon (SwiftOnSecurity-config), Elastic Defend, osquery, metrics — zelfde `endpoints-initial`-policy als DC01 | `elastic_agent_endpoint`, `beats_endpoint`, `endgame` |
 | `ubuntu-server-01` (.40) | ❌ Nee | — | — |
 | ` ATTACK-Kali` (.50) | ❌ Nee | — | — |
 | `OPNsense-FW` (.1) | ❌ Nee, niet van toepassing | — | — |
@@ -31,9 +33,21 @@ normale procedure: uitleggen → risico → bevestiging van Joost → uitvoeren
 
 ## Kandidaten voor uitrol, op prioriteit
 
-### 1. WIN11-01 — hoogste prioriteit
+### 1. WIN11-01 — hoogste prioriteit — ✅ UITGEVOERD 2026-07-14
 
-**Waarom:** WIN11-01 is al aangewezen als toekomstig Tier 3-doelwit voor
+**Uitgevoerd en geverifieerd** — Sysmon 15.21 + SwiftOnSecurity-config en
+Elastic Agent 9.3.3 draaien, enrolled in de bestaande `endpoints-initial`-
+policy (inclusief Elastic Defend, bewuste keuze). Healthy in Fleet
+(na ~12 minuten stabilisatietijd, vergelijkbaar met DC01's eerder
+gedocumenteerde patroon), bevestigd in Hunt met actuele Sysmon- en
+Elastic Defend-telemetrie. Volledig verhaal, inclusief een onderzochte
+maar niet-bevestigde firewall-hypothese:
+`docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`. De
+onderstaande planningstekst blijft staan als het oorspronkelijke recept
+(gevolgd, op de policy-keuze na — geen nieuwe policy aangemaakt, de
+bestaande DC01-policy hergebruikt).
+
+**Waarom (oorspronkelijke planning):** WIN11-01 is al aangewezen als toekomstig Tier 3-doelwit voor
 lateral-movement-oefeningen (masterdoc §12, agreed scope). Zonder een
 agent op WIN11-01 kan Security Onion een aanval daarop domweg niet zien
 op host-niveau (event logs, Sysmon-procescreatie) — alleen het netwerk-
@@ -124,14 +138,20 @@ beantwoord moet worden. Tot die tijd voegt het weinig toe.
 
 ## Samenvatting: aanbevolen volgorde
 
-1. **WIN11-01** — hoogste waarde, direct gekoppeld aan de al afgesproken
-   §12-aanvalsplanning; combineer met de WIN11-01-opschoonstap.
-2. **ubuntu-server-01** — lage moeite (bestaand, herbruikbaar script),
-   reële meerwaarde tijdens Tier 1/2-oefeningen.
+1. **WIN11-01** — ✅ **uitgevoerd 2026-07-14**, zie
+   `docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`. De
+   §12-WIN11-01-opschoonstap (verplaatsen naar `OU=Workstations`, etc.)
+   staat nog los open, zie de master doc §12.
+2. **ubuntu-server-01** — nog te doen. Lage moeite (bestaand, herbruikbaar
+   script), reële meerwaarde tijdens Tier 1/2-oefeningen.
 3. **ATTACK-Kali** — optioneel, uitstellen tot een concrete Purple Team-
    oefening erom vraagt.
 4. OPNsense, Metasploitable2, MGMT-Debian — bewust niet gepland (zie
    redenen hierboven).
+
+**De endpoint-monitoringfase als geheel is pas afgerond zodra ook
+`ubuntu-server-01` (en, indien opgepakt, Kali) klaar zijn** — WIN11-01
+alleen is prioriteit 1, niet de hele fase.
 
 Elke stap hierboven vereist, wanneer die daadwerkelijk wordt uitgevoerd:
 een aparte, expliciete goedkeuring — dit document is de planning, niet de

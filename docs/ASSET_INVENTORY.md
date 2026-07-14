@@ -56,6 +56,9 @@ geverifieerd, ⚠️ = niet deze sessie geverifieerd / uit ouder document.
 | Sysmon (op DC01) | 15.21 (schema 4.91) | ✅, geïnstalleerd 2026-07-13 |
 | Sysmon-configuratie | SwiftOnSecurity, schema 4.50 | ✅ |
 | Windows Server (DC01) | Windows Server 2022 Standard Evaluation | ✅ |
+| Elastic Agent (op WIN11-01) | 9.3.3 | ✅, Healthy in Fleet, geïnstalleerd + geverifieerd 2026-07-14 (zie `docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`) |
+| Sysmon (op WIN11-01) | 15.21 (schema 4.91), SwiftOnSecurity-config | ✅, geïnstalleerd 2026-07-14 |
+| Windows 11 (WIN11-01) | Windows 11 Enterprise Evaluation | ✅ |
 
 ---
 

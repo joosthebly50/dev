@@ -295,7 +295,19 @@ Covers:
 - OpenSSH Server enabled on WIN11-01 (by Joost, via VM console — no other ports touched)
 - Independent verification of the new SSH access before any config/doc change
 - `~/.ssh/config`, `scripts/lab-ssh-all.sh`, `scripts/soc-health-check.sh` all updated to include WIN11-01 like every other lab host
-- Key auth not yet set up (password still required, same open item as `ubuntu-server-01`)
+- Key auth confirmed working later the same day (addendum) — `win11-01` is the standard access path, same as every other lab system
+
+
+---
+
+## 10_win11-01_sysmon_elastic_agent.md
+
+Covers:
+
+- Sysmon + Elastic Agent rolled out to WIN11-01 over SSH, reusing DC01's existing `endpoints-initial` Fleet policy (including Elastic Defend)
+- Fleet's ~12-minute `Starting` stabilization delay after enrollment, and why it wasn't a stuck state
+- A `wsasend` connection-reset message investigated and explicitly **not** confirmed as a fault — same message also occurs on DC01's healthy agent; the firewall hostgroup step tested was a no-op, not a fix
+- Final validation via Hunt: real Sysmon/Elastic Defend telemetry confirmed, no data loss observed
 
 
 ---

@@ -71,6 +71,24 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   geen wachtwoord nodig) — `win11-01` is vanaf nu de standaard
   SSH-toegang voor dit systeem, net als bij Bazzite/security-onion. Zie
   `docs/troubleshooting/09_win11-01_ssh_access.md`.
+- ✅ Sysmon + Elastic Agent uitgerold naar WIN11-01 (via SSH gescript,
+  zelfde `endpoints-initial`-policy als DC01, inclusief Elastic Defend —
+  bewuste keuze i.v.m. de geplande Tier 3-aanvalsrol). Fleet stond na
+  enrollment ~12 minuten op "Starting" voordat het naar
+  Healthy/`online`/`Running` omsloeg — vergelijkbaar met DC01's eerder
+  gedocumenteerde stabilisatietijd, geen vastzittende staat. Alle
+  verwachte componenten HEALTHY (Elastic Defend, osquery, Windows
+  metrics, winlog incl. Sysmon Operational, filestream monitoring).
+  Bevestigd in Hunt: ~6.351 events totaal, ~1.004 Sysmon-events, actuele
+  activiteit. Een `wsasend`-foutmelding op poort 5055 werd onderzocht en
+  **niet** bevestigd als oorzaak van iets — DC01 vertoonde dezelfde
+  melding op hetzelfde moment terwijl die agent Healthy was; de
+  firewall-hostgroups bleken al correct ingesteld vóór de herbevestiging
+  ervan (`so-firewall apply` was een no-op, geen aantoonbare fix). Geen
+  nieuwe packet capture uitgevoerd, dus "geen TCP RST's" wordt niet als
+  claim gedaan. Zie `docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`.
+  Dit rondt prioriteit 1 van de endpoint-monitoringfase af — `ubuntu-server-01`
+  en Kali staan nog open, zie `docs/ROADMAP_ENDPOINT_MONITORING.md`.
 
 ---
 
@@ -88,8 +106,10 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
 - ⚠️ OPNsense en ubuntu-server hadden oorspronkelijk nog geen
   passwordless SSH-key opgezet (uit een eerdere sessie — status niet
   opnieuw gecontroleerd deze sessie).
-- ⚠️ WIN11-01, ubuntu-server-01 en Kali hebben nog geen Elastic Agent.
-  Uitrolvolgorde en motivatie: `docs/ROADMAP_ENDPOINT_MONITORING.md`.
+- ⚠️ `ubuntu-server-01` en Kali hebben nog geen Elastic Agent (WIN11-01 is
+  klaar, zie hierboven). Uitrolvolgorde en motivatie:
+  `docs/ROADMAP_ENDPOINT_MONITORING.md`. De endpoint-monitoringfase als
+  geheel is pas afgerond zodra ook deze twee klaar zijn.
 
 ---
 
