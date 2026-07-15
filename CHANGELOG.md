@@ -6,6 +6,20 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## SOC Alarmdashboard v2: 15 Attack Categories, Settings, Priority/Cooldown/Escalation Voice Logic
+
+Major extension of the same-day SOC Alarmdashboard, following Joost's "SOC Dashboard v2 Roadmap." Expanded the categorization from 7 to 15 attack-type buckets (Recon, Enumeration, OS Fingerprinting, Exploit, Privilege Escalation, Reverse Shell, Persistence, Credential Access, Lateral Movement, MITM, Wireless, SQL Injection, XSS, DoS, Other), each documented with its matching Suricata signature/classtype patterns in `docs/guides/alarm_dashboard.md`. Found and fixed two real categorization bugs during this work (an Nmap-detection signature falling into Exploit instead of Recon, and a genuine Shellshock exploit signature almost getting swallowed by an overly broad Privilege Escalation classtype check) -- both traced to Suricata's classtype free-text fields being reused across unrelated rule types, not a reliable category signal on their own.
+
+Architecture change: voice-announcement decisions (which category to speak, cooldown, escalation, severity filter) moved entirely client-side, driven by a new settings panel (voice choice among the four compared Piper voices, speed, per-category cooldown, Critical/Critical+High/All severity filter) persisted to localStorage. The server no longer pre-decides what to speak; it exposes every categorized alert and synthesizes ONE on-demand clip per client-initiated announcement via a new `/api/tts/generate` endpoint. Implements Joost's explicit voice rules: group identical alerts, speak only a genuinely new category or an escalation to higher priority, respect the cooldown, and when several categories fire in the same batch, speak only the highest-priority one.
+
+Considered and explicitly rejected the browser's native Speech Synthesis API (Joost's original suggestion) after testing: `speechSynthesis` exists in this Chrome/Flatpak-on-Linux environment but `getVoices()` returns zero voices (a known platform limitation, no local TTS engine bridged in) -- would have been silent. Kept Piper as the backend per Joost's follow-up decision; all requested settings (voice/speed/cooldown/filter) are achievable with it natively.
+
+Critical-severity alerts get a more elaborate spoken form ("Warning. Reverse shell detected from Kali to Metasploitable 2.") using hostnames for both source and target, via a new `--verbose` mode in `tts/synth.py`. Severity mapping documented explicitly since Suricata only has low/medium/high natively, no native "Critical" level.
+
+Verified live: a batch containing both RECON and OS_FINGERPRINT alerts produced exactly one popup/clip, for the higher-priority OS_FINGERPRINT category (confirmed via `page.locator('.banner').count() === 1` and a screenshot showing the counter/row highlight). One real bug found mid-session (Joost reported overlapping audio) traced to two causes: the old per-signature voice system still running mid-upgrade, and two separate Chrome windows independently polling and playing sound (`flatpak ps` showed 2 instances; `pgrep` doesn't reliably see Flatpak processes) -- added a 2-second gap between queued announcements per Joost's request regardless.
+
+Full detail: `docs/guides/alarm_dashboard.md`.
+
 ## New Rule: Snapshot Before Every Tier 2/3 Exploit, Restore Clean State After
 
 Joost's instruction right after the vsftpd exploit: every lab machine must stay clean. Standing rule from now on for all Tier 2/3 work: take a VM snapshot before running any exploitation technique, and restore a clean state immediately after — either by removing whatever the technique left behind, or, if that can't be confirmed, by reloading the pre-exploit snapshot.

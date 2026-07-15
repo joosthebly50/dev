@@ -1,0 +1,11 @@
+import { chromium } from 'playwright';
+const browser = await chromium.connectOverCDP('http://127.0.0.1:9223');
+const context = browser.contexts()[0];
+const page = await context.newPage();
+await page.goto('http://127.0.0.1:8765', { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(1500);
+const path = process.argv[2] || '/var/home/Joost/Homelab/browser/artifacts/dashboard-screenshot.png';
+await page.screenshot({ path, fullPage: false });
+console.log('screenshot:', path);
+await page.close();
+process.exit(0);

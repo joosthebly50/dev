@@ -4,15 +4,17 @@
 // Polls Security Onion's Hunt (via the existing, already-authenticated
 // browser daemon on CDP port 9223 -- same pattern as every diag-hunt-*.mjs
 // script this session) for new Suricata alerts, categorizes each into one
-// of the attack-type buckets Joost asked for (ping/scan, exploit, reverse
-// shell, DDoS, SQL injection, XSS), and serves a local dashboard page that
-// shows a banner + plays a sound per category.
+// of the 15 attack-type buckets (categorize.mjs), and serves a local
+// dashboard page.
 //
-// Dedup: today a single gobuster run produced 3,637 alerts on one
-// signature. Every alert is still counted and shown in the feed, but the
-// banner/sound for a given signature is throttled to at most once per
-// NOTIFY_COOLDOWN_MS, so the dashboard stays usable instead of becoming a
-// wall of identical popups.
+// Voice-announcement DECISIONS (which category to speak, cooldown,
+// escalation, severity filter) live entirely client-side in
+// dashboard.html, driven by user-adjustable settings -- this server only
+// exposes every categorized alert and, on request, synthesizes ONE
+// on-demand spoken clip via /api/tts/generate. It never decides on its
+// own what should be spoken; that decision needs settings this process
+// doesn't have (and shouldn't -- restarting the server would otherwise
+// reset them).
 import http from 'node:http';
 import { attachToDaemon } from '../lib/browser.mjs';
 import { BASE } from '../lib/pages.mjs';
@@ -30,17 +32,13 @@ const execFileP = promisify(execFile);
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const PORT = 8765;
 const POLL_INTERVAL_MS = 20_000;
-const NOTIFY_COOLDOWN_MS = 60_000;
 const LOOKBACK_ON_START_MS = 2 * 60_000;
 
 // Spoken alerts: a two-tone siren + Piper (offline neural TTS, female
-// voice, Joost picked en_US-hfc_female-medium 2026-07-15) announcement of
-// category + signature + attacker IP + the friendly name of the system
-// under attack (per Joost's request: source IP only, target by name not
-// raw destination IP -- easier to act on at a glance). Generated on
-// demand per notify-worthy alert; cached under ~/.cache so re-generating
-// the same alert (e.g. after a server restart within the same poll
-// window) is free.
+// voice, Joost picked en_US-hfc_female-medium 2026-07-15). Generated on
+// demand (POST /api/tts/generate) when the client decides to announce;
+// cached under ~/.cache keyed by content so repeat requests (e.g. the
+// same category firing again after its cooldown) are free.
 const TTS_SCRIPT = path.join(DIR, 'tts', 'synth.py');
 const TTS_CACHE_DIR = path.join(os.homedir(), '.cache', 'soc-alarm-dashboard', 'tts-cache');
 fs.mkdirSync(TTS_CACHE_DIR, { recursive: true });
@@ -60,25 +58,54 @@ function hostLabel(ip) {
   return HOST_NAMES[ip] || ip;
 }
 
-async function synthesizeAudio(alert) {
-  const hash = crypto.createHash('sha1').update(alert.id).digest('hex').slice(0, 16);
+// Suricata's severity field (low/medium/high) is what this lab's
+// ruleset actually exposes -- there is no native "Critical" level.
+// Mapped onto the roadmap's Critical/High/Medium filter language as:
+// high -> Critical, medium -> High, low -> Medium. Documented here since
+// it's a deliberate approximation, not a Suricata-native concept.
+function severityToFilterLevel(severity) {
+  if (severity === 'high') return 'critical';
+  if (severity === 'medium') return 'high';
+  return 'medium';
+}
+
+// The four voices actually downloaded and compared live 2026-07-15 --
+// mirrors tts/synth.py's KNOWN_VOICES. Whitelisted here too so an
+// arbitrary client-supplied string never reaches the python subprocess.
+const KNOWN_VOICES = new Set([
+  'en_US-hfc_female-medium',
+  'en_US-amy-medium',
+  'en_GB-jenny_dioco-medium',
+  'en_GB-alba-medium',
+]);
+
+async function synthesizeSpokenClip({ bucket, srcIp, dstIp, verbose, voice, rate }) {
+  const categoryLabel = (CATEGORIES[bucket] || CATEGORIES.OTHER).voiceLabel;
+  const targetLabel = hostLabel(dstIp);
+  // Verbose (Critical/High) mode speaks hostnames for both sides, matching
+  // Joost's own examples ("... from ATTACK-Kali to Metasploitable Two");
+  // normal mode keeps the shorter source-IP form already validated earlier.
+  const sourceLabel = verbose ? hostLabel(srcIp) : (srcIp || 'unknown');
+  const safeVoice = KNOWN_VOICES.has(voice) ? voice : 'en_US-hfc_female-medium';
+  const safeRate = Number.isFinite(rate) && rate >= 0.5 && rate <= 2.0 ? rate : 1.0;
+  const key = `${bucket}|${sourceLabel}|${targetLabel}|${verbose ? 'v' : 's'}|${safeVoice}|${safeRate}`;
+  const hash = crypto.createHash('sha1').update(key).digest('hex').slice(0, 16);
   const filename = `${hash}.wav`;
   const outPath = path.join(TTS_CACHE_DIR, filename);
-  const categoryLabel = (CATEGORIES[alert.bucket] || CATEGORIES.OTHER).voiceLabel;
-  const targetLabel = hostLabel(alert.dstIp);
 
   if (!fs.existsSync(outPath)) {
     await execFileP('python3', [
-      TTS_SCRIPT, outPath, categoryLabel, alert.srcIp, targetLabel,
+      TTS_SCRIPT, outPath, categoryLabel, sourceLabel, targetLabel,
+      '--voice', safeVoice, '--rate', String(safeRate),
+      ...(verbose ? ['--verbose'] : []),
     ]);
   }
-  alert.audioUrl = `/api/tts/${filename}`;
+  return `/api/tts/${filename}`;
 }
 
 let alerts = []; // newest first, capped
 const MAX_ALERTS = 500;
 const seenKeys = new Set();
-const lastNotifiedAt = new Map(); // signature -> ms epoch
 let lastCheckedISO = new Date(Date.now() - LOOKBACK_ON_START_MS).toISOString();
 let pollErrors = 0;
 let lastPollOk = null;
@@ -116,36 +143,16 @@ async function pollOnce(page) {
     seenKeys.add(key);
 
     const bucket = categorize(signature, category);
-    const now = Date.now();
-    const lastNotify = lastNotifiedAt.get(signature) || 0;
-    const shouldNotify = now - lastNotify >= NOTIFY_COOLDOWN_MS;
-    if (shouldNotify) lastNotifiedAt.set(signature, now);
 
-    const alert = {
+    alerts.unshift({
       id: key,
       timestamp: ts,
       srcIp, srcPort, dstIp, dstPort,
       signature, category, severity,
       bucket,
-      notify: shouldNotify,
-      receivedAt: now,
-    };
-
-    // Synthesize BEFORE exposing the alert to the frontend's incremental
-    // (since=) poll -- each alert is only ever delivered to the dashboard
-    // once, so if audioUrl weren't set yet on first delivery, the voice
-    // clip would never play. Adds ~1-2s per notify-worthy alert to this
-    // poll cycle, which is fine given the 60s-per-signature dedup keeps
-    // volume low.
-    if (shouldNotify) {
-      try {
-        await synthesizeAudio(alert);
-      } catch (e) {
-        console.error('[tts error]', e.message);
-      }
-    }
-
-    alerts.unshift(alert);
+      filterLevel: severityToFilterLevel(severity),
+      receivedAt: Date.now(),
+    });
     addedCount++;
     if (ts > newest) newest = ts;
   }
@@ -178,13 +185,38 @@ async function pollLoop() {
   }
 }
 
-const server = http.createServer((req, res) => {
+function readJsonBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', (chunk) => { body += chunk; });
+    req.on('end', () => {
+      try { resolve(body ? JSON.parse(body) : {}); } catch (e) { reject(e); }
+    });
+    req.on('error', reject);
+  });
+}
+
+const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
 
   if (url.pathname === '/' || url.pathname === '/index.html') {
     const html = fs.readFileSync(path.join(DIR, 'dashboard.html'), 'utf8');
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(html);
+    return;
+  }
+
+  if (url.pathname === '/api/tts/generate' && req.method === 'POST') {
+    try {
+      const { bucket, srcIp, dstIp, verbose, voice, rate } = await readJsonBody(req);
+      const audioUrl = await synthesizeSpokenClip({ bucket, srcIp, dstIp, verbose: !!verbose, voice, rate: Number(rate) });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ audioUrl }));
+    } catch (e) {
+      console.error('[tts generate error]', e.message);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
     return;
   }
 

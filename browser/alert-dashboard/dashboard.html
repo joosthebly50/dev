@@ -42,16 +42,35 @@
   .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 0.4rem; background: var(--muted); }
   .dot.live { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
   .dot.stale { background: var(--exploit); }
-  #mute { background: var(--surface-2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.35rem 0.8rem; cursor: pointer; font-size: 0.8rem; }
+  #mute, #settingsBtn { background: var(--surface-2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.35rem 0.8rem; cursor: pointer; font-size: 0.8rem; }
   #mute.muted { color: var(--exploit); border-color: var(--exploit); }
 
+  #settingsPanel {
+    position: fixed; top: 3.4rem; right: 1.4rem; z-index: 60;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.2rem; width: 280px; box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+    display: none; font-size: 0.85rem;
+  }
+  #settingsPanel.open { display: block; }
+  #settingsPanel h3 { margin: 0 0 0.8rem; font-size: 0.9rem; }
+  #settingsPanel label { display: block; margin-top: 0.9rem; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  #settingsPanel select, #settingsPanel input[type="number"] {
+    width: 100%; margin-top: 0.3rem; background: var(--surface-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem 0.5rem; font-size: 0.85rem;
+  }
+  #settingsPanel input[type="range"] { width: 100%; margin-top: 0.4rem; }
+  #settingsPanel .rangeval { color: var(--muted); font-size: 0.72rem; float: right; }
+  #settingsPanel .radiorow { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.4rem; font-size: 0.82rem; text-transform: none; letter-spacing: 0; color: var(--text); }
+
   .counters {
-    display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 1px;
     background: var(--border); border-bottom: 1px solid var(--border);
   }
-  .counter { background: var(--surface); padding: 0.7rem 0.9rem; text-align: center; }
-  .counter .n { font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 1.5rem; font-weight: 700; }
-  .counter .l { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-top: 0.15rem; }
+  .counter { background: var(--surface); padding: 0.55rem 0.5rem; text-align: center; transition: background 0.3s; }
+  .counter .n { font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 1.25rem; font-weight: 700; }
+  .counter .l { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); margin-top: 0.1rem; line-height: 1.2; }
+  .counter.flash { animation: counterflash 1.8s ease-out; }
+  @keyframes counterflash { 0%, 40% { background: var(--flash-color, var(--ok)); } 100% { background: var(--surface); } }
 
   main { flex: 1; overflow-y: auto; padding: 1rem 1.4rem 2rem; }
   .feed { display: flex; flex-direction: column; gap: 0.5rem; max-width: 1100px; margin: 0 auto; }
@@ -67,29 +86,31 @@
   .row .bucket { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
   .row .sig { }
   .row .net { color: var(--muted); font-size: 0.76rem; text-align: right; white-space: nowrap; }
+  .row.flash { animation: rowflash 1.8s ease-out; }
+  @keyframes rowflash { 0%, 40% { box-shadow: 0 0 0 2px var(--flash-color, var(--ok)) inset; } 100% { box-shadow: none; } }
   .empty { color: var(--muted); text-align: center; padding: 3rem 1rem; }
 
+  /* Small popup, top-right -- one per announced category, not one per alert */
   #banner-stack {
-    position: fixed; top: 4.6rem; left: 50%; transform: translateX(-50%);
-    z-index: 50; display: flex; flex-direction: column; gap: 0.6rem; pointer-events: none;
-    width: min(640px, 92vw);
+    position: fixed; top: 3.4rem; right: 1.4rem;
+    z-index: 55; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none;
+    width: min(320px, 88vw);
   }
   .banner {
-    border-radius: 12px; padding: 1rem 1.3rem; color: #fff;
+    border-radius: 10px; padding: 0.75rem 1rem; color: #fff;
     box-shadow: 0 10px 30px rgba(0,0,0,0.45);
-    display: flex; align-items: center; gap: 0.9rem;
-    animation: slidein 0.35s cubic-bezier(.2,.8,.2,1), fadeout 0.5s ease-in forwards 9.5s;
+    display: flex; align-items: flex-start; gap: 0.65rem;
+    animation: slidein 0.3s cubic-bezier(.2,.8,.2,1), fadeout 0.4s ease-in forwards 5.2s;
   }
-  @keyframes slidein { from { opacity: 0; transform: translateY(-16px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
-  @keyframes fadeout { to { opacity: 0; transform: translateY(-8px); } }
-  .banner .icon { font-size: 1.8rem; line-height: 1; }
+  @keyframes slidein { from { opacity: 0; transform: translateX(16px) scale(0.98); } to { opacity: 1; transform: translateX(0) scale(1); } }
+  @keyframes fadeout { to { opacity: 0; transform: translateX(8px); } }
+  .banner .icon { font-size: 1.3rem; line-height: 1.1; }
   .banner .body { flex: 1; min-width: 0; }
-  .banner .btitle { font-weight: 700; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.03em; }
-  .banner .bsig { font-size: 0.88rem; opacity: 0.95; margin-top: 0.15rem; }
-  .banner .bnet { font-family: ui-monospace, monospace; font-size: 0.78rem; opacity: 0.85; margin-top: 0.3rem; }
+  .banner .btitle { font-weight: 700; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .banner .bsig { font-size: 0.76rem; opacity: 0.95; margin-top: 0.1rem; }
 
   @media (prefers-reduced-motion: reduce) {
-    .row, .banner { animation: none !important; }
+    .row, .banner, .counter { animation: none !important; }
   }
 </style>
 </head>
@@ -101,8 +122,32 @@
       <span><span id="statusDot" class="dot"></span><span id="statusText">verbinden...</span></span>
       <span id="totalCount" class="mono">0 alerts</span>
       <button id="mute">🔊 Geluid aan</button>
+      <button id="settingsBtn">⚙️ Instellingen</button>
     </div>
   </header>
+
+  <div id="settingsPanel">
+    <h3>🎙️ Voice-instellingen</h3>
+
+    <label>🎤 Stem</label>
+    <select id="setVoice">
+      <option value="en_US-hfc_female-medium">HFC Female (US)</option>
+      <option value="en_US-amy-medium">Amy (US)</option>
+      <option value="en_GB-jenny_dioco-medium">Jenny (GB)</option>
+      <option value="en_GB-alba-medium">Alba (GB)</option>
+    </select>
+
+    <label>🗣 Spreeksnelheid <span class="rangeval" id="rateVal">1.0x</span></label>
+    <input type="range" id="setRate" min="0.75" max="1.5" step="0.05" value="1.0">
+
+    <label>⏱ Cooldown per categorie <span class="rangeval" id="cooldownVal">30s</span></label>
+    <input type="range" id="setCooldown" min="10" max="120" step="5" value="30">
+
+    <label>🚨 Uitspreken bij</label>
+    <div class="radiorow"><input type="radio" name="filterLevel" id="filterCritical" value="critical"><label for="filterCritical" style="display:inline;text-transform:none;color:inherit">Alleen Critical</label></div>
+    <div class="radiorow"><input type="radio" name="filterLevel" id="filterHigh" value="high"><label for="filterHigh" style="display:inline;text-transform:none;color:inherit">Critical + High</label></div>
+    <div class="radiorow"><input type="radio" name="filterLevel" id="filterAll" value="all"><label for="filterAll" style="display:inline;text-transform:none;color:inherit">Alles uitspreken</label></div>
+  </div>
 
   <div class="counters" id="counters"></div>
 
@@ -111,18 +156,63 @@
 <div id="banner-stack"></div>
 
 <script>
+// Mirrors browser/alert-dashboard/categorize.mjs -- keep these two in
+// sync by hand (categorize.mjs is the source of truth server-side; this
+// copy exists only because dashboard.html has no module loader). PRIORITY
+// order (highest first) matches Joost's explicit voice-announcement
+// priority and is reused here for the counters strip too.
 const CATEGORIES = {
-  REVERSE_SHELL: { label: 'Reverse Shell', color: 'var(--reverse)', icon: '💀', freq: 220 },
-  SQLI:          { label: 'SQL Injection', color: 'var(--sqli)',    icon: '🗄️', freq: 330 },
-  XSS:           { label: 'Cross-Site Scripting', color: 'var(--xss)', icon: '📜', freq: 392 },
-  DDOS:          { label: 'DDoS / DoS', color: 'var(--ddos)', icon: '🌊', freq: 262 },
-  EXPLOIT:       { label: 'Exploit', color: 'var(--exploit)', icon: '💥', freq: 196 },
-  SCAN:          { label: 'Scan / Recon', color: 'var(--scan)', icon: '🔍', freq: 494 },
-  OTHER:         { label: 'Overig', color: 'var(--other)', icon: 'ℹ️', freq: 440 },
+  REVERSE_SHELL:   { label: 'Reverse Shell',         color: '#e0316b', icon: '💀', freq: 196 },
+  PRIV_ESC:        { label: 'Privilege Escalation',  color: '#c2185b', icon: '👑', freq: 208 },
+  EXPLOIT:         { label: 'Exploit',               color: '#d13b3b', icon: '💥', freq: 220 },
+  CRED_ACCESS:     { label: 'Credential Access',     color: '#b5384a', icon: '🔑', freq: 233 },
+  LATERAL_MOVEMENT:{ label: 'Lateral Movement',      color: '#a8492f', icon: '➡️', freq: 247 },
+  PERSISTENCE:     { label: 'Persistence',           color: '#9c5a26', icon: '📌', freq: 262 },
+  MITM:            { label: 'MITM',                  color: '#8a6d1f', icon: '🕵️', freq: 277 },
+  WIRELESS:        { label: 'Wireless',              color: '#7a7a1f', icon: '📶', freq: 294 },
+  SQLI:            { label: 'SQL Injection',         color: '#8a4fd1', icon: '🗄️', freq: 330 },
+  XSS:             { label: 'Cross-Site Scripting',  color: '#c99a1f', icon: '📜', freq: 349 },
+  ENUMERATION:     { label: 'Enumeration',           color: '#3a7fc1', icon: '📋', freq: 415 },
+  OS_FINGERPRINT:  { label: 'OS Fingerprinting',     color: '#2f8fb0', icon: '🧬', freq: 440 },
+  RECON:           { label: 'Recon',                 color: '#2b8fd1', icon: '🔍', freq: 494 },
+  DOS:             { label: 'DoS',                   color: '#e0672c', icon: '🌊', freq: 262 },
+  OTHER:           { label: 'Overig',                color: '#6b7280', icon: 'ℹ️', freq: 523 },
 };
-const ORDER = ['SCAN','EXPLOIT','REVERSE_SHELL','DDOS','SQLI','XSS','OTHER'];
+const ORDER = [
+  'REVERSE_SHELL', 'PRIV_ESC', 'EXPLOIT', 'CRED_ACCESS', 'LATERAL_MOVEMENT',
+  'PERSISTENCE', 'MITM', 'WIRELESS', 'SQLI', 'XSS', 'ENUMERATION',
+  'OS_FINGERPRINT', 'RECON', 'DOS', 'OTHER',
+];
 
-let muted = false;
+function priorityRank(bucket) {
+  const i = ORDER.indexOf(bucket);
+  return i === -1 ? ORDER.length : i;
+}
+
+// --- Settings: voice on/off, voice, rate, cooldown, severity filter.
+// Persisted to localStorage so they survive a page refresh (Joost's
+// explicit requirement, SOC Dashboard v2 roadmap, 2026-07-15).
+const SETTINGS_KEY = 'soc-dashboard-voice-settings-v1';
+const DEFAULT_SETTINGS = { voiceEnabled: true, voice: 'en_US-hfc_female-medium', rate: 1.0, cooldownSec: 30, filterLevel: 'all' };
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : { ...DEFAULT_SETTINGS };
+  } catch (e) { return { ...DEFAULT_SETTINGS }; }
+}
+function saveSettings() { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
+let settings = loadSettings();
+
+function applySettingsToUI() {
+  document.getElementById('setVoice').value = settings.voice;
+  document.getElementById('setRate').value = settings.rate;
+  document.getElementById('rateVal').textContent = settings.rate.toFixed(2) + 'x';
+  document.getElementById('setCooldown').value = settings.cooldownSec;
+  document.getElementById('cooldownVal').textContent = settings.cooldownSec + 's';
+  document.getElementById('filter' + settings.filterLevel[0].toUpperCase() + settings.filterLevel.slice(1)).checked = true;
+}
+
+let muted = false; // manual quick-toggle (mute button), separate from settings.voiceEnabled
 let lastSince = 0;
 let counts = Object.fromEntries(ORDER.map(k => [k, 0]));
 let audioCtx = null;
@@ -134,56 +224,123 @@ function ensureAudio() {
 
 // Fallback synthetic beep -- used only if a spoken-alert audio clip isn't
 // available (e.g. Piper/TTS failed server-side for this alert).
-function playBeepFallback(bucket, severity) {
-  if (muted) return;
+function playBeepFallback(bucket) {
+  if (muted || !settings.voiceEnabled) return;
   try {
     const ctx = ensureAudio();
     const meta = CATEGORIES[bucket] || CATEGORIES.OTHER;
-    const beeps = severity === 'high' ? 3 : severity === 'medium' ? 2 : 1;
-    for (let i = 0; i < beeps; i++) {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'square';
-      osc.frequency.value = meta.freq;
-      gain.gain.value = 0.08;
-      osc.connect(gain).connect(ctx.destination);
-      const start = ctx.currentTime + i * 0.22;
-      gain.gain.setValueAtTime(0.08, start);
-      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.16);
-      osc.start(start);
-      osc.stop(start + 0.18);
-    }
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = meta.freq;
+    gain.gain.value = 0.08;
+    osc.connect(gain).connect(ctx.destination);
+    const start = ctx.currentTime;
+    gain.gain.setValueAtTime(0.08, start);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.16);
+    osc.start(start);
+    osc.stop(start + 0.18);
   } catch (e) { /* audio not available yet (needs a user gesture first in some browsers) */ }
 }
 
-// Spoken alert: siren + female-voice (Piper, offline neural TTS)
-// announcement generated server-side per alert. Falls back to the
-// synthetic beep if no audio clip was produced. Queued (not overlapped) --
-// each clip is ~4-9s, and two different signatures can legitimately fire
-// in the same poll cycle (dedup is per-signature, not global), which
-// would otherwise mean two voices talking over each other.
+// Spoken announcement queue -- siren + female voice (Piper, offline
+// neural TTS), one clip per announced category (not per alert). Queued
+// with a 2s gap between clips (Joost's request 2026-07-15) so two
+// announcements decided close together never talk over each other.
+const VOICE_GAP_MS = 2000;
 let voiceQueue = Promise.resolve();
-function playSpokenAlert(a) {
-  if (muted) return;
-  if (!a.audioUrl) { playBeepFallback(a.bucket, a.severity); return; }
+function playClip(audioUrl, bucket) {
   voiceQueue = voiceQueue.then(() => new Promise((resolve) => {
-    if (muted) { resolve(); return; } // re-check: could've been muted while queued
-    const audio = new Audio(a.audioUrl);
-    audio.onended = resolve;
-    audio.onerror = () => { playBeepFallback(a.bucket, a.severity); resolve(); };
-    audio.play().catch(() => { playBeepFallback(a.bucket, a.severity); resolve(); });
+    if (muted || !settings.voiceEnabled) { resolve(); return; }
+    if (!audioUrl) { playBeepFallback(bucket); setTimeout(resolve, VOICE_GAP_MS); return; }
+    const audio = new Audio(audioUrl);
+    audio.onended = () => setTimeout(resolve, VOICE_GAP_MS);
+    audio.onerror = () => { playBeepFallback(bucket); setTimeout(resolve, VOICE_GAP_MS); };
+    audio.play().catch(() => { playBeepFallback(bucket); setTimeout(resolve, VOICE_GAP_MS); });
   }));
+}
+
+// --- Announcement decision: which category (if any) gets spoken for a
+// batch of newly-arrived alerts. Rules (Joost's explicit spec,
+// 2026-07-15): don't speak every alert, group identical ones, speak only
+// a genuinely new category or an escalation (higher priority than the
+// last-announced one), respect a per-category cooldown, and when several
+// categories fire in the same batch, speak only the highest-priority one.
+const everAnnounced = new Set();
+const lastAnnouncedAt = new Map(); // bucket -> ms epoch
+let lastAnnouncedBucket = null;
+
+function passesFilter(alert) {
+  if (settings.filterLevel === 'critical') return alert.filterLevel === 'critical';
+  if (settings.filterLevel === 'high') return alert.filterLevel === 'critical' || alert.filterLevel === 'high';
+  return true; // 'all'
+}
+
+async function decideAndAnnounce(batch) {
+  if (!settings.voiceEnabled || muted) return;
+  const eligible = batch.filter(passesFilter);
+  if (!eligible.length) return;
+
+  // Highest-priority category present in this batch.
+  let best = eligible[0];
+  for (const a of eligible) {
+    if (priorityRank(a.bucket) < priorityRank(best.bucket)) best = a;
+  }
+  const bucket = best.bucket;
+  const now = Date.now();
+  const cooldownMs = settings.cooldownSec * 1000;
+  const isNew = !everAnnounced.has(bucket);
+  const isEscalation = lastAnnouncedBucket && priorityRank(bucket) < priorityRank(lastAnnouncedBucket);
+  const cooldownExpired = now - (lastAnnouncedAt.get(bucket) || 0) >= cooldownMs;
+
+  if (!(isNew || isEscalation || cooldownExpired)) return;
+
+  everAnnounced.add(bucket);
+  lastAnnouncedAt.set(bucket, now);
+  lastAnnouncedBucket = bucket;
+
+  const verbose = best.filterLevel === 'critical';
+  let audioUrl = null;
+  try {
+    const res = await fetch('/api/tts/generate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bucket, srcIp: best.srcIp, dstIp: best.dstIp, verbose, voice: settings.voice, rate: settings.rate }),
+    });
+    ({ audioUrl } = await res.json());
+  } catch (e) { /* falls back to beep in playClip */ }
+
+  playClip(audioUrl, bucket);
+  showBanner(best);
+  flashCounter(bucket);
+  flashRows(bucket);
 }
 
 function renderCounters() {
   const el = document.getElementById('counters');
   el.innerHTML = ORDER.map(k => {
     const m = CATEGORIES[k];
-    return `<div class="counter" style="border-bottom:3px solid ${m.color}">
+    return `<div class="counter" id="counter-${k}" style="border-bottom:3px solid ${m.color}">
       <div class="n" style="color:${m.color}">${counts[k]}</div>
       <div class="l">${m.icon} ${m.label}</div>
     </div>`;
   }).join('');
+}
+
+function flashCounter(bucket) {
+  const el = document.getElementById('counter-' + bucket);
+  if (!el) return;
+  const meta = CATEGORIES[bucket] || CATEGORIES.OTHER;
+  el.style.setProperty('--flash-color', meta.color);
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+}
+
+function flashRows(bucket) {
+  const meta = CATEGORIES[bucket] || CATEGORIES.OTHER;
+  document.querySelectorAll('.row[data-bucket="' + bucket + '"]').forEach((row, i) => {
+    if (i >= 5) return; // only the most recent handful, avoid flashing hundreds
+    row.style.setProperty('--flash-color', meta.color);
+    row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash');
+  });
 }
 
 function addRow(a) {
@@ -192,6 +349,7 @@ function addRow(a) {
   const meta = CATEGORIES[a.bucket] || CATEGORIES.OTHER;
   const row = document.createElement('div');
   row.className = 'row';
+  row.dataset.bucket = a.bucket;
   row.innerHTML = `
     <div class="bar" style="background:${meta.color}"></div>
     <div class="time mono">${a.timestamp.slice(11,19)}</div>
@@ -214,11 +372,10 @@ function showBanner(a) {
     <div class="body">
       <div class="btitle">${meta.label} gedetecteerd</div>
       <div class="bsig">${escapeHtml(a.signature)}</div>
-      <div class="bnet">${a.srcIp}:${a.srcPort} → ${a.dstIp}:${a.dstPort} · severity: ${a.severity}</div>
     </div>
   `;
   stack.appendChild(b);
-  setTimeout(() => b.remove(), 10200);
+  setTimeout(() => b.remove(), 5700);
 }
 
 function escapeHtml(s) {
@@ -237,10 +394,12 @@ async function poll() {
     for (const a of newOnes) {
       counts[a.bucket] = (counts[a.bucket] || 0) + 1;
       addRow(a);
-      if (a.notify) { showBanner(a); playSpokenAlert(a); }
       lastSince = Math.max(lastSince, a.receivedAt);
     }
-    if (newOnes.length) renderCounters();
+    if (newOnes.length) {
+      renderCounters();
+      decideAndAnnounce(newOnes);
+    }
   } catch (e) {
     document.getElementById('statusDot').className = 'dot stale';
     document.getElementById('statusText').textContent = 'verbinding verbroken, opnieuw proberen...';
@@ -255,6 +414,25 @@ document.getElementById('mute').addEventListener('click', () => {
   if (!muted) ensureAudio();
 });
 
+document.getElementById('settingsBtn').addEventListener('click', () => {
+  document.getElementById('settingsPanel').classList.toggle('open');
+});
+document.getElementById('setVoice').addEventListener('change', (e) => { settings.voice = e.target.value; saveSettings(); });
+document.getElementById('setRate').addEventListener('input', (e) => {
+  settings.rate = Number(e.target.value);
+  document.getElementById('rateVal').textContent = settings.rate.toFixed(2) + 'x';
+  saveSettings();
+});
+document.getElementById('setCooldown').addEventListener('input', (e) => {
+  settings.cooldownSec = Number(e.target.value);
+  document.getElementById('cooldownVal').textContent = settings.cooldownSec + 's';
+  saveSettings();
+});
+document.querySelectorAll('input[name="filterLevel"]').forEach((el) => {
+  el.addEventListener('change', (e) => { settings.filterLevel = e.target.value; saveSettings(); });
+});
+
+applySettingsToUI();
 renderCounters();
 poll();
 setInterval(poll, 3000);
