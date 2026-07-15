@@ -91,6 +91,7 @@ def main():
     parser.add_argument("source")
     parser.add_argument("target")
     parser.add_argument("--verbose", action="store_true")
+    parser.add_argument("--multiple", action="store_true", help="Repeat announcement of the same category (cooldown-triggered, not new/escalation) -- speak a calmer grouped summary instead of repeating the full sentence")
     parser.add_argument("--voice", default=DEFAULT_VOICE, choices=sorted(KNOWN_VOICES))
     parser.add_argument("--rate", type=float, default=1.0)
     parser.add_argument("--text", default=None, help="Speak this exact text instead of building an alert sentence (voice preview)")
@@ -98,10 +99,12 @@ def main():
 
     if args.text:
         text = args.text
+    elif args.multiple:
+        text = f"Multiple {args.category_label} events detected."
     elif args.verbose:
         text = f"Warning. {args.category_label} detected from {args.source} to {args.target}."
     else:
-        text = f"{args.category_label} detected. Source {args.source}. Target: {args.target}."
+        text = f"{args.category_label} detected from {args.source} against {args.target}."
 
     # Skip the siren for a plain --text preview (e.g. "listen to this voice"
     # while adjusting settings) -- it reads as a real alert otherwise.

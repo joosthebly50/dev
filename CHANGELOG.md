@@ -6,6 +6,16 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## SOC Alarmdashboard: Voice 2.0 — Hostnames in Normal Mode, Grouped "Multiple Events" Phrasing
+
+Following GPT's refinement suggestions (relayed by Joost) on top of the SOC Dashboard v2 roadmap. The normal (non-Critical) spoken announcement now names both source and target as hostnames -- "Recon detected from Kali against Metasploitable 2." -- instead of the earlier raw source IP. When more than one alert of the winning (highest-priority) category lands in the same poll batch, the dashboard now speaks a calmer grouped line instead -- "Multiple recon events detected." -- rather than repeating the full from/against sentence, matching the existing "don't spam every alert" voice discipline.
+
+Added a `--multiple` mode to `tts/synth.py` and a matching `multiple` parameter through `/api/tts/generate`; `dashboard.html`'s `decideAndAnnounce` now counts how many of the winning bucket's alerts are in the current batch and picks the phrasing accordingly.
+
+Verified the `--multiple` mode standalone (correct audio, correct text). A fully isolated live demonstration (only Recon alerts, no higher-priority category mixed in) proved hard to force -- nearly every `nmap -sC` scan also triggers a DNS-related NSE script, producing an OS_FINGERPRINT alert that legitimately outranks Recon in the priority order regardless of how many Recon alerts also fired. Not a bug; documented as the reason the live demo didn't land.
+
+Full detail: `docs/guides/alarm_dashboard.md`.
+
 ## SOC Alarmdashboard: Voice Preview on Change, Cooldown Minimum Lowered to 1s
 
 Two usability fixes to the v2 settings panel. Changing the voice dropdown now immediately plays a short preview clip in the newly selected voice ("This is the Amy (US) voice.") -- no siren, so it never reads as a real alert, and it goes through the same playback queue as real announcements so it can't overlap one. Required a new `--text` mode in `tts/synth.py` (speak an exact given string instead of building the category/source/target alert sentence) and a matching `text` parameter on the `/api/tts/generate` endpoint.

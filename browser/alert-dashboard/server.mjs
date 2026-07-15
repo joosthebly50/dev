@@ -79,7 +79,7 @@ const KNOWN_VOICES = new Set([
   'en_GB-alba-medium',
 ]);
 
-async function synthesizeSpokenClip({ bucket, srcIp, dstIp, verbose, voice, rate, text }) {
+async function synthesizeSpokenClip({ bucket, srcIp, dstIp, verbose, multiple, voice, rate, text }) {
   const safeVoice = KNOWN_VOICES.has(voice) ? voice : 'en_US-hfc_female-medium';
   const safeRate = Number.isFinite(rate) && rate >= 0.5 && rate <= 2.0 ? rate : 1.0;
 
@@ -101,12 +101,14 @@ async function synthesizeSpokenClip({ bucket, srcIp, dstIp, verbose, voice, rate
   }
 
   const categoryLabel = (CATEGORIES[bucket] || CATEGORIES.OTHER).voiceLabel;
+  // Voice 2.0 (2026-07-15): both source and target are spoken as hostnames
+  // in every mode now, not just verbose/Critical -- "Recon detected from
+  // Kali against Metasploitable 2." Falls back to the raw IP if it's
+  // outside the known lab range.
   const targetLabel = hostLabel(dstIp);
-  // Verbose (Critical/High) mode speaks hostnames for both sides, matching
-  // Joost's own examples ("... from ATTACK-Kali to Metasploitable Two");
-  // normal mode keeps the shorter source-IP form already validated earlier.
-  const sourceLabel = verbose ? hostLabel(srcIp) : (srcIp || 'unknown');
-  const key = `${bucket}|${sourceLabel}|${targetLabel}|${verbose ? 'v' : 's'}|${safeVoice}|${safeRate}`;
+  const sourceLabel = hostLabel(srcIp);
+  const mode = multiple ? 'm' : verbose ? 'v' : 's';
+  const key = `${bucket}|${sourceLabel}|${targetLabel}|${mode}|${safeVoice}|${safeRate}`;
   const hash = crypto.createHash('sha1').update(key).digest('hex').slice(0, 16);
   const filename = `${hash}.wav`;
   const outPath = path.join(TTS_CACHE_DIR, filename);
@@ -115,7 +117,7 @@ async function synthesizeSpokenClip({ bucket, srcIp, dstIp, verbose, voice, rate
     await execFileP('python3', [
       TTS_SCRIPT, outPath, categoryLabel, sourceLabel, targetLabel,
       '--voice', safeVoice, '--rate', String(safeRate),
-      ...(verbose ? ['--verbose'] : []),
+      ...(multiple ? ['--multiple'] : verbose ? ['--verbose'] : []),
     ]);
   }
   return `/api/tts/${filename}`;
@@ -226,8 +228,8 @@ const server = http.createServer(async (req, res) => {
 
   if (url.pathname === '/api/tts/generate' && req.method === 'POST') {
     try {
-      const { bucket, srcIp, dstIp, verbose, voice, rate, text } = await readJsonBody(req);
-      const audioUrl = await synthesizeSpokenClip({ bucket, srcIp, dstIp, verbose: !!verbose, voice, rate: Number(rate), text });
+      const { bucket, srcIp, dstIp, verbose, multiple, voice, rate, text } = await readJsonBody(req);
+      const audioUrl = await synthesizeSpokenClip({ bucket, srcIp, dstIp, verbose: !!verbose, multiple: !!multiple, voice, rate: Number(rate), text });
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ audioUrl }));
     } catch (e) {

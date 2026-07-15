@@ -162,11 +162,28 @@ Suricata's eigen severity-veld heeft alleen low/medium/high — er bestaat
 geen native "Critical"-niveau. Bewuste, gedocumenteerde benadering
 (`severityToFilterLevel` in `server.mjs`): `high` → Critical, `medium` →
 High, `low` → Medium. Bij een Critical-alert wordt de uitgebreide
-meldingsvorm gebruikt, met hostnamen voor zowel bron als doel (niet
-alleen het doel zoals in de normale modus):
+meldingsvorm gebruikt.
 
-- Normaal: *"Recon detected. Source 192.168.50.50. Target: Metasploitable 2."*
-- Critical: *"Warning. Reverse shell detected from Kali to Metasploitable 2."*
+### Voice 2.0 (2026-07-15) — drie spreekvormen
+
+- **Normaal** (één alert): *"Recon detected from Kali against Metasploitable 2."*
+  Sinds Voice 2.0 spreekt ook de normale (niet-Critical) modus bron én
+  doel als hostnaam uit, niet alleen het doel — eerder werd hier nog het
+  ruwe bron-IP gebruikt.
+- **Meerdere tegelijk** (>1 alert van de winnende categorie in dezelfde
+  poll-batch): *"Multiple recon events detected."* — een rustigere,
+  gegroepeerde melding in plaats van steeds dezelfde volledige zin
+  herhalen. Voorkomt een stortvloed aan bijna-identieke meldingen tijdens
+  bijvoorbeeld een poortscan. **Losstaand geverifieerd** (`tts/synth.py
+  --multiple`); een zuivere live-demo (alleen RECON, geen
+  hoger-prioriteit-categorie ertussen) bleek lastig te forceren omdat
+  vrijwel elke `nmap -sC`-scan ook een DNS-gerelateerd NSE-script
+  meestuurt dat een OS_FINGERPRINT-alert triggert — die staat hoger in de
+  prioriteitsvolgorde en "wint" dan terecht van Recon, ook als Recon veel
+  vaker voorkomt in dezelfde batch. Geen bug, wel een reden waarom de
+  live-demo niet is gelukt.
+- **Critical**: *"Warning. Reverse shell detected from Kali to Metasploitable 2."*
+  (ongewijzigd — al aanwezig sinds v1 van de gesproken meldingen).
 
 ### Instellingenmenu (⚙️-knop, rechtsboven)
 

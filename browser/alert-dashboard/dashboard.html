@@ -316,12 +316,18 @@ async function decideAndAnnounce(batch) {
   lastAnnouncedAt.set(bucket, now);
   lastAnnouncedBucket = bucket;
 
-  const verbose = best.filterLevel === 'critical';
+  // Voice 2.0 (2026-07-15): several alerts of the same category landing
+  // in one batch get the calmer grouped phrasing ("Multiple recon events
+  // detected.") instead of repeating a full from/against sentence for
+  // just one of them -- less noisy during a burst (e.g. a port scan).
+  const sameBucketCount = eligible.filter((a) => a.bucket === bucket).length;
+  const multiple = sameBucketCount > 1;
+  const verbose = !multiple && best.filterLevel === 'critical';
   let audioUrl = null;
   try {
     const res = await fetch('/api/tts/generate', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bucket, srcIp: best.srcIp, dstIp: best.dstIp, verbose, voice: settings.voice, rate: settings.rate }),
+      body: JSON.stringify({ bucket, srcIp: best.srcIp, dstIp: best.dstIp, verbose, multiple, voice: settings.voice, rate: settings.rate }),
     });
     ({ audioUrl } = await res.json());
   } catch (e) { /* falls back to beep in playClip */ }
