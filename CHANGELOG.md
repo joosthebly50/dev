@@ -6,6 +6,16 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## SOC Alarmdashboard: Voice Preview on Change, Cooldown Minimum Lowered to 1s
+
+Two usability fixes to the v2 settings panel. Changing the voice dropdown now immediately plays a short preview clip in the newly selected voice ("This is the Amy (US) voice.") -- no siren, so it never reads as a real alert, and it goes through the same playback queue as real announcements so it can't overlap one. Required a new `--text` mode in `tts/synth.py` (speak an exact given string instead of building the category/source/target alert sentence) and a matching `text` parameter on the `/api/tts/generate` endpoint.
+
+Also lowered the cooldown-per-category slider's minimum from 10s to 1s, giving finer control for fast-paced testing.
+
+Also recovered from an unrelated operational incident during this work: closing what looked like a stale duplicate Chrome window (`kill <pid>`) turned out to bring down the entire shared Chrome/Flatpak process group, including the Security Onion browser automation daemon the dashboard server depends on -- restarted both the daemon and the dashboard server to recover. Corrected an earlier (wrong) diagnosis in the process: `flatpak ps` showing two `com.google.Chrome` entries is normal for a single window (a zygote helper process plus the actual window process), not evidence of a genuine duplicate dashboard window.
+
+Full detail: `docs/guides/alarm_dashboard.md`.
+
 ## SOC Alarmdashboard v2: 15 Attack Categories, Settings, Priority/Cooldown/Escalation Voice Logic
 
 Major extension of the same-day SOC Alarmdashboard, following Joost's "SOC Dashboard v2 Roadmap." Expanded the categorization from 7 to 15 attack-type buckets (Recon, Enumeration, OS Fingerprinting, Exploit, Privilege Escalation, Reverse Shell, Persistence, Credential Access, Lateral Movement, MITM, Wireless, SQL Injection, XSS, DoS, Other), each documented with its matching Suricata signature/classtype patterns in `docs/guides/alarm_dashboard.md`. Found and fixed two real categorization bugs during this work (an Nmap-detection signature falling into Exploit instead of Recon, and a genuine Shellshock exploit signature almost getting swallowed by an overly broad Privilege Escalation classtype check) -- both traced to Suricata's classtype free-text fields being reused across unrelated rule types, not a reliable category signal on their own.

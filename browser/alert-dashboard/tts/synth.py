@@ -93,16 +93,20 @@ def main():
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--voice", default=DEFAULT_VOICE, choices=sorted(KNOWN_VOICES))
     parser.add_argument("--rate", type=float, default=1.0)
+    parser.add_argument("--text", default=None, help="Speak this exact text instead of building an alert sentence (voice preview)")
     args = parser.parse_args()
 
-    if args.verbose:
+    if args.text:
+        text = args.text
+    elif args.verbose:
         text = f"Warning. {args.category_label} detected from {args.source} to {args.target}."
     else:
         text = f"{args.category_label} detected. Source {args.source}. Target: {args.target}."
 
-    siren = alarm_tone()
+    # Skip the siren for a plain --text preview (e.g. "listen to this voice"
+    # while adjusting settings) -- it reads as a real alert otherwise.
     speech = synthesize_speech(text, args.voice, args.rate)
-    combined = np.concatenate([siren, speech])
+    combined = speech if args.text else np.concatenate([alarm_tone(), speech])
     combined = np.clip(combined, -1.0, 1.0)
     pcm = (combined * 32767).astype(np.int16)
 

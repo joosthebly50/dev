@@ -172,13 +172,19 @@ alleen het doel zoals in de normale modus):
 
 | Instelling | Opties | Persistent? |
 |---|---|---|
-| Stem | HFC Female (US) · Amy (US) · Jenny (GB) · Alba (GB) — de vier stemmen die live vergeleken zijn | ✅ localStorage |
+| Stem | HFC Female (US) · Amy (US) · Jenny (GB) · Alba (GB) — de vier stemmen die live vergeleken zijn. **Bij wijzigen speelt direct een korte preview af** ("This is the &lt;stem&gt; voice.", geen sirene) zodat je hem hoort vóórdat hij op een echt alert gebruikt wordt. | ✅ localStorage |
 | Spreeksnelheid | 0.75x – 1.5x (Piper's `--length-scale`, omgekeerd) | ✅ localStorage |
-| Cooldown per categorie | 10s – 120s, standaard 30s | ✅ localStorage |
+| Cooldown per categorie | 1s – 120s, standaard 30s | ✅ localStorage |
 | Uitspreken bij | Alleen Critical / Critical + High / Alles | ✅ localStorage |
 
 **Bewust niet gebouwd, op Joost's expliciete verzoek:** volumeregelaar en
 taalkeuze (NL/EN) horen niet in de app zelf thuis.
+
+**Stem-preview, techniek:** `tts/synth.py` ondersteunt nu ook `--text`
+(een vaste zin, in plaats van de categorie/bron/doel-sjabloon), en slaat
+in dat geval de sirene over — een preview moet niet als een echt alert
+klinken. Gaat door dezelfde afspeelwachtrij als echte meldingen, zodat
+een preview nooit over een actieve melding heen speelt.
 
 **Waarom niet de browser Speech Synthesis API:** getest 2026-07-15 —
 `speechSynthesis`/`SpeechSynthesisUtterance` bestaan wel in deze

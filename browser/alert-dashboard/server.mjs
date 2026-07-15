@@ -79,15 +79,33 @@ const KNOWN_VOICES = new Set([
   'en_GB-alba-medium',
 ]);
 
-async function synthesizeSpokenClip({ bucket, srcIp, dstIp, verbose, voice, rate }) {
+async function synthesizeSpokenClip({ bucket, srcIp, dstIp, verbose, voice, rate, text }) {
+  const safeVoice = KNOWN_VOICES.has(voice) ? voice : 'en_US-hfc_female-medium';
+  const safeRate = Number.isFinite(rate) && rate >= 0.5 && rate <= 2.0 ? rate : 1.0;
+
+  // Voice preview (settings panel "listen to this voice" on change) --
+  // a fixed short line, no siren (see tts/synth.py), not shaped like a
+  // real alert so it's never confusable with one.
+  if (text) {
+    const key = `preview|${text}|${safeVoice}|${safeRate}`;
+    const hash = crypto.createHash('sha1').update(key).digest('hex').slice(0, 16);
+    const filename = `${hash}.wav`;
+    const outPath = path.join(TTS_CACHE_DIR, filename);
+    if (!fs.existsSync(outPath)) {
+      await execFileP('python3', [
+        TTS_SCRIPT, outPath, '', '', '',
+        '--voice', safeVoice, '--rate', String(safeRate), '--text', text,
+      ]);
+    }
+    return `/api/tts/${filename}`;
+  }
+
   const categoryLabel = (CATEGORIES[bucket] || CATEGORIES.OTHER).voiceLabel;
   const targetLabel = hostLabel(dstIp);
   // Verbose (Critical/High) mode speaks hostnames for both sides, matching
   // Joost's own examples ("... from ATTACK-Kali to Metasploitable Two");
   // normal mode keeps the shorter source-IP form already validated earlier.
   const sourceLabel = verbose ? hostLabel(srcIp) : (srcIp || 'unknown');
-  const safeVoice = KNOWN_VOICES.has(voice) ? voice : 'en_US-hfc_female-medium';
-  const safeRate = Number.isFinite(rate) && rate >= 0.5 && rate <= 2.0 ? rate : 1.0;
   const key = `${bucket}|${sourceLabel}|${targetLabel}|${verbose ? 'v' : 's'}|${safeVoice}|${safeRate}`;
   const hash = crypto.createHash('sha1').update(key).digest('hex').slice(0, 16);
   const filename = `${hash}.wav`;
@@ -208,8 +226,8 @@ const server = http.createServer(async (req, res) => {
 
   if (url.pathname === '/api/tts/generate' && req.method === 'POST') {
     try {
-      const { bucket, srcIp, dstIp, verbose, voice, rate } = await readJsonBody(req);
-      const audioUrl = await synthesizeSpokenClip({ bucket, srcIp, dstIp, verbose: !!verbose, voice, rate: Number(rate) });
+      const { bucket, srcIp, dstIp, verbose, voice, rate, text } = await readJsonBody(req);
+      const audioUrl = await synthesizeSpokenClip({ bucket, srcIp, dstIp, verbose: !!verbose, voice, rate: Number(rate), text });
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ audioUrl }));
     } catch (e) {

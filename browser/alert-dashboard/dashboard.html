@@ -141,7 +141,7 @@
     <input type="range" id="setRate" min="0.75" max="1.5" step="0.05" value="1.0">
 
     <label>⏱ Cooldown per categorie <span class="rangeval" id="cooldownVal">30s</span></label>
-    <input type="range" id="setCooldown" min="10" max="120" step="5" value="30">
+    <input type="range" id="setCooldown" min="1" max="120" step="1" value="30">
 
     <label>🚨 Uitspreken bij</label>
     <div class="radiorow"><input type="radio" name="filterLevel" id="filterCritical" value="critical"><label for="filterCritical" style="display:inline;text-transform:none;color:inherit">Alleen Critical</label></div>
@@ -274,6 +274,23 @@ function passesFilter(alert) {
   if (settings.filterLevel === 'critical') return alert.filterLevel === 'critical';
   if (settings.filterLevel === 'high') return alert.filterLevel === 'critical' || alert.filterLevel === 'high';
   return true; // 'all'
+}
+
+// Voice preview -- plays immediately when a new voice is picked in
+// Settings, so Joost can hear it before it's used on a real alert. Goes
+// through the same queue as real announcements so it never overlaps one.
+async function previewVoice() {
+  if (muted) return;
+  const label = document.querySelector('#setVoice option:checked').textContent;
+  let audioUrl = null;
+  try {
+    const res = await fetch('/api/tts/generate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: `This is the ${label} voice.`, voice: settings.voice, rate: settings.rate }),
+    });
+    ({ audioUrl } = await res.json());
+  } catch (e) { /* no fallback beep for a preview -- silently skip if TTS failed */ }
+  if (audioUrl) playClip(audioUrl, null);
 }
 
 async function decideAndAnnounce(batch) {
@@ -417,7 +434,11 @@ document.getElementById('mute').addEventListener('click', () => {
 document.getElementById('settingsBtn').addEventListener('click', () => {
   document.getElementById('settingsPanel').classList.toggle('open');
 });
-document.getElementById('setVoice').addEventListener('change', (e) => { settings.voice = e.target.value; saveSettings(); });
+document.getElementById('setVoice').addEventListener('change', (e) => {
+  settings.voice = e.target.value;
+  saveSettings();
+  previewVoice();
+});
 document.getElementById('setRate').addEventListener('input', (e) => {
   settings.rate = Number(e.target.value);
   document.getElementById('rateVal').textContent = settings.rate.toFixed(2) + 'x';
