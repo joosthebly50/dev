@@ -355,6 +355,20 @@ Disk); voor GPU-temperatuur: groen tot 75°C, amber 75-85°C, rood vanaf
 85°C. Live bevestigd via screenshot: RAM (91%, rood) en Disk (80%, amber)
 kleurden correct volgens deze drempels op het moment van testen.
 
+**Visuele stijl herzien (later dezelfde dag), MangoHud-uitstraling:**
+Joost stuurde een screenshot van zijn eigen MangoHud-overlay (het
+in-game performance-HUD dat hij op Linux gebruikt) als referentie. De
+balk is herbouwd om die stijl te volgen: transparant-donkere achtergrond,
+vetgedrukte waarden met kleinere eenheid-tekst ernaast (bijv. "77" groot,
+"%" klein), een vaste kleur per metriek-label die MangoHud's eigen
+palet volgt (CPU geel, GPU groen, RAM paars — Disk en Net kregen een
+eigen kleur, cyaan resp. oranje, aangezien dit dashboard meer metrieken
+toont dan MangoHud standaard doet), dunne verticale scheidingsstreepjes
+tussen elke metriek, en kleine inline sparkline-grafiekjes (canvas,
+laatste ~20 metingen = ~200s geschiedenis) naast CPU en GPU. De
+severity-kleurcodering (groen/amber/rood) blijft behouden, alleen nu
+toegepast op de waarde zelf in plaats van op een badge-achtergrond.
+
 **Nog niet gebouwd:** Security Onion's eigen componentstatus
 (Suricata/Zeek/Elasticsearch/Fleet) — dat vereist een aparte check tegen
 Security Onion zelf (bijv. `so-status` of een Fleet-API-aanroep), niet

@@ -45,17 +45,31 @@
   #mute, #settingsBtn { background: var(--surface-2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.35rem 0.8rem; cursor: pointer; font-size: 0.8rem; }
   #mute.muted { color: var(--exploit); border-color: var(--exploit); }
 
+  /* MangoHud-style overlay strip -- Joost's own in-game HUD reference,
+     2026-07-15: transparent-dark backdrop, bold tabular values, small
+     superscript-style units, a colored label per metric (matches
+     MangoHud's own palette: CPU yellow, GPU green, RAM purple), thin
+     pipe separators, tiny inline sparkline graphs. */
   .health-bar {
-    display: flex; align-items: center; gap: 1.6rem; flex-wrap: wrap;
-    padding: 0.5rem 1.4rem; background: var(--surface-2); border-bottom: 1px solid var(--border);
-    font-size: 0.78rem; color: var(--muted);
+    display: flex; align-items: center; gap: 0;
+    padding: 0.4rem 1.4rem; background: rgba(0,0,0,0.55); border-bottom: 1px solid var(--border);
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: 0.92rem; color: #eef1ee; overflow-x: auto;
   }
-  .health-metric { display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
-  .health-metric .val { font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; font-weight: 700; }
-  .health-metric .val.ok { color: var(--ok); }
-  .health-metric .val.warn { color: #d99a4c; }
-  .health-metric .val.crit { color: var(--exploit); }
-  .health-metric .val.na { color: var(--muted); font-weight: 400; }
+  .health-metric { display: flex; align-items: baseline; gap: 0.32rem; white-space: nowrap; padding: 0 0.85rem; }
+  .health-metric:not(:last-child) { border-right: 1px solid rgba(255,255,255,0.16); }
+  .health-metric .label { font-weight: 700; font-size: 0.82rem; letter-spacing: 0.02em; }
+  .health-metric .val { font-variant-numeric: tabular-nums; font-weight: 700; color: #f2f5f2; }
+  .health-metric .unit { font-size: 0.68rem; font-weight: 400; color: #b9c2bd; margin-left: 0.05rem; }
+  .health-metric .val.na { color: #7c8a80; font-weight: 400; }
+  .health-metric .val.warn { color: #e0b34c !important; }
+  .health-metric .val.crit { color: #e0574c !important; }
+  .health-metric.cpu .label { color: #e8c93f; }
+  .health-metric.mem .label { color: #b48af0; }
+  .health-metric.disk .label { color: #4fd1e8; }
+  .health-metric.net .label { color: #f0954f; }
+  .health-metric.gpu .label { color: #4fe881; }
+  .health-metric canvas { display: block; height: 14px; width: 42px; margin-left: 0.15rem; }
 
   #settingsPanel {
     position: fixed; top: 5.7rem; right: 1.4rem; z-index: 60;
@@ -139,11 +153,23 @@
   </header>
 
   <div class="health-bar" id="healthBar">
-    <span class="health-metric">🖥 CPU <span class="val na" id="hCpu">–</span></span>
-    <span class="health-metric">💾 RAM <span class="val na" id="hMem">–</span></span>
-    <span class="health-metric">💿 Disk <span class="val na" id="hDisk">–</span></span>
-    <span class="health-metric">🌐 Net <span class="val na" id="hNet">–</span></span>
-    <span class="health-metric">🔥 GPU <span class="val na" id="hGpu">–</span></span>
+    <span class="health-metric cpu">
+      <span class="label">CPU</span> <span class="val na" id="hCpu">–</span><span class="unit">%</span>
+      <canvas id="gCpu" width="42" height="14"></canvas>
+    </span>
+    <span class="health-metric mem">
+      <span class="label">RAM</span> <span class="val na" id="hMem">–</span><span class="unit">%</span>
+    </span>
+    <span class="health-metric disk">
+      <span class="label">DISK</span> <span class="val na" id="hDisk">–</span><span class="unit">%</span>
+    </span>
+    <span class="health-metric net">
+      <span class="label">NET</span> <span class="val na" id="hNet">–</span>
+    </span>
+    <span class="health-metric gpu">
+      <span class="label">GPU</span> <span class="val na" id="hGpu">–</span>
+      <canvas id="gGpu" width="42" height="14"></canvas>
+    </span>
   </div>
 
   <div id="settingsPanel">
@@ -504,31 +530,64 @@ function healthClass(pct, warnAt, critAt) {
   if (pct >= warnAt) return 'warn';
   return 'ok';
 }
+// Tiny inline sparklines (MangoHud has these next to CPU/GPU) -- a
+// rolling history drawn on a small <canvas>, redrawn each health poll.
+const HIST_LEN = 20; // 20 samples * 10s poll = last ~200s
+const cpuHistory = [];
+const gpuHistory = [];
+function drawSparkline(canvasId, history, color) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  if (history.length < 2) return;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  history.forEach((v, i) => {
+    const x = (i / (HIST_LEN - 1)) * w;
+    const y = h - (Math.min(v, 100) / 100) * h;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+}
+function pushHistory(arr, val) {
+  arr.push(val == null ? 0 : val);
+  while (arr.length > HIST_LEN) arr.shift();
+}
+
 async function pollHealth() {
   try {
     const h = await (await fetch('/api/health')).json();
-    const setMetric = (id, val, text) => {
+    const setMetric = (id, val) => {
       const el = document.getElementById(id);
-      el.textContent = text;
-      el.className = 'val ' + healthClass(val, 70, 90);
+      el.textContent = val != null ? val : 'n/a';
+      el.className = 'val ' + (val == null ? 'na' : healthClass(val, 70, 90));
     };
-    setMetric('hCpu', h.cpu, h.cpu != null ? h.cpu + '%' : 'n/a');
-    setMetric('hMem', h.mem, h.mem != null ? h.mem + '%' : 'n/a');
-    setMetric('hDisk', h.disk, h.disk != null ? h.disk + '%' : 'n/a');
+    setMetric('hCpu', h.cpu);
+    setMetric('hMem', h.mem);
+    setMetric('hDisk', h.disk);
+    pushHistory(cpuHistory, h.cpu);
+    drawSparkline('gCpu', cpuHistory, '#e8c93f');
+
     const netEl = document.getElementById('hNet');
     if (h.net) {
       netEl.textContent = `↓${(h.net.rxKbps/1000).toFixed(1)} ↑${(h.net.txKbps/1000).toFixed(1)} Mbps`;
-      netEl.className = 'val ok';
+      netEl.className = 'val';
     } else {
       netEl.textContent = 'n/a'; netEl.className = 'val na';
     }
+
     const gpuEl = document.getElementById('hGpu');
     if (h.gpu) {
-      gpuEl.textContent = `${h.gpu.tempC}°C · ${h.gpu.utilPercent}%`;
+      gpuEl.textContent = `${h.gpu.utilPercent}% ${h.gpu.tempC}°C`;
       gpuEl.className = 'val ' + healthClass(h.gpu.tempC, 75, 85);
+      pushHistory(gpuHistory, h.gpu.utilPercent);
     } else {
       gpuEl.textContent = 'n/a'; gpuEl.className = 'val na';
+      pushHistory(gpuHistory, null);
     }
+    drawSparkline('gGpu', gpuHistory, '#4fe881');
   } catch (e) { /* leave last-known values on a transient fetch failure */ }
 }
 

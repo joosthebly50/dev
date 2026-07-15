@@ -6,6 +6,14 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## SOC Alarmdashboard: Restyled Health Bar to Match MangoHud
+
+Joost shared a screenshot of his own MangoHud in-game overlay (Linux gaming performance HUD) as a visual reference and asked for the health bar to match it. Rebuilt the styling: transparent-dark backdrop, bold values with smaller unit text beside them, a fixed color per metric label following MangoHud's own palette (CPU yellow, GPU green, RAM purple; Disk and Net got their own colors, cyan and orange, since this dashboard shows more metrics than MangoHud does by default), thin vertical separators between metrics, and small inline sparkline graphs (canvas, last ~20 samples / ~200s of history) next to CPU and GPU. Kept the existing severity color coding (green/amber/red) but applied to the value text itself rather than a badge background.
+
+Confirmed live via screenshot alongside a real categorized alert (Enumeration) firing at the same time -- the existing banner/highlight system kept working unaffected by the styling change.
+
+Full detail: `docs/guides/alarm_dashboard.md`.
+
 ## SOC Alarmdashboard: System Health Bar (CPU/RAM/Disk/Network/GPU)
 
 Added the first piece of the "System Health Bar" from the SOC Dashboard v2 roadmap: a thin strip below the header showing the Bazzite host's own CPU, RAM, disk, network throughput, and GPU (temp + utilization), refreshed every 10s via a new `GET /api/health` endpoint backed by a fully standalone module (`health.mjs`) that reads directly from `/proc` and `nvidia-smi` -- no dependency on Security Onion or the alert pipeline.
