@@ -6,6 +6,14 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## Phase 3 Detection Engineering Started: Metasploitable2 Tier 1 Scan Confirms TCP-Scan and OS-Fingerprinting Detection
+
+Kicked off Phase 3 (detection engineering) by executing the already-agreed §12 attack-scope plan's Tier 1, starting with a full port/service scan (`nmap -sV -sC -p-`) from ATTACK-Kali against Metasploitable2 — a scan previously started and deliberately stopped, now run to completion (136.31s, 30 open ports, matches the target's known stock fingerprint).
+
+Checked Hunt for the same source/destination/time window: 65,801 Zeek `conn`/`weird` events confirmed full network visibility, and — more importantly — **172 real Suricata alerts** fired on the actual scan traffic (`ET SCAN Potential SSH Scan OUTBOUND`, `ET SCAN Suspicious inbound to PostgreSQL/MySQL`, `GPL DNS named version attempt`, `GPL NETBIOS SMB-DS IPC$ share access`). This is real signature-based detection evidence, not just passive traffic visibility, so two long-standing ⚠️ rows in the master doc's §6.1 detection use-case table flip to ✅: **TCP scans** and **OS fingerprinting/banner grabbing**.
+
+Full evidence (exact command, timestamps, event counts, signatures, and the reasoning for each status flip): `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §6.1 and §6.3. Tier 1 continues next with Juice Shop web recon (`nikto`/`gobuster`) and read-only DC01 AD enumeration; Tier 2 (exploitation) and Tier 3 (AD attack chain, firewall loosening) remain out of scope without separate explicit approval.
+
 ## Phase 2A: OPNsense Syslog Forwarding to Security Onion — Validated (Firewall + DHCP)
 
 Root cause of the "nothing arrives" symptom: the remote-syslog destination's **Contents / Log sources field was empty** — the destination existed (right IP, enabled) but was never bound to any local log source, so syslog-ng had nothing to route to it. This was true even before the stale-IP fix (`.9` → `.30`), proven via OPNsense's own syslog-ng Statistics tab showing `processed=written=0` on the destination throughout — never a network or Security Onion firewall problem, despite two earlier fixes in that direction (stale IP, missing SO hostgroup) both being real, necessary, but insufficient on their own.

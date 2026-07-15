@@ -149,6 +149,16 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   Fase 3 (detection engineering), met name bij het ontwerpen van DNS-
   tunneling-/beaconingdetecties. Geen OPNsense-configuratiewijziging
   uitgevoerd. Zie `docs/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md`.
+- 🔄 **Phase 3: Detection engineering — gestart (2026-07-15).** Uitvoering
+  van het al op 2026-07-13 afgesproken §12-aanvalsplan (master doc). Eerste
+  scenario afgerond: volledige poort-/servicescan (`nmap -sV -sC -p-`)
+  vanaf ATTACK-Kali tegen Metasploitable2 — 172 echte Suricata-alerts en
+  65.801 Zeek-events bevestigd in Hunt, waarmee twee §6.1-detecties
+  (TCP scans, OS fingerprinting/banner grabbing) van ⚠️ naar ✅ gaan. Tier 1
+  loopt door met Juice Shop-webrecon en read-only DC01-AD-enumeratie.
+  Tier 2 (exploitatie) en Tier 3 (AD-escalatie, firewallversoepeling)
+  blijven buiten scope zonder aparte expliciete toestemming. Zie
+  `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §6.1/§6.3/§12.
 
 ---
 

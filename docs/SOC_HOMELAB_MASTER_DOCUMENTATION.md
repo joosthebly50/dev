@@ -324,12 +324,23 @@ ssh security-onion "tail -20 /opt/so/log/so-firewall.log"
 
 | Detection | Status |
 |---|---|
-| ICMP ping sweeps / TCP scans (SYN/FIN/NULL/XMAS) / UDP scans | ⚠️ |
-| OS fingerprinting / banner grabbing | ⚠️ (Zeek connection logs, no dedicated alert) |
+| ICMP ping sweeps / TCP scans (SYN/FIN/NULL/XMAS) / UDP scans | ✅ Confirmed 2026-07-15 — see Metasploitable2 Tier 1 scan below |
+| OS fingerprinting / banner grabbing | ✅ Confirmed 2026-07-15 — see Metasploitable2 Tier 1 scan below |
 | SSH / FTP / SMB brute force | ⚠️ (SMB relevant especially toward DC01) |
 | Suspicious DNS requests | ⚠️ (Zeek `dns.log`; Sysmon event 22 on DC01) |
 | Known exploit signatures / reverse shells / Metasploit indicators | ⚠️ (Suricata rulesets; Sysmon process-creation for host-side) |
 | SQLi / command injection / directory traversal | ⚠️ (Suricata web-attack rulesets) |
+
+**Metasploitable2 Tier 1 scan — TCP scans + OS fingerprinting/banner grabbing, confirmed 2026-07-15:**
+
+- **Command:** `nmap -sV -sC -p- 192.168.50.70` (full 65535 TCP ports, service/version detection, default NSE scripts).
+- **Source:** ATTACK-Kali (`192.168.50.50`, run via SSH from the Bazzite host). **Target:** Metasploitable2 (`192.168.50.70`).
+- **Time window:** `2026-07-15 01:50:48Z` – `01:53:20Z` (scan itself: `01:50:54Z`–`01:53:10Z`, 136.31s per nmap's own summary).
+- **Result:** 30 open ports found (vsftpd 2.3.4 with anonymous login, telnet, Postfix smtpd, BIND 9.4.2, Apache 2.2.8, unauthenticated NFS/RPC, Samba 3.0.20, rexecd, a literal "Metasploitable root shell" bindshell on 1524, MySQL 5.0.51a, distccd, PostgreSQL 8.3, VNC, UnrealIRCd, Tomcat, Ruby DRb) — matches this target's known stock fingerprint.
+- **Hunt evidence, same source/dest/window:**
+  - `event.dataset:"zeek.conn"` / `zeek.weird`: **65,801 events** — confirms full network-level visibility of the scan traffic (query: `source.ip:"192.168.50.50" AND destination.ip:"192.168.50.70" AND @timestamp:[2026-07-15T01:50:40.000Z TO 2026-07-15T01:53:20.000Z]`).
+  - `event.module:"suricata"`, same source/dest/window: **172 real alerts**, not raw traffic — signature-based detections firing on the actual scan. Distinct signatures observed: `ET SCAN Potential SSH Scan OUTBOUND` (medium), `ET SCAN Suspicious inbound to PostgreSQL port 5432` (medium), `ET SCAN Suspicious inbound to mySQL port 3306` (medium), `GPL DNS named version attempt` (medium — fired by `-sC`'s `dns-nsid` script, a direct banner-grab signature), `GPL NETBIOS SMB-DS IPC$ share access` (low — fired by the SMB/`smb-os-discovery` enumeration scripts).
+- **Why this flips both rows:** `ET SCAN Potential SSH Scan OUTBOUND` and the PostgreSQL/MySQL "suspicious inbound" signatures are pattern-based scan detections that fired directly on this `-p-` full-port sweep — confirms **TCP scan detection** works, not just default-ruleset assumption. `GPL DNS named version attempt` and the SMB share-access/`smb-os-discovery` signature are specifically banner-grab/service-fingerprinting detections, triggered by nmap's own `-sC` scripts querying BIND's version and enumerating SMB — confirms **OS fingerprinting/banner grabbing detection** works, not just passive Zeek visibility as previously assumed.
 
 **Host-based (Sysmon on DC01):** Process Create (1), Network Connection (3), File Create (11), DNS Query (22) — all ✅ confirmed with test events. Other event types (registry, image load) — ⚠️ covered by config, not individually tested. Elastic Defend also produces its own detections since the 2026-07-13 firewall fix.
 
@@ -353,7 +364,18 @@ Fixed procedure for any alert — real, test, or exercise:
 
 ### 6.3 Detection validation plan
 
-**Planned, execution deferred to the [§12](#12-attack-scope-agreed-red-team-test-plan) test session** — every ⚠️ above gets tested there rather than in a separate pass: Tier 1 (recon) covers scans/sweeps/fingerprinting/DNS; Tier 2 (Metasploitable2/Juice Shop exploitation) covers brute force, exploit signatures, reverse shells, Meterpreter, SQLi/injection; Sysmon "other" event IDs get tested on DC01 or WIN11-01 once it's a target. Method: run technique → check Hunt → flip ⚠️ to ✅/❌ with the query and evidence used. Also planned: one full runbook dry-run (§6.2) against a real alert from that pass, logged in `docs/daily/`.
+**In progress — [§12](#12-attack-scope-agreed-red-team-test-plan) test session started 2026-07-15 (Phase 3 of the project roadmap).** Every ⚠️ in [§6.1](#61-what-this-soc-should-detect) gets tested here rather than in a separate pass: Tier 1 (recon) covers scans/sweeps/fingerprinting/DNS; Tier 2 (Metasploitable2/Juice Shop exploitation) covers brute force, exploit signatures, reverse shells, Meterpreter, SQLi/injection; Sysmon "other" event IDs get tested on DC01 or WIN11-01 once it's a target. Method: run technique → check Hunt → flip ⚠️ to ✅/❌ with the query and evidence used. Also planned: one full runbook dry-run (§6.2) against a real alert from that pass, logged in `docs/daily/`.
+
+**Tier 1 progress:**
+
+| Scenario | Status | Evidence |
+|---|---|---|
+| Full port/service scan — Metasploitable2 | ✅ Done, 2026-07-15 | See [§6.1](#61-what-this-soc-should-detect) "Metasploitable2 Tier 1 scan" — 172 Suricata alerts, 65,801 Zeek events, flipped 2 rows to ✅ |
+| Web app recon — Juice Shop (`nikto`, `gobuster`/`ffuf`) | ⏳ Next | — |
+| AD/domain enumeration — DC01 (`enum4linux-ng`, `netexec smb`, anonymous LDAP) | ⏳ Planned, read-only only | — |
+| Network sweep (`.0/24`) | ✅ Already done (`nmap -sn`, confirmed known IPs only, per [§12](#12-attack-scope-agreed-red-team-test-plan) "Preparation already done") | — |
+
+**Tier 2 and Tier 3 remain explicitly out of scope without new, separate explicit approval** — this session's authorization covers Tier 1 recon only (full port scan done; web recon and AD enumeration next, read-only).
 
 ---
 
