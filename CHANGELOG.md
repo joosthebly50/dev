@@ -6,6 +6,16 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## SOC Alarmdashboard: Fix Categorization Miscall, Cleaner Spoken Category Names
+
+Two small fixes found via a real dashboard run and a live listening test, both same day as the dashboard itself.
+
+**Categorization bug:** signatures literally prefixed `ET SCAN`/`GPL SCAN` or containing "nmap" (e.g. `ET SCAN Possible Nmap User-Agent Observed`) were being miscategorized as `EXPLOIT` instead of `SCAN`, because Suricata's own classtype text for that kind of signature is often "Web Application Attack" — which matched the exploit-keyword check before the scan check ever ran. Fixed with an explicit, signature-name-only check ("starts with ET/GPL SCAN, or contains nmap") placed before the exploit check. Verified by re-running the exact same scan that first exposed the bug: both previously-miscategorized signatures now correctly land in Scan/Recon.
+
+**Spoken category names:** the visual category label for scans is "Scan / Recon" — Piper reads the "/" aloud as the literal word "slash". Added a separate `voiceLabel` field per category (`categorize.mjs`) used only for speech: Recon, Exploit, Reverse shell, Denial of service, S Q L injection (spelled out, not "sequel"), Cross site scripting, Alert. Verified by generating and listening to clips for four real example signatures across all the affected categories, played back to back with no overlap.
+
+Full detail: `docs/guides/alarm_dashboard.md`.
+
 ## SOC Alarmdashboard: Spoken Alerts via Offline Neural TTS
 
 Extended the same-day SOC Alarmdashboard with spoken announcements: each notify-worthy alert now gets a short two-tone siren followed by a female voice (Piper, offline neural TTS — installed via `pip3 install --user piper-tts`, not the already-present `espeak-ng`/`speech-dispatcher`, which sound clearly robotic/formant-synthesis rather than "AI-generated") saying the category, the attacker's (source) IP, and the friendly name of the system under attack — not its raw IP, per Joost's request. Four female English voices were generated and compared live; Joost picked `en_US-hfc_female-medium`.

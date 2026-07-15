@@ -64,7 +64,7 @@ async function synthesizeAudio(alert) {
   const hash = crypto.createHash('sha1').update(alert.id).digest('hex').slice(0, 16);
   const filename = `${hash}.wav`;
   const outPath = path.join(TTS_CACHE_DIR, filename);
-  const categoryLabel = (CATEGORIES[alert.bucket] || CATEGORIES.OTHER).label;
+  const categoryLabel = (CATEGORIES[alert.bucket] || CATEGORIES.OTHER).voiceLabel;
   const targetLabel = hostLabel(alert.dstIp);
 
   if (!fs.existsSync(outPath)) {

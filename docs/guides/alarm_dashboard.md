@@ -74,10 +74,21 @@ via de "SOC Alarmdashboard"-launcher.
 Er bestaat geen 1-op-1-koppeling tussen Suricata's eigen rule-categorieën
 en de zes gevraagde aanvalstypes. `categorize.mjs` matcht daarom op
 keywords in de signature-naam + Suricata's eigen classificatietekst, in
-volgorde van specificiteit (reverse shell → SQLi → XSS → DDoS → exploit →
-scan → overig, eerste match wint). Alles wat nergens op matcht valt in
-"Overig" in plaats van geforceerd in een verkeerde categorie geduwd te
-worden.
+volgorde van specificiteit (reverse shell → SQLi → XSS → DDoS → **scan-
+signatures met "nmap" in de naam** → exploit → overige scan-trefwoorden →
+overig, eerste match wint). Alles wat nergens op matcht valt in "Overig"
+in plaats van geforceerd in een verkeerde categorie geduwd te worden.
+
+**Fix 2026-07-15 (zelfde dag, gevonden via een echte dashboard-run):**
+signatures die letterlijk beginnen met `ET SCAN`/`GPL SCAN` of "nmap" in
+de naam bevatten (bijv. `ET SCAN Possible Nmap User-Agent Observed`)
+werden fout als **Exploit** gecategoriseerd, omdat Suricata's eigen
+classtype-tekst voor dat soort signatures vaak "Web Application Attack"
+is — en die tekst matchte de exploit-check vóórdat de scan-check aan de
+beurt kwam. Opgelost door een expliciete, signature-naam-alleen check
+("begint met ET/GPL SCAN, of bevat nmap") vóór de exploit-check te
+plaatsen. Bevestigd met een live herhaling van exact dezelfde scan: beide
+eerder foutief-gecategoriseerde signatures nu correct als Scan/Recon.
 
 **Bekende beperking:** generieke web-kwetsbaarheid-probe-signatures (zoals
 `GPL WEB_SERVER iisadmin access`, `global.asa access` — gezien tijdens de
@@ -131,8 +142,17 @@ Vier vrouwelijke Engelse stemmen beluisterd, Joost koos
 ### Wat er gezegd wordt
 
 `"<Categorie> detected. Source <bron-IP>. Target: <systeemnaam>."` —
-bijvoorbeeld: *"Scan detected. Source 192.168.50.50. Target:
+bijvoorbeeld: *"Recon detected. Source 192.168.50.50. Target:
 Metasploitable 2."*
+
+De gesproken categorienaam (`voiceLabel` in `categorize.mjs`) is bewust
+een ander, korter woord dan het visuele label in de banner/tellers
+(`label`) — het visuele label voor Scan is bijvoorbeeld "Scan / Recon",
+maar Piper leest een "/" letterlijk voor als het woord "slash". Gevonden
+en gefixt 2026-07-15 na een luistertest; nu spreekt elke categorie een
+los, kort woord uit: Recon, Exploit, Reverse shell, Denial of service,
+S Q L injection (expres letter voor letter, niet als "sequel"), Cross
+site scripting, Alert.
 
 Bewuste keuzes, beide op Joost's expliciete verzoek:
 
