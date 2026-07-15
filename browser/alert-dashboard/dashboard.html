@@ -118,6 +118,10 @@
     padding: 0.35rem 1rem; border-bottom: 1px solid var(--surface-2); align-items: center;
   }
   .conn-row.lab { background: var(--accent-soft, rgba(43,143,209,0.08)); }
+  .conn-row.threat-warning { background: rgba(224,140,44,0.18); box-shadow: inset 3px 0 0 #e08c2c; }
+  .conn-row.threat-critical { background: rgba(224,49,60,0.2); box-shadow: inset 3px 0 0 #e0313c; animation: threatpulse 1.4s ease-in-out infinite; }
+  .conn-row.voip { background: rgba(62,207,110,0.14); box-shadow: inset 3px 0 0 #3ecf6e; }
+  @keyframes threatpulse { 0%, 100% { background: rgba(224,49,60,0.2); } 50% { background: rgba(224,49,60,0.36); } }
   .conn-row .proto { color: var(--muted); text-transform: uppercase; }
   .conn-row .addr { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .conn-row .arrow { color: var(--muted); text-align: center; }
@@ -159,7 +163,7 @@
   .banner .bsig { font-size: 0.76rem; opacity: 0.95; margin-top: 0.1rem; }
 
   @media (prefers-reduced-motion: reduce) {
-    .row, .banner, .counter { animation: none !important; }
+    .row, .banner, .counter, .conn-row.threat-critical { animation: none !important; }
   }
 </style>
 </head>
@@ -281,6 +285,40 @@ const ORDER = [
 function priorityRank(bucket) {
   const i = ORDER.indexOf(bucket);
   return i === -1 ? ORDER.length : i;
+}
+
+// --- Threat correlation for the connections panel: when an alert fires,
+// glow that IP's row(s) red (REVERSE_SHELL..MITM, rank 0-6) or orange
+// (everything else) for a while, so a scan/exploit against the host is
+// visible right where its connection actually shows up, not just in the
+// feed. Also flag known VoIP/game processes green so lab traffic can be
+// told apart from Joost's own Discord/TeamSpeak/gaming traffic at a glance.
+const threatIps = new Map(); // ip -> { level: 'critical'|'warning', until: epoch ms }
+const THREAT_GLOW_MS = 60_000;
+const THREAT_RANK = { critical: 0, warning: 1 };
+function markThreatIp(ip, level) {
+  if (!ip) return;
+  const existing = threatIps.get(ip);
+  if (existing && existing.until > Date.now() && THREAT_RANK[existing.level] <= THREAT_RANK[level]) {
+    existing.until = Date.now() + THREAT_GLOW_MS; // keep the worse level, just refresh the timer
+    return;
+  }
+  threatIps.set(ip, { level, until: Date.now() + THREAT_GLOW_MS });
+}
+function threatLevelFor(ip) {
+  const t = threatIps.get(ip);
+  if (!t) return null;
+  if (t.until < Date.now()) { threatIps.delete(ip); return null; }
+  return t.level;
+}
+
+// Heuristic: matched against the process name `ss` reports. Not exhaustive
+// (there's no generic way to know every game binary) -- extend this list
+// as new voice/game apps come up.
+const VOIP_GAME_KEYWORDS = ['discord', 'teamspeak', 'ts3client', 'mumble', 'ventrilo', 'steam', 'arma', 'reforger', 'csgo', 'cs2', 'dota2'];
+function isVoipOrGame(process) {
+  const p = (process || '').toLowerCase();
+  return VOIP_GAME_KEYWORDS.some((k) => p.includes(k));
 }
 
 // --- Settings: voice on/off, voice, rate, cooldown, severity filter.
@@ -512,6 +550,9 @@ async function poll() {
       counts[a.bucket] = (counts[a.bucket] || 0) + 1;
       addRow(a);
       lastSince = Math.max(lastSince, a.receivedAt);
+      const level = priorityRank(a.bucket) <= 6 ? 'critical' : 'warning';
+      markThreatIp(a.srcIp, level);
+      markThreatIp(a.dstIp, level);
     }
     if (newOnes.length) {
       renderCounters();
@@ -640,7 +681,18 @@ async function pollConnections() {
     const list = document.getElementById('connList');
     list.innerHTML = connections.map((c) => {
       const isLab = (c.localAddr || '').startsWith('192.168.50.') || (c.peerAddr || '').startsWith('192.168.50.');
-      return `<div class="conn-row ${isLab ? 'lab' : ''}">
+      // Only the peer side matters here -- localAddr is always the host's
+      // own address, so matching on it would light up every single row
+      // whenever the host itself is the scan source.
+      const threat = threatLevelFor(c.peerAddr);
+      const voip = !threat && isVoipOrGame(c.process);
+      const cls = ['conn-row'];
+      if (isLab) cls.push('lab');
+      if (threat) cls.push('threat-' + threat);
+      else if (voip) cls.push('voip');
+      const title = threat ? (threat === 'critical' ? 'Aanval/exploit gedetecteerd op dit IP' : 'Scan/verdachte activiteit gedetecteerd op dit IP')
+        : voip ? 'VoIP/game-verkeer' : '';
+      return `<div class="${cls.join(' ')}" title="${title}">
         <span class="proto">${c.proto}</span>
         <span class="addr" title="${escapeHtml2(c.localAddr)}:${c.localPort}">${escapeHtml2(c.localAddr)}:${c.localPort}</span>
         <span class="arrow">→</span>

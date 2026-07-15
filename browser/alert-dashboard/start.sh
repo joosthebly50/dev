@@ -18,6 +18,12 @@ if ! curl -s -m 2 http://127.0.0.1:8765/api/alerts >/dev/null 2>&1; then
 fi
 
 echo "Dashboard openen..."
-flatpak run com.google.Chrome --app=http://127.0.0.1:8765 --window-size=1400,900 >/dev/null 2>&1 &
+# --autoplay-policy=no-user-gesture-required: without it, a freshly opened
+# window blocks the very first spoken alert (and its beep fallback) since
+# Chrome treats page load with zero prior clicks as "no user gesture" --
+# found 2026-07-15 when a live scan produced no audio right after a
+# kill+reopen cycle. Safe here since this is a single-purpose trusted app
+# window, not a general browsing profile.
+flatpak run com.google.Chrome --app=http://127.0.0.1:8765 --window-size=1400,900 --autoplay-policy=no-user-gesture-required >/dev/null 2>&1 &
 disown
 echo "Klaar. Server-log: /tmp/alert-dashboard-server.log"

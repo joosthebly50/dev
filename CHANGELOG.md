@@ -6,6 +6,16 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## SOC Alarmdashboard: Threat/VoIP Highlighting on Connection Rows + Autoplay Fix
+
+Per Joost's request, connection rows in the new active-connections panel now light up red (critical categories: Reverse Shell through MITM) or orange (everything else) when that peer IP matches a recently-fired alert, and light up green for known VoIP/game processes (Discord, TeamSpeak, Steam, Arma/Reforger, etc.) so lab detections and Joost's own voice-call/gaming traffic are visually distinguishable at a glance.
+
+First version matched threat IPs against both local and peer address, which lit up nearly every row during a host-originated scan (the host's own IP is on every row as the local address). Fixed by matching only the peer address. Live-verified before and after the fix: a test connect-scan against Metasploitable2 (192.168.50.70) initially colored 15+ unrelated rows orange; after the fix, only the actual `nc -> 192.168.50.70:21` row did.
+
+While testing this live, found that the dashboard window produces no audio (voice or fallback beep) right after being reopened via the standard `flatpak kill` + relaunch cycle -- Chrome's autoplay policy blocks sound on a freshly loaded page with no prior click. Fixed by adding `--autoplay-policy=no-user-gesture-required` to the Chrome launch command in `start.sh`, since this is a single-purpose trusted app window rather than a general browsing profile.
+
+Full detail: `docs/guides/alarm_dashboard.md`.
+
 ## SOC Alarmdashboard: Active Connections Panel
 
 Added a new sidepanel next to the alert feed showing the Bazzite host's own live network connections (PID, process name, local/peer address:port), refreshed every 1s, per Joost's request ("een plek op mijn dashboard waar je actieve verbinden laat zien met pid en source ip adres ook live 1 sec").

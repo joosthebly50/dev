@@ -428,3 +428,49 @@ Live bevestigd via screenshot: 65 actieve verbindingen, lab-subnet-
 verbindingen (chrome→Security Onion :443, ssh naar DC01/Kali/ubuntu-
 server/OPNsense) correct bovenaan en gemarkeerd, PID's zichtbaar
 (`chrome ·155305`, `ssh ·55313`, `ssh ·91807`, etc.).
+
+### Threat- en VoIP/game-highlighting op verbindingsrijen
+
+Op verzoek van Joost: als er een scan/exploit-achtig alert binnenkomt,
+licht de bijbehorende rij in het verbindingspaneel rood of oranje op; en
+VoIP/game-verkeer (Discord, TeamSpeak, Steam, een game) licht groen op —
+zodat in één oogopslag te zien is welke live verbinding bij een
+detectie hoort, en welke gewoon Joost's eigen call/game is.
+
+**Threat-highlighting:** client-side `threatIps`-map (IP → level +
+verlooptijd, 60s gloed). Bij elk nieuw alert (`poll()`) wordt zowel
+`srcIp` als `dstIp` gemarkeerd: `critical` (rood, pulserend) voor de
+hoogste-prioriteit categorieën (Reverse Shell t/m MITM, rank 0-6 in de
+bestaande PRIORITY-volgorde), `warning` (oranje) voor de rest. Een
+verbindingsrij wordt alleen gematcht op het **peer-adres**, niet het
+lokale adres — het lokale adres is altijd het adres van de host zelf, dus
+matchen daarop zou bij een scan vanaf de host letterlijk elke rij rood/
+oranje kleuren (eerste versie deed dit fout, gecorrigeerd na live test:
+een testscan tegen Metasploitable2 kleurde alle 15+ rijen oranje in
+plaats van alleen de daadwerkelijke scanverbinding). Live herbevestigd
+na de fix: alleen de `nc → 192.168.50.70:21`-rij kleurde oranje, de rest
+bleef normaal.
+
+**VoIP/game-highlighting:** herkenning op basis van procesnaam (die
+`ss` toch al meelevert) tegen een lijst met bekende voice/game-processen
+(`discord`, `teamspeak`, `ts3client`, `mumble`, `ventrilo`, `steam`,
+`arma`, `reforger`, `csgo`, `cs2`, `dota2`) — geen uitputtende lijst, wel
+uitbreidbaar. Live bevestigd: `steam`/`steamwebhelper`-rijen kleurden
+groen tijdens de test.
+
+### Bug gevonden tijdens live-testen: geen geluid na venster-herstart
+
+Tijdens het testen van de threat-highlighting bleef de spraakmelding
+uit, ondanks dat het alert wel binnenkwam en zichtbaar was. Oorzaak:
+Chrome's autoplay-beleid blokkeert geluid (en de beep-fallback, want
+`AudioContext` heeft dezelfde beperking) op een net geopende pagina
+zonder dat er al ergens op geklikt is — en dit dashboardvenster wordt
+standaard met `flatpak kill` + een verse `flatpak run` heropend na elke
+grote wijziging (Joost's staande instructie: sluit het oude venster,
+open een vers venster zodat hij zelf kan testen), dus elk zo'n heropend
+venster startte zonder "user gesture" en blokkeerde daardoor het
+allereerste geluid.
+
+Fix: `--autoplay-policy=no-user-gesture-required` toegevoegd aan het
+Chrome-opstartcommando in `start.sh`. Veilig hier, want dit is een
+single-purpose vertrouwd appvenster, geen algemeen browserprofiel.
