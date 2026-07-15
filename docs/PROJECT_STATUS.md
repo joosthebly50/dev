@@ -169,6 +169,18 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   Tier 2 (exploitatie) en Tier 3 (AD-escalatie, firewallversoepeling)
   blijven buiten scope zonder aparte expliciete toestemming. Zie
   `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §6.1/§6.3/§12.
+- ✅ **SOC Alarmdashboard (2026-07-15).** Live, lokale alarmering op de
+  Bazzite-host: banner + geluid per aanvalstype (scan/recon, exploit,
+  reverse shell, DDoS, SQLi, XSS) zodra Security Onion een Suricata-alert
+  genereert, met dedup zodat één scan met honderden hits niet honderden
+  losse meldingen geeft. Zesde desktop-launcher, start ook automatisch mee
+  met "Pentest Lab Start". Getest en bevestigd (categorisering, dedup,
+  meerdere opeenvolgende poll-cycli zonder fouten) — DDoS/SQLi/XSS/reverse-
+  shell-categorieën nog niet met een echt bijpassend testevent bevestigd
+  (vereist Tier 2, nog niet toegestaan). Apart, lokaal bouwsel — **niet**
+  hetzelfde als het hieronder nog geplande vier-niveau
+  INFO/WARNING/HIGH/CRITICAL-schema met Discord/Telegram-doorsturing. Zie
+  `docs/guides/alarm_dashboard.md`.
 
 ---
 
@@ -214,7 +226,12 @@ gecombineerd dashboard met host-/gaming-metrics is nog niet gebouwd.
 
 Het oorspronkelijke plan definieerde vier niveaus: INFO, WARNING, HIGH,
 CRITICAL, met als einddoel automatische doorsturing van HIGH/CRITICAL
-naar Discord of Telegram. Nog niet geïmplementeerd in dit lab.
+naar Discord of Telegram. **Nog niet geïmplementeerd** — dit blijft een
+apart, open punt. Wel gerealiseerd (2026-07-15, ander ontwerp): een lokaal
+alarmdashboard op de Bazzite-host zelf, categoriserend op **aanvalstype**
+(scan, exploit, reverse shell, DDoS, SQLi, XSS) in plaats van op
+severity-niveau, zonder externe doorsturing. Zie
+`docs/guides/alarm_dashboard.md`.
 
 ### Overig
 
@@ -245,7 +262,7 @@ Alles wat er nu is, op één plek:
 | `docs/ROADMAP_OPNSENSE_LOGGING.md` | Fase 2A: OPNsense-syslog naar Security Onion (Firewall + DHCP, bewezen werkend) |
 | `docs/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md` | Fase 2B: Unbound DNS query logging — onderzoek, bewust uitgesteld |
 | `docs/GLOSSARY.md` | Uitleg van vaktermen |
-| `docs/guides/` | Technische handleidingen (setup, launchers, netwerk/poorten, detectie, incident response, quick reference) |
+| `docs/guides/` | Technische handleidingen (setup, launchers, netwerk/poorten, detectie, incident response, quick reference, alarmdashboard) |
 | `docs/decisions/` | Architectuur- en beveiligingskeuzes |
 | `docs/troubleshooting/` | Opgeloste problemen, met bewijs |
 | `docs/daily/` | Dagrapporten en commandologs, één map per dag |

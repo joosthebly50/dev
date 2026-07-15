@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=SOC Alarmdashboard
+Comment=Live alarmdashboard: banner + geluid per aanvalstype (scan, exploit, reverse shell, DDoS, SQLi, XSS) op basis van Security Onion's Suricata-alerts
+Exec=/var/home/Joost/Homelab/scripts/soc-alarm-dashboard.sh
+Icon=security-high
+Terminal=false
+Categories=System;
+StartupNotify=true
+Keywords=Homelab;SecurityOnion;Suricata;Alarm;Dashboard;SOC;

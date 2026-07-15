@@ -6,6 +6,20 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## SOC Alarmdashboard: Live Local Alerting by Attack Type
+
+Built on request: a live dashboard on the Bazzite host itself that shows a banner and plays a sound for every Suricata alert Security Onion generates, categorized by attack type (scan/recon, exploit, reverse shell, DDoS, SQL injection, XSS). This is a different, complementary thing from the still-unbuilt four-tier INFO/WARNING/HIGH/CRITICAL-with-Discord/Telegram-forwarding item already on the roadmap — this one categorizes by attack type, stays entirely local, and was built same-day.
+
+Architecture: `browser/alert-dashboard/server.mjs` polls Security Onion's Hunt every 20s via the same already-authenticated browser-daemon pattern every `diag-hunt-*.mjs` script this session used (no new firewall access needed), categorizes each alert via keyword matching (`categorize.mjs`) against signature name + Suricata's own classification text, and serves a local dashboard (`dashboard.html`, port 8765) with live counters, a feed, and category-colored banners with distinct sounds (generated via the Web Audio API, no external audio files).
+
+Deduplication: today's earlier gobuster run alone produced 3,637 alerts on one signature — without throttling that's 3,637 identical popups. Every alert is still counted and shown in the feed, but banner+sound for a given signature is capped at once per 60 seconds.
+
+New sixth desktop launcher ("SOC Alarmdashboard"), and wired into `scripts/lab-start.sh` (detached, non-blocking) so it starts automatically with the rest of the lab.
+
+Verified with three live test scans against Metasploitable2: correct categorization, correct dedup behavior, and `pollErrors: 0` across multiple consecutive poll cycles. Found and fixed one real bug during verification: the first version's timestamp conversion left a stray space before `Z`, which would have broken the next poll's Hunt query after the first successful one. DDoS/SQLi/XSS/reverse-shell categories are implemented but not yet confirmed against a real matching test event — that needs Tier 2 (exploitation), still out of scope pending separate approval.
+
+Full detail: `docs/guides/alarm_dashboard.md`.
+
 ## New §6.1 Detection Row: AD / LDAP / SMB Enumeration
 
 Added a dedicated §6.1 detection-use-case row, "AD / LDAP / SMB enumeration," status ✅ Confirmed 2026-07-15, based on the DC01 read-only enumeration test: `enum4linux-ng -A`, `netexec smb --shares`, and an anonymous `ldapsearch` bind from ATTACK-Kali (`192.168.50.50`) against DC01 (`192.168.50.10`). Suricata detected the attempt — `ET INFO Anonymous LDAPv3 Bind Request Outbound`, `ET INFO NTLM Session Setup Request - Auth`, `ET INFO NTLM Session Setup Request - Negotiate` — while DC01 itself correctly blocked the actual enumeration (`STATUS_ACCESS_DENIED`, valid LDAP bind required).

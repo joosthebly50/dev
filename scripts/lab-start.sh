@@ -90,6 +90,11 @@ else
   echo "✅ Pentest Lab volledig gestart."
 fi
 
+echo
+echo "SOC Alarmdashboard starten (detached -- Security Onion heeft nog een paar minuten nodig, de dashboard-poller wacht dat vanzelf af)..."
+nohup /var/home/Joost/Homelab/scripts/soc-alarm-dashboard.sh >/tmp/soc-alarm-dashboard-autostart.log 2>&1 &
+disown
+
 if [ -t 0 ]; then
   read -r -p "Druk op Enter om af te sluiten..." _
 fi
