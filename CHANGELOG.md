@@ -6,6 +6,16 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## Phase 2A: OPNsense Syslog Forwarding to Security Onion — Validated (Firewall + DHCP)
+
+Root cause of the "nothing arrives" symptom: the remote-syslog destination's **Contents / Log sources field was empty** — the destination existed (right IP, enabled) but was never bound to any local log source, so syslog-ng had nothing to route to it. This was true even before the stale-IP fix (`.9` → `.30`), proven via OPNsense's own syslog-ng Statistics tab showing `processed=written=0` on the destination throughout — never a network or Security Onion firewall problem, despite two earlier fixes in that direction (stale IP, missing SO hostgroup) both being real, necessary, but insufficient on their own.
+
+Fixed by setting Contents to exactly **Firewall, DHCP (Kea), DNS (Unbound)**. Validated with direct evidence, not summary views: OPNsense's Statistics tab counters climbed 47 → 276 (`processed`/`written`, `dropped=0` throughout) after a deliberate DHCP renew; Security Onion's own Zeek independently saw 288 packets on the wire (`zeek.syslog`, isolating "packets arrive" from "packets parse"); `pfsense.firewall` dataset shows real parsed entries including a "pass" verdict; a deliberate `sudo networkctl renew` on ubuntu-server-01 produced two Kea log lines under `syslog.syslog` whose MAC address (`52:54:00:0e:0f:65`) was independently confirmed as that exact host's real interface MAC — not a coincidental match.
+
+DNS did not validate — root-caused as a **separate, not-yet-enabled Unbound setting** (`unbound.advanced.logqueries`, confirmed off by default), not a pipeline defect, so it's split into a distinct Phase 2B rather than reopening Phase 2A. TLS transport and OPNsense's own Suricata remain explicitly deferred, unchanged from the original design.
+
+Full evidence and validation steps: `docs/ROADMAP_OPNSENSE_LOGGING.md`. Phase 2B research (not yet enabled): `docs/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md`.
+
 ## Decision: Kali Will Not Get an Elastic Agent — Endpoint-Monitoring Phase Closed
 
 Joost decided definitively: Kali stays without Elastic Agent monitoring, closing out the endpoint-monitoring phase (WIN11-01 and ubuntu-server-01 were already done). Discussed explicitly whether this was needed for Red/Blue/Purple Team work: not needed for Red or Blue Team (detections are driven by what Security Onion sees at the targets and on the network, not at the attacker), and while it would add precision for Purple Team correlation (matching attacker actions to detections), it isn't essential — the already-agreed §12 test methodology (run technique → check Hunt → flip status) doesn't depend on it. `docs/ROADMAP_ENDPOINT_MONITORING.md`, `docs/PROJECT_STATUS.md`, and the master doc updated to reflect this as closed, not deferred.

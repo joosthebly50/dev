@@ -1,10 +1,18 @@
 # Roadmap: OPNsense Logging into Security Onion
 
-**Status: DESIGN PROPOSAL ONLY — nothing in this document has been executed.
-No changes have been made to OPNsense or Security Onion.** This is Phase 2
-of the roadmap Joost set on 2026-07-14 (see `docs/PHASE1_CLOSURE_SUMMARY.md`
-for the closed Phase 1). Per explicit instruction, this design needs to be
-reviewed and approved before any configuration is touched.
+**Status: Phase 2A ✅ VALIDATED (2026-07-15) — Phase 2B proposed, not yet
+executed.** This is Phase 2 of the roadmap Joost set on 2026-07-14 (see
+`docs/PHASE1_CLOSURE_SUMMARY.md` for the closed Phase 1). Split into two
+sub-phases to keep each change independently validatable:
+
+- **Phase 2A — Remote syslog (Firewall + Kea DHCP), TLS/Suricata deferred.**
+  Implemented and validated with direct evidence 2026-07-15. See "Phase 2A
+  validation evidence" below.
+- **Phase 2B — Unbound DNS query logging.** Deliberately split off as a
+  separate change once Phase 2A validation showed DNS wasn't a syslog-pipeline
+  problem but a distinct, not-yet-enabled Unbound setting. See
+  `docs/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md` — design/research only, nothing
+  enabled yet.
 
 This was already anticipated, in outline, in
 `docs/ROADMAP_ENDPOINT_MONITORING.md`'s "Expliciet buiten scope" section:
@@ -59,11 +67,11 @@ syslog (RFC 5425) natively — not just legacy UDP.
 
 ## 2. Which OPNsense logs to collect
 
-| Source | Value | Priority |
-|---|---|---|
-| **Firewall (filterlog)** — allow/block decisions | Core perimeter visibility; complements Suricata/Zeek's payload-level view with the firewall's own pass/block verdict | High |
-| **DHCP (Kea)** | Already proven valuable this session for troubleshooting (the `.100`/`.40` investigation) — forwarding this means future Kea issues are diagnosable via Hunt instead of requiring SSH + `grep` each time | High |
-| **DNS (Unbound query log)** | Lab-wide DNS resolution visibility — direct relevance to Phase 3 detection engineering (DNS tunneling/beaconing detection needs this) | Medium — needs Unbound query logging enabled first if not already (not confirmed either way) |
+| Source | Value | Priority | Status |
+|---|---|---|---|
+| **Firewall (filterlog)** — allow/block decisions | Core perimeter visibility; complements Suricata/Zeek's payload-level view with the firewall's own pass/block verdict | High | ✅ Validated 2026-07-15 |
+| **DHCP (Kea)** | Already proven valuable this session for troubleshooting (the `.100`/`.40` investigation) — forwarding this means future Kea issues are diagnosable via Hunt instead of requiring SSH + `grep` each time | High | ✅ Validated 2026-07-15 |
+| **DNS (Unbound query log)** | Lab-wide DNS resolution visibility — direct relevance to Phase 3 detection engineering (DNS tunneling/beaconing detection needs this) | Medium | ⏸ Deferred to Phase 2B — confirmed `unbound.advanced.logqueries` is off by default in this install (OPNsense 26.1.11_6); see `docs/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md` |
 | **OPNsense's own Intrusion Detection (Suricata) plugin** | OPNsense has this as an available service, separate from Security Onion's own network-mirror-fed Suricata | **Needs verification first** — not confirmed whether Joost has this enabled. If it *is* running, forwarding its alerts would likely **duplicate** Security Onion's own Suricata detections on the same traffic, which needs a deliberate decision (forward it anyway for a second, firewall-side vantage point? skip it as redundant?) rather than a default yes. |
 | **VPN** | N/A for now — the OPNsense audit confirmed no VPN is configured at all. Placeholder only, revisit if a VPN is ever set up (ties into the "WireGuard for remote lab access" idea from the earlier network-ideas discussion). |
 | **NAT events** | Typically part of the firewall/filterlog stream on this firewall family, not a separate log — no separate collection needed. |
@@ -124,14 +132,81 @@ or firewall segmentation rules:
 
 ---
 
+## Phase 2A validation evidence (2026-07-15)
+
+**Root cause of the initial "nothing arrives" symptom:** the remote-syslog
+destination's **Contents / Log sources field was empty** — a destination
+existed (correct IP, enabled) but was never bound to any local log source,
+so syslog-ng had literally nothing to route to it (confirmed via the
+Statistics tab: `processed`/`written` were `0` for this destination even
+before the IP was stale-corrected, i.e. this was never a network/firewall
+problem). Fixed by setting Contents to exactly **Firewall, DHCP (Kea),
+DNS (Unbound)** — nothing else (Suricata/IDS, DHCP-relay, routing,
+gateways, wireguard, dnsmasq all left unchecked).
+
+**Transport (unchanged from the stale-IP fix):** plain UDP syslog to
+`192.168.50.30:514`. TLS migration is still explicitly deferred — not
+part of this phase.
+
+Evidence collected, in the order validated:
+
+1. **OPNsense syslog-ng Statistics tab** — destination
+   `udp,192.168.50.30:514` counters climbed from `processed=written=47`
+   (baseline, ambient traffic only) to `processed=written=276` after a
+   deliberate DHCP renew, with `dropped=0`/`queued=0` throughout the whole
+   session. No message loss at any point.
+2. **Packets physically arriving** — Security Onion's own Zeek instance
+   independently saw the traffic on the wire: `zeek.syslog` dataset, 288
+   hits for `192.168.50.1 → 192.168.50.30:514` in a 20-minute window. This
+   is evidence from a completely separate code path than the ingest
+   pipeline below, so it isolates "packets arrive" from "packets get
+   parsed."
+3. **Firewall — confirmed.** `event.dataset:"pfsense.firewall"` (Security
+   Onion parses OPNsense's filterlog using its pfSense-family parser,
+   since OPNsense is a pfSense fork) shows real, correctly-parsed entries,
+   including a "pass" verdict — not just a raw/unparsed blob.
+4. **DHCP (Kea) — confirmed with an unambiguous identity match.** A
+   deliberate `sudo networkctl renew enp1s0` on ubuntu-server-01 produced
+   two `event.dataset:"syslog.syslog"` entries at `01:29:52.134Z` and
+   `01:30:12.237Z` with `real_message`:
+   `[hwtype=1 52:54:00:0e:0f:65], cid=[01:52:54:00:0e:0f:65], tid=0xad09bc2c`.
+   `52:54:00:0e:0f:65` was independently confirmed as ubuntu-server-01's
+   actual MAC (`ip link show enp1s0`) — this is not a coincidental/ambient
+   match, it's that host's real renewal. Other lab hosts' routine Kea
+   renewals (different MACs, same dataset) were also visible in the
+   surrounding window, confirming the category is generally live, not a
+   one-off.
+5. **DNS (Unbound) — attempted, not confirmed, root-caused as a separate
+   issue.** A distinctive NXDOMAIN marker query
+   (`phase2-dns-test-1784078759.homelab.test`) never appeared anywhere, any
+   field, any time — a full free-text search (no field/time restriction)
+   ruled out a query-syntax miss. Every `syslog.syslog` entry in the
+   surrounding time window was a Kea fragment, none DNS-shaped. Root cause:
+   Unbound's own query logging (`unbound.advanced.logqueries`, under
+   DNS Resolver → Advanced → Logging Settings, currently **unchecked**) is
+   a separate setting from the syslog-Contents checkbox — Unbound doesn't
+   log individual queries by default regardless of what's forwarded. This
+   is why it's split into Phase 2B rather than treated as a Phase 2A bug.
+
+**Not tested this phase, deliberately:** a firewall *block* event. Given
+`pfsense.firewall` already proved the parser/pipeline works end-to-end for
+a "pass" verdict, and the current LAN ruleset has no rule that would ever
+produce a genuine block from ordinary lab traffic (`docs/OPNSENSE_AUDIT_2026-07-13.md`
+confirms only the two default allow-any rules exist, no segmentation), a
+block-test would require adding a temporary firewall rule — a separate,
+explicitly-approved change, not bundled into this validation. Judged
+unnecessary for now since the same dataset/parser already proved itself on
+real traffic; revisit if/when segmentation rules are ever added.
+
 ## Next step
 
-Waiting on Joost's review/approval of this design before any configuration
-change is made on either OPNsense or Security Onion, per explicit
-instruction. Open decisions to resolve during that review:
+Phase 2A is complete. Remaining open items, none blocking:
 
-1. TLS or plain TCP for transport?
-2. Forward OPNsense's own IDS/Suricata alerts too, or skip as likely
-   redundant with Security Onion's existing network-mirror-based Suricata?
-3. Log-everything vs. blocks-only for the firewall stream (storage
-   tradeoff)?
+1. TLS migration — still deferred, unchanged from the original design.
+2. Forward OPNsense's own IDS/Suricata alerts — still deferred, unchanged.
+3. Log-everything vs. blocks-only for the firewall stream — observed
+   behavior so far is that pass events *are* being logged (not blocks-only),
+   worth revisiting for storage/volume once real usage accumulates.
+4. Phase 2B (DNS query logging) — see
+   `docs/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md`, awaiting Joost's decision on
+   whether to enable it.
