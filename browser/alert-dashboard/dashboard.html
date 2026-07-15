@@ -121,6 +121,8 @@
   .conn-row.threat-warning { background: rgba(224,140,44,0.18); box-shadow: inset 3px 0 0 #e08c2c; }
   .conn-row.threat-critical { background: rgba(224,49,60,0.2); box-shadow: inset 3px 0 0 #e0313c; animation: threatpulse 1.4s ease-in-out infinite; }
   .conn-row.voip { background: rgba(62,207,110,0.14); box-shadow: inset 3px 0 0 #3ecf6e; }
+  .conn-row.synthetic { border-bottom-style: dashed; opacity: 0.92; }
+  .conn-row.synthetic .proto { font-style: italic; }
   @keyframes threatpulse { 0%, 100% { background: rgba(224,49,60,0.2); } 50% { background: rgba(224,49,60,0.36); } }
   .conn-row .proto { color: var(--muted); text-transform: uppercase; }
   .conn-row .addr { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -310,6 +312,20 @@ function threatLevelFor(ip) {
   if (!t) return null;
   if (t.until < Date.now()) { threatIps.delete(ip); return null; }
   return t.level;
+}
+
+// The connections panel only ever sees the Bazzite HOST's own sockets
+// (`ss`) -- an alert between two other lab machines (e.g. Kali scanning
+// Metasploitable2) never touches the host's network stack, so it can
+// never appear there as a real row. To still make that traffic visible,
+// keep the actual src->dst pair from each alert and render it as a
+// separate "network-only" row (no PID, clearly not a host process) in
+// pollConnections() whenever no real host connection already covers it.
+const recentAlertLinks = new Map(); // "src|dst" -> { srcIp, dstIp, bucket, level, until }
+function markAlertLink(a, level) {
+  recentAlertLinks.set(a.srcIp + '|' + a.dstIp, {
+    srcIp: a.srcIp, dstIp: a.dstIp, bucket: a.bucket, level, until: Date.now() + THREAT_GLOW_MS,
+  });
 }
 
 // Heuristic: matched against the process name `ss` reports. Not exhaustive
@@ -553,6 +569,7 @@ async function poll() {
       const level = priorityRank(a.bucket) <= 6 ? 'critical' : 'warning';
       markThreatIp(a.srcIp, level);
       markThreatIp(a.dstIp, level);
+      markAlertLink(a, level);
     }
     if (newOnes.length) {
       renderCounters();
@@ -677,9 +694,37 @@ function escapeHtml2(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&
 async function pollConnections() {
   try {
     const { connections } = await (await fetch('/api/connections')).json();
-    document.getElementById('connCount').textContent = connections.length;
+
+    // Alert-only rows: traffic between two OTHER lab machines (e.g. Kali
+    // scanning Metasploitable2) never touches the host's own socket
+    // table, so it has no real row above. Synthesize one, but only for
+    // pairs not already covered by an actual host connection either way.
+    const now = Date.now();
+    const covered = new Set();
+    for (const c of connections) covered.add(c.localAddr + '|' + c.peerAddr), covered.add(c.peerAddr + '|' + c.localAddr);
+    const syntheticLinks = [];
+    for (const [key, link] of recentAlertLinks) {
+      if (link.until < now) { recentAlertLinks.delete(key); continue; }
+      if (covered.has(link.srcIp + '|' + link.dstIp)) continue;
+      syntheticLinks.push(link);
+    }
+    syntheticLinks.sort((a, b) => b.until - a.until);
+
+    document.getElementById('connCount').textContent = connections.length + syntheticLinks.length;
     const list = document.getElementById('connList');
-    list.innerHTML = connections.map((c) => {
+
+    const syntheticHtml = syntheticLinks.map((link) => {
+      const meta = CATEGORIES[link.bucket] || CATEGORIES.OTHER;
+      return `<div class="conn-row synthetic threat-${link.level}" title="Suricata-alert (${meta.label}) -- geen live verbinding op deze host, verkeer tussen andere labmachines">
+        <span class="proto">NET</span>
+        <span class="addr" title="${escapeHtml2(link.srcIp)}">${escapeHtml2(link.srcIp)}</span>
+        <span class="arrow">→</span>
+        <span class="addr" title="${escapeHtml2(link.dstIp)}">${escapeHtml2(link.dstIp)}</span>
+        <span class="proc">${meta.icon} ${escapeHtml2(meta.label)} <span class="pid">(niet deze host)</span></span>
+      </div>`;
+    }).join('');
+
+    const realHtml = connections.map((c) => {
       const isLab = (c.localAddr || '').startsWith('192.168.50.') || (c.peerAddr || '').startsWith('192.168.50.');
       // Only the peer side matters here -- localAddr is always the host's
       // own address, so matching on it would light up every single row
@@ -700,6 +745,8 @@ async function pollConnections() {
         <span class="proc" title="${c.process || ''} (${c.pid || '?'})">${c.process ? escapeHtml2(c.process) : '<span class="pid">?</span>'}<span class="pid">${c.pid ? ' ·' + c.pid : ''}</span></span>
       </div>`;
     }).join('');
+
+    list.innerHTML = syntheticHtml + realHtml;
   } catch (e) { /* leave last-known list on a transient fetch failure */ }
 }
 

@@ -474,3 +474,30 @@ allereerste geluid.
 Fix: `--autoplay-policy=no-user-gesture-required` toegevoegd aan het
 Chrome-opstartcommando in `start.sh`. Veilig hier, want dit is een
 single-purpose vertrouwd appvenster, geen algemeen browserprofiel.
+
+### Alert-only rijen ("NET") voor verkeer tussen andere labmachines
+
+Direct na bovenstaande fix meldde Joost: scans komen wel binnen in het
+linkerpaneel (de alert-feed), maar lichten niet op in het rechterpaneel.
+Oorzaak: het verbindingspaneel toont uitsluitend de eigen `ss`-sockets
+van de Bazzite-host. Verkeer tussen twee ándere labmachines (bijv. Kali
+die Metasploitable2 scant, of gewoon Kali's eigen DHCP-verkeer naar
+OPNsense) loopt nooit over de netwerkstack van de host zelf, en kan dus
+principieel nooit als een echte rij verschijnen — dit is geen bug in de
+`ss`-parsing, maar een structurele beperking van "alleen host-
+zichtbaarheid". Live bevestigd: het `ET INFO Possible Kali Linux
+hostname in DHCP Request Packet`-alert (192.168.50.50 → 192.168.50.1)
+had geen enkele overeenkomende regel in `ss -tnp`/`-unp` op de host.
+
+Opgelost door het src/dst-paar van elk alert apart bij te houden
+(`recentAlertLinks`, dezelfde 60s-gloedvenster-logica als
+`threatIps`). In `pollConnections()` wordt voor elk zo'n paar gecheckt
+of er al een échte host-verbinding is die het dekt (in beide
+richtingen); zo niet, dan verschijnt er een synthetische rij bovenaan
+met proto `NET`, geen poorten, geen PID, en het label van de alert-
+categorie gevolgd door "(niet deze host)" — zodat nooit de indruk
+gewekt wordt dat het om een écht hostproces gaat. Visueel onderscheiden
+met een gestippelde onderrand. Live bevestigd via screenshot: twee
+`NET`-rijen bovenaan (Kali→OPNsense enumeration, en de eerdere host-scan
+naar Metasploitable2 nadat die TCP-verbinding alweer gesloten was),
+beide correct oranje gemarkeerd en gelabeld.

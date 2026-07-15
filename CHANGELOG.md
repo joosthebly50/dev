@@ -6,6 +6,14 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## SOC Alarmdashboard: Alert-Only "NET" Rows for Non-Host Lab Traffic
+
+Immediately after the previous fix, Joost reported scans showing up in the left alert feed but never lighting up anything in the right connections panel. Root cause: that panel only ever sees the Bazzite host's own `ss` sockets -- traffic between two other lab machines (e.g. Kali scanning Metasploitable2, or Kali's own DHCP traffic to OPNsense) never touches the host's network stack at all, so it structurally can never appear as a real row, confirmed live with the `ET INFO Possible Kali Linux hostname in DHCP Request Packet` alert (192.168.50.50 -> 192.168.50.1), which had no matching line in `ss -tnp`/`-unp` on the host.
+
+Fixed by tracking each alert's src/dst pair client-side (`recentAlertLinks`, same 60s glow window as the IP-level threat map) and rendering a synthetic "NET" row at the top of the panel for any pair not already covered by a real host connection -- no ports, no PID, labeled with the alert category plus "(niet deze host)" so it's never mistaken for an actual host process. Confirmed live via screenshot: two NET rows appeared correctly (the Kali->OPNsense enumeration alert, and the earlier Metasploitable2 scan after its TCP connection had already closed), both orange and dashed-bordered to stand apart from real rows.
+
+Full detail: `docs/guides/alarm_dashboard.md`.
+
 ## SOC Alarmdashboard: Threat/VoIP Highlighting on Connection Rows + Autoplay Fix
 
 Per Joost's request, connection rows in the new active-connections panel now light up red (critical categories: Reverse Shell through MITM) or orange (everything else) when that peer IP matches a recently-fired alert, and light up green for known VoIP/game processes (Discord, TeamSpeak, Steam, Arma/Reforger, etc.) so lab detections and Joost's own voice-call/gaming traffic are visually distinguishable at a glance.
