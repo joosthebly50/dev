@@ -327,6 +327,7 @@ ssh security-onion "tail -20 /opt/so/log/so-firewall.log"
 | ICMP ping sweeps / TCP scans (SYN/FIN/NULL/XMAS) / UDP scans | ✅ Confirmed 2026-07-15 — see Metasploitable2 Tier 1 scan below |
 | OS fingerprinting / banner grabbing | ✅ Confirmed 2026-07-15 — see Metasploitable2 Tier 1 scan below |
 | SSH / FTP / SMB brute force | ⚠️ (SMB relevant especially toward DC01) |
+| **AD / LDAP / SMB enumeration** | ✅ Confirmed 2026-07-15 — see "DC01 Tier 1 AD enumeration" below. Deliberately a separate row from brute force: enumeration (single null-session/anonymous-bind probes reading directory/share structure) and brute force (repeated authentication attempts against credentials) are different behaviors with different signatures, and shouldn't be collapsed into one row. |
 | Suspicious DNS requests | ⚠️ (Zeek `dns.log`; Sysmon event 22 on DC01) |
 | Known exploit signatures / reverse shells / Metasploit indicators | ⚠️ (Suricata rulesets; Sysmon process-creation for host-side) |
 | SQLi / command injection / directory traversal | ⚠️ (Suricata web-attack rulesets) |
@@ -372,7 +373,7 @@ Fixed procedure for any alert — real, test, or exercise:
 |---|---|---|
 | Full port/service scan — Metasploitable2 | ✅ Done, 2026-07-15 | See [§6.1](#61-what-this-soc-should-detect) "Metasploitable2 Tier 1 scan" — 172 Suricata alerts, 65,801 Zeek events, flipped 2 rows to ✅ |
 | Web app recon — Juice Shop (`nikto`, `gobuster`/`ffuf`) | ✅ Done, 2026-07-15 | See "Juice Shop Tier 1 web recon" below — 3,637 Suricata alerts, no §6.1 row flipped outright (see notes) |
-| AD/domain enumeration — DC01 (`enum4linux-ng`, `netexec smb`, anonymous LDAP) | ✅ Done, 2026-07-15, read-only only | See "DC01 Tier 1 AD enumeration" below — 3 Suricata alerts incl. a high-severity anonymous-LDAP-bind signature; no existing §6.1 row fits, flagged separately |
+| AD/domain enumeration — DC01 (`enum4linux-ng`, `netexec smb`, anonymous LDAP) | ✅ Done, 2026-07-15, read-only only | See "DC01 Tier 1 AD enumeration" below — 3 Suricata alerts incl. a high-severity anonymous-LDAP-bind signature; flipped a new §6.1 row, "AD / LDAP / SMB enumeration," to ✅ |
 | Network sweep (`.0/24`) | ✅ Already done (`nmap -sn`, confirmed known IPs only, per [§12](#12-attack-scope-agreed-red-team-test-plan) "Preparation already done") | — |
 
 **Juice Shop Tier 1 web recon — confirmed 2026-07-15:**
@@ -392,7 +393,7 @@ Fixed procedure for any alert — real, test, or exercise:
 - **Time window:** `2026-07-15 02:04:46Z`–`02:05:05Z`.
 - **AD-side result — DC01 correctly rejected enumeration:** null-session SMB connected and revealed only basic domain identity (NetBIOS name `DC01`, domain `PENTEST`/`pentest.lab`, domain SID) — every actual enumeration call (`querydispinfo`, `enumdomusers`, `enumalsgroups`, `enumdomgroups`, share list, policy, printers) returned `STATUS_ACCESS_DENIED`. `netexec` confirmed null-auth accepted at the protocol level but got `STATUS_USER_SESSION_DELETED` on share enumeration. Anonymous LDAP bind was rejected outright (`Operations error` — "a successful bind must be completed"). This is a real, confirmed security posture, not assumed.
 - **Hunt evidence, same source/dest/window:** 76 total events; **3 real Suricata alerts** (`event.module:"suricata"`): `ET INFO NTLM Session Setup Request - Auth` (low), `ET INFO NTLM Session Setup Request - Negotiate` (low), and **`ET INFO Anonymous LDAPv3 Bind Request Outbound`** (**high**, "Potential Corporate Privacy Violation") — a purpose-built signature that fired precisely on the anonymous LDAP bind attempt.
-- **Why no §6.1 row is flipped:** none of the current 6 rows is a clean match for "AD/LDAP/SMB enumeration detection" specifically (closest is "SSH/FTP/SMB brute force," which implies repeated auth attempts, not a single null-session probe). Flagged as an open question rather than force-fit: **worth considering a new §6.1 row for AD/LDAP enumeration detection**, given a real, purpose-built, high-severity signature exists and fired correctly — this table addition needs Joost's decision, not a unilateral restructure.
+- **New §6.1 row added, 2026-07-15: "AD / LDAP / SMB enumeration," status ✅.** None of the original 6 rows was a clean match — closest was "SSH/FTP/SMB brute force," but that implies repeated authentication attempts against credentials, not single null-session/anonymous-bind probes reading directory/share structure. These are different behaviors with different signatures (`ET INFO Anonymous LDAPv3 Bind Request Outbound` / NTLM Session Setup vs. e.g. repeated-failed-logon signatures) and belong in separate rows, not collapsed into one — Joost's explicit decision, not a unilateral restructure.
 
 **Tier 1 complete as of 2026-07-15** — all three planned scenarios (Metasploitable2 full-port scan, Juice Shop web recon, DC01 read-only AD enumeration) executed and validated in Hunt with direct evidence. **Tier 2 and Tier 3 remain explicitly out of scope without new, separate explicit approval.**
 

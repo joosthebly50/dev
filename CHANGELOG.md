@@ -6,6 +6,14 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## New §6.1 Detection Row: AD / LDAP / SMB Enumeration
+
+Added a dedicated §6.1 detection-use-case row, "AD / LDAP / SMB enumeration," status ✅ Confirmed 2026-07-15, based on the DC01 read-only enumeration test: `enum4linux-ng -A`, `netexec smb --shares`, and an anonymous `ldapsearch` bind from ATTACK-Kali (`192.168.50.50`) against DC01 (`192.168.50.10`). Suricata detected the attempt — `ET INFO Anonymous LDAPv3 Bind Request Outbound`, `ET INFO NTLM Session Setup Request - Auth`, `ET INFO NTLM Session Setup Request - Negotiate` — while DC01 itself correctly blocked the actual enumeration (`STATUS_ACCESS_DENIED`, valid LDAP bind required).
+
+Deliberately kept separate from the existing "SSH/FTP/SMB brute force" row: enumeration (single null-session/anonymous-bind probes reading directory/share structure) and brute force (repeated authentication attempts against credentials) are different behaviors with different signatures, and collapsing them into one row would blur the detection matrix. Joost's explicit decision.
+
+Full record: `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §6.1/§6.3.
+
 ## Phase 3 Tier 1 Complete: DC01 Read-Only AD Enumeration Confirmed in Hunt
 
 Ran the third and final planned Tier 1 scenario: read-only AD enumeration against DC01 from ATTACK-Kali — `enum4linux-ng -A`, `netexec smb --shares`, and an anonymous `ldapsearch` bind. No credentials used, no write/modify operation attempted.

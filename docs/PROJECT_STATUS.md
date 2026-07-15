@@ -149,13 +149,23 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   Fase 3 (detection engineering), met name bij het ontwerpen van DNS-
   tunneling-/beaconingdetecties. Geen OPNsense-configuratiewijziging
   uitgevoerd. Zie `docs/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md`.
-- 🔄 **Phase 3: Detection engineering — gestart (2026-07-15).** Uitvoering
-  van het al op 2026-07-13 afgesproken §12-aanvalsplan (master doc). Eerste
-  scenario afgerond: volledige poort-/servicescan (`nmap -sV -sC -p-`)
-  vanaf ATTACK-Kali tegen Metasploitable2 — 172 echte Suricata-alerts en
-  65.801 Zeek-events bevestigd in Hunt, waarmee twee §6.1-detecties
-  (TCP scans, OS fingerprinting/banner grabbing) van ⚠️ naar ✅ gaan. Tier 1
-  loopt door met Juice Shop-webrecon en read-only DC01-AD-enumeratie.
+- ✅ **Phase 3, Tier 1: Detection engineering — volledig afgerond
+  (2026-07-15).** Uitvoering van het al op 2026-07-13 afgesproken
+  §12-aanvalsplan (master doc), alle drie geplande recon-scenario's
+  bevestigd in Hunt met direct bewijs:
+  - Volledige poort-/servicescan (`nmap -sV -sC -p-`) tegen Metasploitable2
+    — 172 Suricata-alerts, 65.801 Zeek-events. Twee §6.1-detecties
+    (TCP scans, OS fingerprinting/banner grabbing) van ⚠️ naar ✅.
+  - Juice Shop-webrecon (`nikto`, `gobuster`) — 3.637 Suricata-alerts,
+    incl. een high-severity Shellshock-exploitsignature. Geen bestaande
+    §6.1-rij geflipt (bewaard als ondersteunend bewijs).
+  - Read-only DC01-AD-enumeratie (`enum4linux-ng`, `netexec smb`, anonieme
+    `ldapsearch`) — DC01 blokkeerde de daadwerkelijke enumeratie correct
+    (`STATUS_ACCESS_DENIED`, LDAP-bind vereist), Suricata detecteerde de
+    poging alsnog (3 alerts, incl. high-severity anonieme-LDAP-bind-
+    signature). Nieuwe §6.1-rij **"AD / LDAP / SMB enumeration"** (✅)
+    toegevoegd — bewust een eigen rij, niet samengevoegd met brute force
+    (andere gedragingen, andere signatures).
   Tier 2 (exploitatie) en Tier 3 (AD-escalatie, firewallversoepeling)
   blijven buiten scope zonder aparte expliciete toestemming. Zie
   `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §6.1/§6.3/§12.
