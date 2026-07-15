@@ -39,8 +39,18 @@ SAMPLE_RATE = 22050
 KNOWN_VOICES = {
     "en_US-hfc_female-medium",
     "en_US-amy-medium",
+    "en_US-kristin-medium",
+    "en_US-ljspeech-medium",
+    "en_US-ljspeech-high",
     "en_GB-jenny_dioco-medium",
     "en_GB-alba-medium",
+    "en_GB-cori-medium",
+    "en_GB-semaine-medium",
+    "en_GB-aru-medium",
+    "en_US-hfc_male-medium",
+    "en_US-norman-medium",
+    "en_US-bryce-medium",
+    "en_GB-alan-medium",
 }
 
 

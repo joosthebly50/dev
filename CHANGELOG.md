@@ -6,6 +6,14 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## SOC Alarmdashboard: 10 More Voices Added to the Settings Menu
+
+Expanded the voice picker from 4 to 14 options, grouped by category (Female US, Female GB, Male) in the settings dropdown. Added four male voices with distinct character (Norman, Bryce, HFC Male, Alan) as the closest available stand-ins for a "game/viking/hacker" feel -- Piper's catalog doesn't have literally-themed voices, so these were picked and compared by ear for timbre. Added six more female voices (Kristin, LJSpeech at both medium and high quality, Cori, Semaine, Aru), rounding out essentially every clean single-speaker English voice Piper offers.
+
+Two Dutch voices (Nathalie, Ronnie) were downloaded, compared, and explicitly rejected -- no Dutch voices in the list, consistent with the earlier decision to keep language selection out of the app entirely. Every candidate was listened to standalone before being added to the menu; final voice selection is Joost's to make via the settings panel itself (using the existing live-preview-on-change feature).
+
+Full detail: `docs/guides/alarm_dashboard.md`.
+
 ## SOC Alarmdashboard: Voice 2.0 — Hostnames in Normal Mode, Grouped "Multiple Events" Phrasing
 
 Following GPT's refinement suggestions (relayed by Joost) on top of the SOC Dashboard v2 roadmap. The normal (non-Critical) spoken announcement now names both source and target as hostnames -- "Recon detected from Kali against Metasploitable 2." -- instead of the earlier raw source IP. When more than one alert of the winning (highest-priority) category lands in the same poll batch, the dashboard now speaks a calmer grouped line instead -- "Multiple recon events detected." -- rather than repeating the full from/against sentence, matching the existing "don't spam every alert" voice discipline.

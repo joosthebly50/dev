@@ -189,13 +189,25 @@ meldingsvorm gebruikt.
 
 | Instelling | Opties | Persistent? |
 |---|---|---|
-| Stem | HFC Female (US) · Amy (US) · Jenny (GB) · Alba (GB) — de vier stemmen die live vergeleken zijn. **Bij wijzigen speelt direct een korte preview af** ("This is the &lt;stem&gt; voice.", geen sirene) zodat je hem hoort vóórdat hij op een echt alert gebruikt wordt. | ✅ localStorage |
+| Stem | 14 stemmen, gegroepeerd: Vrouw (US) — HFC Female, Amy, Kristin, LJSpeech, LJSpeech HQ; Vrouw (GB) — Jenny, Alba, Cori, Semaine, Aru; Man — HFC Male, Norman, Bryce, Alan. **Bij wijzigen speelt direct een korte preview af** ("This is the &lt;stem&gt; voice.", geen sirene) zodat je hem hoort vóórdat hij op een echt alert gebruikt wordt. | ✅ localStorage |
 | Spreeksnelheid | 0.75x – 1.5x (Piper's `--length-scale`, omgekeerd) | ✅ localStorage |
 | Cooldown per categorie | 1s – 120s, standaard 30s | ✅ localStorage |
 | Uitspreken bij | Alleen Critical / Critical + High / Alles | ✅ localStorage |
 
 **Bewust niet gebouwd, op Joost's expliciete verzoek:** volumeregelaar en
 taalkeuze (NL/EN) horen niet in de app zelf thuis.
+
+**Stemuitbreiding (2026-07-15):** op verzoek 10 stemmen toegevoegd aan de
+oorspronkelijke 4 — vier "andere karakter"-mannenstemmen (voor een
+game/viking/hacker-sfeer; Piper heeft geen letterlijk zo genoemde stemmen,
+dit zijn de dichtstbijzijnde kandidaten qua timbre) plus zes extra
+vrouwenstemmen, incl. de high-quality variant van LJSpeech. Twee
+Nederlandse stemmen (Nathalie, Ronnie) zijn beluisterd en **expliciet
+afgewezen** — geen Nederlandse stemmen in de lijst, past ook bij de
+eerdere beslissing om geen taalkeuze in de app te bouwen. Elke kandidaat
+is eerst los beluisterd (via `paplay`) vóórdat 'ie aan het menu is
+toegevoegd; de definitieve keuze uit deze 14 is aan Joost, te maken via
+het instellingenpaneel zelf (met de live preview-functie).
 
 **Stem-preview, techniek:** `tts/synth.py` ondersteunt nu ook `--text`
 (een vaste zin, in plaats van de categorie/bron/doel-sjabloon), en slaat

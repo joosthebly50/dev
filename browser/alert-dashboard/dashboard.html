@@ -131,10 +131,26 @@
 
     <label>🎤 Stem</label>
     <select id="setVoice">
-      <option value="en_US-hfc_female-medium">HFC Female (US)</option>
-      <option value="en_US-amy-medium">Amy (US)</option>
-      <option value="en_GB-jenny_dioco-medium">Jenny (GB)</option>
-      <option value="en_GB-alba-medium">Alba (GB)</option>
+      <optgroup label="Vrouw (US)">
+        <option value="en_US-hfc_female-medium">HFC Female (US)</option>
+        <option value="en_US-amy-medium">Amy (US)</option>
+        <option value="en_US-kristin-medium">Kristin (US)</option>
+        <option value="en_US-ljspeech-medium">LJSpeech (US)</option>
+        <option value="en_US-ljspeech-high">LJSpeech HQ (US)</option>
+      </optgroup>
+      <optgroup label="Vrouw (GB)">
+        <option value="en_GB-jenny_dioco-medium">Jenny (GB)</option>
+        <option value="en_GB-alba-medium">Alba (GB)</option>
+        <option value="en_GB-cori-medium">Cori (GB)</option>
+        <option value="en_GB-semaine-medium">Semaine (GB)</option>
+        <option value="en_GB-aru-medium">Aru (GB)</option>
+      </optgroup>
+      <optgroup label="Man">
+        <option value="en_US-hfc_male-medium">HFC Male (US)</option>
+        <option value="en_US-norman-medium">Norman (US)</option>
+        <option value="en_US-bryce-medium">Bryce (US)</option>
+        <option value="en_GB-alan-medium">Alan (GB)</option>
+      </optgroup>
     </select>
 
     <label>🗣 Spreeksnelheid <span class="rangeval" id="rateVal">1.0x</span></label>
