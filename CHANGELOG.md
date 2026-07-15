@@ -6,6 +6,12 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## Reusable Markdown-to-PDF Renderer for the Master Documentation
+
+The master doc's PDF had gone stale relative to its markdown source (last rendered 2026-07-13, source since edited 2026-07-15) and there was no persisted script for re-rendering it -- past re-renders (per earlier changelog entries) were apparently done ad hoc. Built `browser/render-doc-pdf.mjs`: converts markdown to HTML via `marked` (added as a proper dependency alongside the existing `playwright`), wraps it in print-friendly CSS (headings, tables, code blocks, page-number footer), and prints to PDF via a headless Chromium tab (Playwright, already used throughout this project for browser automation).
+
+Found and fixed a real formatting bug on first render: code blocks used `overflow-x: auto`, which only helps on-screen -- in a printed PDF there's no scrolling, so long lines were silently clipped at the page edge (confirmed via a rendered-page screenshot, `so-firewall apply # additive; so-firewall removehost <ip> to strip e[clipped]`). Fixed by switching to `white-space: pre-wrap` so long lines wrap instead. Re-rendered: 25 pages, verified clean via a second screenshot.
+
 ## SOC Alarmdashboard: Live-Verified Threat Highlighting Against a Real Exploit
 
 Re-ran the already-validated vsftpd 2.3.4 backdoor (CVE-2011-2523) from Kali against Metasploitable2 -- an nmap service scan followed by the FTP `USER x:)` trigger and a read-only root shell (`id`/`whoami`/`uname`/`hostname`) via TCP/6200 -- specifically to test the new dashboard features against real traffic instead of synthetic `nc` connections. Nothing left on the target (no files/users/persistence, confirmed via `ss -tn` on Kali), consistent with the earlier run of this same scenario, so no VM restore was needed.

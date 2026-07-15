@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "Playwright-driven browser automation for the SOC Homelab (Security Onion / Kibana / Fleet).",
   "dependencies": {
+    "marked": "^18.0.6",
     "playwright": "^1.48.0"
   }
 }
