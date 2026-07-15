@@ -123,6 +123,13 @@ tijdstempel-conversie, wat de volgende poll-query zou hebben laten
 mislukken — opgelost door de regex uit te breiden met `\s*` vóór het
 offset-gedeelte.
 
+**Live end-to-end bevestigd** met een volwaardige `nmap -sV -sC`-scan
+(26 poorten) tegen Metasploitable2: 9 alerts, correct verdeeld over
+SCAN (8, incl. 2 high-severity) en EXPLOIT (1, `GPL RPC rlogin login
+failure`), alle 9 met `notify: true`. Joost bevestigde visueel dat alle
+9 banners + geluiden daadwerkelijk in het dashboardvenster verschenen,
+niet alleen via de API.
+
 **Nog niet getest:** DDoS-, SQLi-, XSS- en reverse-shell-categorieën met
 een echt bijpassend testevent (de tests vandaag waren allemaal Scan/Recon).
 Dat vereist Tier 2-technieken (exploitatie), die nog expliciet buiten scope
