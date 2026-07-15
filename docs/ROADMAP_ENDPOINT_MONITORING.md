@@ -4,7 +4,9 @@
 zijn uitgevoerd en geverifieerd (2026-07-14, zie
 `docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md` en
 `docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`).
-Kali staat bewust nog als niet-uitgevoerd — zie prioriteit 3 hieronder.** Dit
+**Kali krijgt definitief géén Elastic Agent — bewust besloten door Joost
+(2026-07-15), niet langer "uitgesteld" maar afgesloten.** Endpoint-
+monitoringfase is hiermee volledig afgerond.** Dit
 document beschrijft welke endpoints nog geen Elastic Agent-telemetrie naar
 Security Onion sturen, welke daarvan kandidaat zijn voor uitrol, in welke
 volgorde, en welke bewust buiten scope blijven — als vervolg op de agent
@@ -26,7 +28,7 @@ normale procedure: uitleggen → risico → bevestiging van Joost → uitvoeren
 | `SOC-SecurityOnion` (.30) | N.v.t. — dit ís het platform | — | — |
 | `WIN11-01` (.20) | ✅ Ja, **Healthy** in Fleet (2026-07-14) | Windows Event Logs, Sysmon (SwiftOnSecurity-config), Elastic Defend, osquery, metrics — zelfde `endpoints-initial`-policy als DC01 | `elastic_agent_endpoint`, `beats_endpoint`, `endgame` |
 | `ubuntu-server-01` (.40) | ✅ Ja, **Healthy** in Fleet (2026-07-14) | journald (`system.auth`, `system.syslog`), system-metrics — **geen** Elastic Defend, zelfde scope-keuze als de Bazzite-host | `elastic_agent_endpoint`, `beats_endpoint` (geen `endgame`) |
-| ` ATTACK-Kali` (.50) | ❌ Nee | — | — |
+| ` ATTACK-Kali` (.50) | ❌ Nee — **definitief besloten, niet gepland** (2026-07-15) | — | — |
 | `OPNsense-FW` (.1) | ❌ Nee, niet van toepassing | — | — |
 | `Target-Metasploitable2` (.70) | ❌ Nee, bewust nooit | — | — |
 | `MGMT-Debian` (.60) | ❌ Nee | — (VM staat uit, geen onderdeel van actieve lab) | — |
@@ -96,27 +98,13 @@ kapotgemaakt/geëxploiteerd tijdens Tier 1/2-oefeningen — een agent erop
 is precies waardevol om te zien wat een exploit *op het systeem zelf*
 achterlaat (niet alleen op het netwerk).
 
-### 3. ATTACK-Kali — laag/optioneel
+### 3. ATTACK-Kali — ❌ definitief besloten: geen Elastic Agent
 
-**Waarom (twijfel):** Kali is het aanvalsplatform, niet een doelwit.
-Netwerkverkeer vanaf Kali wordt al gezien (bron-IP in Suricata/Zeek). Een
-agent hierop zou vooral waarde hebben voor de Purple Team-kant van het
-verhaal: zien welke tools/commando's er lokaal draaiden tijdens een
-oefening, gecorreleerd met wat Security Onion detecteerde.
+**Beslissing, 2026-07-15:** Joost heeft dit expliciet en definitief afgesloten — Kali krijgt geen Elastic Agent. Dit is geen "later misschien" meer, maar een genomen beslissing.
 
-**Aanpak (indien gewenst):** identiek aan ubuntu-server-01 — zelfde
-generieke Linux-policy, zelfde script, Kali heeft al werkende
-passwordless SSH (`kali`-alias), dus dit is het laagste-frictie endpoint
-om aan toe te voegen als het ooit relevant wordt.
+**Waarom het overwogen werd:** Kali is het aanvalsplatform, niet een doelwit. Netwerkverkeer vanaf Kali wordt al gezien (bron-IP in Suricata/Zeek). Een agent hierop zou vooral waarde hebben gehad voor de Purple Team-kant: zien welke tools/commando's er lokaal draaiden tijdens een oefening, gecorreleerd met wat Security Onion detecteerde. De scope/privacy-afweging (welke datasets, hoe lang bewaard, wie heeft toegang) die hiervoor eerder als blocker gold, is niet gemaakt — in plaats daarvan is er gekozen om het gewoon niet te doen.
 
-**Aanbeveling, herbevestigd 2026-07-14:** bewust nog niet doen. Volledige
-endpoint-monitoring op een Red Team-machine legt aanvalstools, commando's
-en testgedrag vast — nuttig voor Purple Team-oefeningen, maar de scope en
-privacy van die testdata moeten eerst bewust gekozen worden (welke
-datasets, hoe lang bewaard, wie heeft toegang), niet als bijvangst van
-een standaard-uitrol. Wacht tot er een concrete Purple Team-oefening
-gepland is waar "wat deed de aanvaller lokaal" een vraag is die
-beantwoord moet worden én die scope-afweging expliciet is gemaakt.
+**Als dit ooit heroverwogen wordt:** de aanpak zou identiek zijn aan ubuntu-server-01 (generieke Linux-policy, `browser/fleet-setup-linux-agent.mjs`, Kali heeft al werkende passwordless SSH) — laagste-frictie endpoint om toe te voegen, mocht een concrete Purple Team-oefening dit ooit alsnog nodig maken. Niet actief gepland.
 
 ---
 

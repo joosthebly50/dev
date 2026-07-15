@@ -6,6 +6,10 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## Decision: Kali Will Not Get an Elastic Agent — Endpoint-Monitoring Phase Closed
+
+Joost decided definitively: Kali stays without Elastic Agent monitoring, closing out the endpoint-monitoring phase (WIN11-01 and ubuntu-server-01 were already done). Discussed explicitly whether this was needed for Red/Blue/Purple Team work: not needed for Red or Blue Team (detections are driven by what Security Onion sees at the targets and on the network, not at the attacker), and while it would add precision for Purple Team correlation (matching attacker actions to detections), it isn't essential — the already-agreed §12 test methodology (run technique → check Hunt → flip status) doesn't depend on it. `docs/ROADMAP_ENDPOINT_MONITORING.md`, `docs/PROJECT_STATUS.md`, and the master doc updated to reflect this as closed, not deferred.
+
 ## ubuntu-server-01 DHCP Reservation Fix: CLOSED After Cold-Boot Validation
 
 Two additional, independent boot cycles run after the `dhcp-identifier: mac` fix was committed (`8e5e135`): a second standalone warm reboot, and — specifically to rule out any dependency on a warm-boot code path — a full cold power-cycle (`virsh shutdown`, confirmed `shut off`, then `virsh start`). Both cycles: `.40` acquired within 10 seconds, both per-boot DHCP negotiations confirmed via `journalctl` to get `.40`, `ssh ubuntu-server` worked with zero manual changes, Elastic Agent recovered automatically, and Fleet reported all components `HEALTHY` (the cold boot took ~5 minutes to show Healthy in Fleet's UI — confirmed benign via established TCP connections and a fresh Hunt-verified marker in the meantime, the same server-side display-lag pattern already seen for WIN11-01). OPNsense's own Kea log independently confirmed the full DISCOVER→OFFER→REQUEST→ACK exchange for `.40` in both cycles, including a clean `DHCP4_RELEASE` pair at the cold shutdown. No regressions on any other lab system in either cycle.

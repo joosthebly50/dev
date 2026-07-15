@@ -87,8 +87,7 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   ervan (`so-firewall apply` was een no-op, geen aantoonbare fix). Geen
   nieuwe packet capture uitgevoerd, dus "geen TCP RST's" wordt niet als
   claim gedaan. Zie `docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`.
-  Dit rondt prioriteit 1 van de endpoint-monitoringfase af — `ubuntu-server-01`
-  en Kali staan nog open, zie `docs/ROADMAP_ENDPOINT_MONITORING.md`.
+  Dit rondt prioriteit 1 van de endpoint-monitoringfase af.
 - ✅ Sysmon-vrije Elastic Agent uitgerold naar `ubuntu-server-01`
   (log/metrics-only via `linux-endpoints-initial`, zelfde scope als de
   Bazzite-host), Healthy in Fleet, bevestigd in Hunt. Onderweg: `/tmp`
@@ -111,6 +110,14 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   `docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md` en
   de nieuwe standaardregel in `docs/decisions/architecture_decisions.md`
   voor toekomstige Linux-endpoints.
+- ✅ **Endpoint-monitoringfase volledig afgerond (2026-07-15).** Kali
+  krijgt definitief géén Elastic Agent — bewust besloten door Joost, niet
+  "uitgesteld". Overwogen (alarm-generatie, Red/Blue/Purple Team-nut) en
+  afgewogen: niet nodig voor Red/Blue Team (die draaien op wat
+  Security Onion bij de dóelwitten en op het netwerk ziet, niet bij de
+  aanvaller), en voor Purple Team-correlatie is het gewenst maar niet
+  essentieel — het bestaande §12-testplan werkt al zonder. Zie
+  `docs/ROADMAP_ENDPOINT_MONITORING.md`.
 
 ---
 
@@ -128,13 +135,6 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
 - ⚠️ OPNsense heeft nog geen passwordless SSH-key opgezet (bewuste
   password-only-instelling, geen open punt — zie `docs/OPNSENSE_AUDIT_2026-07-13.md`).
   `ubuntu-server` heeft dit inmiddels wel (2026-07-14, gebruiker `sysadmin`).
-- ⚠️ Kali heeft nog geen Elastic Agent (WIN11-01 en `ubuntu-server-01`
-  zijn klaar). Bewust uitgesteld — een Red Team-machine volledig
-  monitoren legt aanvalstools/commando's vast, wat eerst een bewuste
-  scope/privacy-afweging vraagt, geen standaard uitrol. Zie
-  `docs/ROADMAP_ENDPOINT_MONITORING.md`. De endpoint-monitoringfase als
-  geheel is pas afgerond zodra ook Kali is opgepakt (of bewust buiten
-  scope wordt verklaard).
 
 ---
 
