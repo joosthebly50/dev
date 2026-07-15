@@ -284,6 +284,29 @@ Kea's reservations in this lab are keyed on hardware address. DHCP theory says a
 
 ---
 
+# Decision: Snapshot Before Every Tier 2/3 Exploit, Restore Clean State After
+
+## Choice
+
+Every exploitation test against a lab target (Phase 3, Tier 2 onward) must have a pre-exploit VM snapshot, and the target must be returned to a clean state immediately afterward — either by removing whatever the technique left behind, or, if that can't be confirmed, by reloading the pre-exploit snapshot.
+
+## Reason
+
+Set by Joost 2026-07-15, right after the first Tier 2 exploit (the vsftpd 2.3.4 backdoor against Metasploitable2, `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §6.3): *"alle machines moeten schoon blijven ... maak snapshot voor elke exploit ... na het simuleren van een aanval breng de machine terug naar clean state."* This is the offensive-side counterpart to the reproducibility discipline already standing for defensive/infra work (two-reboot-cycle validation, `docs/troubleshooting/`) — every test should be provably reversible, not just provably effective.
+
+## Snapshot inventory found while establishing this rule (2026-07-15)
+
+- `Target-Metasploitable2`: `01-Clean` (2026-07-09, pre-any-lab-work) — still valid, this system is deliberately never modified outside exploit testing itself.
+- `ubuntu-server-01` (hosts Juice Shop, the Tier 2 OWASP-Top-10 target): `01-Clean` (2026-07-09) **predates the Elastic Agent rollout and the `dhcp-identifier: mac` fix above** — restoring it would silently undo real infrastructure work, not just an exploit. A fresh baseline snapshot reflecting the current, monitored state is needed before the first Juice Shop Tier 2 test; not yet taken as of 2026-07-15.
+
+## How to apply
+
+1. Before running a Tier 2/3 technique: check `virsh -c qemu:///system snapshot-list <vm>` and confirm/create a snapshot that reflects the target's *current, desired* state — not an old pre-monitoring one.
+2. After the technique: verify explicitly (check for created files/users/persistence, lingering sessions/connections from the attacking side) rather than assuming a clean exit. Read-only recon inside a shell with nothing created needs no restore, but still needs that explicit check.
+3. If clean removal can't be confirmed, restore the pre-exploit snapshot.
+
+---
+
 # Overall Architecture Goal
 
 The SOC Homelab is designed to simulate a small enterprise environment.

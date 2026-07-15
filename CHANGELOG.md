@@ -6,6 +6,16 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## New Rule: Snapshot Before Every Tier 2/3 Exploit, Restore Clean State After
+
+Joost's instruction right after the vsftpd exploit: every lab machine must stay clean. Standing rule from now on for all Tier 2/3 work: take a VM snapshot before running any exploitation technique, and restore a clean state immediately after — either by removing whatever the technique left behind, or, if that can't be confirmed, by reloading the pre-exploit snapshot.
+
+Checked the existing snapshot inventory while establishing this: Metasploitable2's `01-Clean` (2026-07-09) is still a valid baseline — that system is deliberately never modified outside exploit testing. `ubuntu-server-01`'s `01-Clean` (also 2026-07-09) is **stale** — it predates the Elastic Agent rollout and the `dhcp-identifier: mac` DHCP fix, so restoring it would silently undo real infrastructure work, not just an exploit. A fresh baseline snapshot is needed before the first Juice Shop Tier 2 test.
+
+For the vsftpd test already done: nothing needed cleaning up — only read-only recon commands were run (`id`/`whoami`/`uname`/`hostname`), no files/users/persistence created, and no lingering session to the backdoor remained (verified via `ss -tn` on the attacking side).
+
+Recorded as a standing architecture decision: `docs/decisions/architecture_decisions.md`.
+
 ## Phase 3 Tier 2 Started: vsftpd 2.3.4 Backdoor Gets Real Root RCE, Nuanced Detection Result
 
 Joost explicitly authorized Tier 2 (exploitation) — "test tier 2 met mijn toestemming" — and the first scenario from the already-agreed §12 plan ran the same day: the classic vsftpd 2.3.4 malicious-backdoor RCE (CVE-2011-2523) against Metasploitable2, the same exploit this project's own timeline (§8) already referenced as done once before.

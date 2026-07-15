@@ -185,6 +185,14 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   (Samba/NFS/RMI, Juice Shop OWASP Top 10, UnrealIRCd-backdoor), één voor
   één. Tier 3 blijft buiten scope zonder aparte toestemming. Zie
   `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §6.1/§6.3/§12.
+- 📋 **Nieuwe standaardregel (2026-07-15): snapshot vóór elke Tier 2/3-
+  exploit, schone staat herstellen erna** (verwijderen wat de techniek
+  achterliet, of in het slechtste geval de snapshot terugzetten). Zie
+  `docs/decisions/architecture_decisions.md`. Metasploitable2's
+  `01-Clean`-snapshot (2026-07-09) is nog geldig; ubuntu-server-01's
+  `01-Clean` is **verouderd** (van vóór de Elastic Agent-rollout en de
+  DHCP-fix) — vóór de eerste Juice Shop-Tier 2-test moet daar eerst een
+  verse baseline-snapshot van gemaakt worden.
 - ✅ **SOC Alarmdashboard (2026-07-15).** Live, lokale alarmering op de
   Bazzite-host: banner + geluid per aanvalstype (scan/recon, exploit,
   reverse shell, DDoS, SQLi, XSS) zodra Security Onion een Suricata-alert
