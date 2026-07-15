@@ -130,13 +130,23 @@
   .conn-row .proc { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .conn-row .pid { color: #7c8a80; }
   .row {
-    display: grid; grid-template-columns: 6px 100px 90px 1fr auto; gap: 0.9rem;
+    display: grid; grid-template-columns: 6px 82px 34px 100px 1fr auto; gap: 0.9rem;
     align-items: center; background: var(--surface); border: 1px solid var(--border);
     border-radius: 8px; padding: 0.55rem 0.9rem; font-size: 0.85rem;
     animation: fadein 0.3s ease-out;
   }
   @keyframes fadein { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
   .row .bar { width: 6px; align-self: stretch; border-radius: 4px; }
+  .row .sev {
+    width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 0.62rem; font-weight: 800; color: #0b0d0c;
+  }
+  .row .sev.sev-high { background: #e0313c; color: #fff; }
+  .row .sev.sev-medium { background: #e0952c; }
+  .row .sev.sev-low { background: #6b93c9; color: #fff; }
+  .row .net-host { white-space: nowrap; }
+  .row .net-host .arrow { color: var(--muted); }
+  .row .net-ip { color: var(--muted); font-size: 0.72rem; margin-top: 0.1rem; white-space: nowrap; }
   .row .time { color: var(--muted); font-size: 0.76rem; }
   .row .bucket { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
   .row .sig { }
@@ -514,19 +524,41 @@ function flashRows(bucket) {
   });
 }
 
+// Display-friendly asset names (docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md
+// §9) -- separate from server.mjs's HOST_NAMES, which spells names
+// phonetically for Piper ("D C 0 1"). This one is for the visible table.
+const HOST_NAMES = {
+  '192.168.50.1': 'OPNsense',
+  '192.168.50.10': 'DC01',
+  '192.168.50.20': 'WIN11-01',
+  '192.168.50.30': 'Security Onion',
+  '192.168.50.40': 'ubuntu-server-01',
+  '192.168.50.50': 'Kali',
+  '192.168.50.70': 'Metasploitable2',
+  '192.168.50.254': 'Bazzite-host',
+};
+function hostLabel(ip) { return HOST_NAMES[ip] || ip; }
+
 function addRow(a) {
   const feed = document.getElementById('feed');
   if (feed.querySelector('.empty')) feed.innerHTML = '';
   const meta = CATEGORIES[a.bucket] || CATEGORIES.OTHER;
+  const sev = (a.severity || 'low').toLowerCase();
+  const sevLabel = { high: 'H', medium: 'M', low: 'L' }[sev] || '?';
+  const sevTitle = { high: 'High severity', medium: 'Medium severity', low: 'Low severity' }[sev] || 'Onbekende severity';
   const row = document.createElement('div');
   row.className = 'row';
   row.dataset.bucket = a.bucket;
   row.innerHTML = `
     <div class="bar" style="background:${meta.color}"></div>
     <div class="time mono">${a.timestamp.slice(11,19)}</div>
+    <div class="sev sev-${sev}" title="${sevTitle}">${sevLabel}</div>
     <div class="bucket" style="color:${meta.color}">${meta.icon} ${meta.label}</div>
     <div class="sig">${escapeHtml(a.signature)}</div>
-    <div class="net mono">${a.srcIp}:${a.srcPort} → ${a.dstIp}:${a.dstPort}</div>
+    <div class="net">
+      <div class="net-host">${escapeHtml(hostLabel(a.srcIp))} <span class="arrow">→</span> ${escapeHtml(hostLabel(a.dstIp))}</div>
+      <div class="net-ip mono">${a.srcIp}:${a.srcPort} → ${a.dstIp}:${a.dstPort}</div>
+    </div>
   `;
   feed.prepend(row);
   while (feed.children.length > 300) feed.removeChild(feed.lastChild);

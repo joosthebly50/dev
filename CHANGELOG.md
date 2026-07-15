@@ -6,6 +6,16 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## SOC Alarmdashboard: Alert Table Gets Hostnames + Severity Badges
+
+Next step on the v2 roadmap after the health bar: the alert feed now shows a severity badge (H/M/L, red/orange/blue circle, from Suricata's own low/medium/high severity field) and resolved hostnames instead of bare IPs ("Kali -> Metasploitable2" instead of just the raw addresses), with the raw `ip:port` still shown as a small muted line underneath for anyone who wants the exact address.
+
+Added a client-side `HOST_NAMES` map in `dashboard.html`, deliberately separate from server.mjs's own `HOST_NAMES` -- that one spells names phonetically for Piper ("D C 0 1"), this one is for the visible table so it's just "DC01". Both need to stay hand-synced with the IP plan in `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §9 (same tradeoff already documented for the existing `CATEGORIES` client-side copy).
+
+Confirmed live via screenshot: severity badges correct (H for the Nmap scans, M for the privilege-escalation alert), hostnames resolving for every lab machine including the host itself ("Bazzite-host").
+
+Full detail: `docs/guides/alarm_dashboard.md`.
+
 ## Reusable Markdown-to-PDF Renderer for the Master Documentation
 
 The master doc's PDF had gone stale relative to its markdown source (last rendered 2026-07-13, source since edited 2026-07-15) and there was no persisted script for re-rendering it -- past re-renders (per earlier changelog entries) were apparently done ad hoc. Built `browser/render-doc-pdf.mjs`: converts markdown to HTML via `marked` (added as a proper dependency alongside the existing `playwright`), wraps it in print-friendly CSS (headings, tables, code blocks, page-number footer), and prints to PDF via a headless Chromium tab (Playwright, already used throughout this project for browser automation).

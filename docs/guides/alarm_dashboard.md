@@ -501,3 +501,23 @@ met een gestippelde onderrand. Live bevestigd via screenshot: twee
 `NET`-rijen bovenaan (Kali→OPNsense enumeration, en de eerdere host-scan
 naar Metasploitable2 nadat die TCP-verbinding alweer gesloten was),
 beide correct oranje gemarkeerd en gelabeld.
+
+### Alert-tabel: hostnamen + severity-badge
+
+Volgende stap op de v2-roadmap: de alert-feed toont nu een severity-
+badge (H/M/L, rode/oranje/blauwe cirkel — gebaseerd op Suricata's eigen
+`severity`-veld, low/medium/high) en leesbare hostnamen in plaats van
+kale IP's (`Kali → Metasploitable2` i.p.v. alleen
+`192.168.50.50 → 192.168.50.70`), met de ruwe `ip:poort`-notatie nog als
+kleine grijze regel eronder voor wie het exacte adres wil zien.
+
+Eigen client-side `HOST_NAMES`-map in `dashboard.html`, bewust apart van
+server.mjs's `HOST_NAMES` — die laatste spelt namen fonetisch uit voor
+Piper ("D C 0 1"), dit is voor de zichtbare tabel dus gewoon "DC01".
+Beide moeten met de hand gesynchroniseerd blijven met het IP-plan uit
+`docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §9 (net als de bestaande
+`CATEGORIES`-kopie, al gedocumenteerd als een bewuste afweging).
+
+Live bevestigd via screenshot: severity-badges kloppen (H voor de Nmap-
+scans, M voor de privilege-escalation-alert, etc.), hostnamen resolven
+correct voor alle labmachines inclusief de host zelf ("Bazzite-host").
