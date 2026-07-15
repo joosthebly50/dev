@@ -313,10 +313,49 @@ cooldown, escalatie, filter, instellingen) is volledig bron-onafhankelijk
 en hoeft niet te veranderen.
 
 Ook nog open, uit de bredere SOC Dashboard v2-roadmap (Joost, 2026-07-15,
-apart te plannen): systeemhealth-topbalk (CPU/RAM/GPU/Security Onion-
-componenten), Asset Context Panel, Incident Timeline, Live Network Map,
-WHOIS/GeoIP, Open PCAP, MITRE ATT&CK-details, en externe integraties
-(VirusTotal, AbuseIPDB, Shodan, GreyNoise). **Block IP** blijft expliciet
-apart — dat is een echte OPNsense-firewallwijziging vanuit een
-dashboardknop en verdient een eigen ontwerp-goedkeuring voordat 'ie
-functioneel wordt.
+apart te plannen): Security Onion-componentstatus (Suricata/Zeek/
+Elasticsearch/Fleet health — de hostmetrics-helft van de topbalk is nu wel
+klaar, zie hieronder), Asset Context Panel, Incident Timeline, Live
+Network Map, WHOIS/GeoIP, Open PCAP, MITRE ATT&CK-details, en externe
+integraties (VirusTotal, AbuseIPDB, Shodan, GreyNoise). **Block IP**
+blijft expliciet apart — dat is een echte OPNsense-firewallwijziging
+vanuit een dashboardknop en verdient een eigen ontwerp-goedkeuring
+voordat 'ie functioneel wordt.
+
+---
+
+## Systeemhealth-topbalk (2026-07-15)
+
+Een dunne balk direct onder de header, tussen header en tellers: CPU,
+RAM, Disk, netwerkdoorvoer en GPU van de Bazzite-host zelf. Ververst elke
+10s (los van de 3s-alertpolling — een healthcheck kost ~150-350ms omdat
+CPU/netwerk twee `/proc`-metingen met een korte pauze ertussen nemen om
+een percentage/snelheid te kunnen berekenen, niet zomaar één momentopname).
+
+**Bestand:** `browser/alert-dashboard/health.mjs` — volledig losstaand
+van de rest van het systeem (geen afhankelijkheid van Security Onion,
+Suricata, of de alert-pijplijn), leest rechtstreeks uit `/proc` en
+`nvidia-smi`. Geserveerd via een nieuw endpoint, `GET /api/health`.
+
+**Een echte bug gevonden tijdens het bouwen:** de eerste versie las
+schijfgebruik van `/` — en gaf standaard 100% terug. Bazzite is een
+immutable OS (ostree/composefs): `/` is een kleine (~45MB), altijd-volle,
+alleen-lezen image-overlay, dat zegt niets over daadwerkelijke
+schijfruimte. De echte, relevante mount is `/var/home` (een
+LUKS-versleuteld btrfs-volume, waar dit hele project en alle VM's op
+staan) — daar is de check nu op aangepast.
+
+**Netwerk-interface:** `virbr10` (192.168.50.254, het lab-netwerk zelf —
+zie `NETWORK.md`), niet de algemene internet-uplink van de host. Relevanter
+voor een SOC-dashboard: dit laat zien hoeveel verkeer er door het lab zelf
+gaat, niet hoeveel de host toevallig ververst.
+
+**Kleurcodering:** groen tot 70%, amber 70-90%, rood vanaf 90% (CPU/RAM/
+Disk); voor GPU-temperatuur: groen tot 75°C, amber 75-85°C, rood vanaf
+85°C. Live bevestigd via screenshot: RAM (91%, rood) en Disk (80%, amber)
+kleurden correct volgens deze drempels op het moment van testen.
+
+**Nog niet gebouwd:** Security Onion's eigen componentstatus
+(Suricata/Zeek/Elasticsearch/Fleet) — dat vereist een aparte check tegen
+Security Onion zelf (bijv. `so-status` of een Fleet-API-aanroep), niet
+zomaar uit te breiden vanuit deze puur-lokale hostmetrics-module.

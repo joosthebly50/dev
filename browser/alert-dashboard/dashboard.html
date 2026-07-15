@@ -45,8 +45,20 @@
   #mute, #settingsBtn { background: var(--surface-2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 0.35rem 0.8rem; cursor: pointer; font-size: 0.8rem; }
   #mute.muted { color: var(--exploit); border-color: var(--exploit); }
 
+  .health-bar {
+    display: flex; align-items: center; gap: 1.6rem; flex-wrap: wrap;
+    padding: 0.5rem 1.4rem; background: var(--surface-2); border-bottom: 1px solid var(--border);
+    font-size: 0.78rem; color: var(--muted);
+  }
+  .health-metric { display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
+  .health-metric .val { font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; font-weight: 700; }
+  .health-metric .val.ok { color: var(--ok); }
+  .health-metric .val.warn { color: #d99a4c; }
+  .health-metric .val.crit { color: var(--exploit); }
+  .health-metric .val.na { color: var(--muted); font-weight: 400; }
+
   #settingsPanel {
-    position: fixed; top: 3.4rem; right: 1.4rem; z-index: 60;
+    position: fixed; top: 5.7rem; right: 1.4rem; z-index: 60;
     background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
     padding: 1rem 1.2rem; width: 280px; box-shadow: 0 12px 30px rgba(0,0,0,0.5);
     display: none; font-size: 0.85rem;
@@ -92,7 +104,7 @@
 
   /* Small popup, top-right -- one per announced category, not one per alert */
   #banner-stack {
-    position: fixed; top: 3.4rem; right: 1.4rem;
+    position: fixed; top: 5.7rem; right: 1.4rem;
     z-index: 55; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none;
     width: min(320px, 88vw);
   }
@@ -125,6 +137,14 @@
       <button id="settingsBtn">⚙️ Instellingen</button>
     </div>
   </header>
+
+  <div class="health-bar" id="healthBar">
+    <span class="health-metric">🖥 CPU <span class="val na" id="hCpu">–</span></span>
+    <span class="health-metric">💾 RAM <span class="val na" id="hMem">–</span></span>
+    <span class="health-metric">💿 Disk <span class="val na" id="hDisk">–</span></span>
+    <span class="health-metric">🌐 Net <span class="val na" id="hNet">–</span></span>
+    <span class="health-metric">🔥 GPU <span class="val na" id="hGpu">–</span></span>
+  </div>
 
   <div id="settingsPanel">
     <h3>🎙️ Voice-instellingen</h3>
@@ -475,10 +495,49 @@ document.querySelectorAll('input[name="filterLevel"]').forEach((el) => {
   el.addEventListener('change', (e) => { settings.filterLevel = e.target.value; saveSettings(); });
 });
 
+// System health bar (CPU/RAM/Disk/Net/GPU of the Bazzite host itself).
+// Each check takes ~150-350ms server-side (samples /proc twice to
+// compute a rate) -- polled less often than alerts (10s, not 3s).
+function healthClass(pct, warnAt, critAt) {
+  if (pct == null) return 'na';
+  if (pct >= critAt) return 'crit';
+  if (pct >= warnAt) return 'warn';
+  return 'ok';
+}
+async function pollHealth() {
+  try {
+    const h = await (await fetch('/api/health')).json();
+    const setMetric = (id, val, text) => {
+      const el = document.getElementById(id);
+      el.textContent = text;
+      el.className = 'val ' + healthClass(val, 70, 90);
+    };
+    setMetric('hCpu', h.cpu, h.cpu != null ? h.cpu + '%' : 'n/a');
+    setMetric('hMem', h.mem, h.mem != null ? h.mem + '%' : 'n/a');
+    setMetric('hDisk', h.disk, h.disk != null ? h.disk + '%' : 'n/a');
+    const netEl = document.getElementById('hNet');
+    if (h.net) {
+      netEl.textContent = `↓${(h.net.rxKbps/1000).toFixed(1)} ↑${(h.net.txKbps/1000).toFixed(1)} Mbps`;
+      netEl.className = 'val ok';
+    } else {
+      netEl.textContent = 'n/a'; netEl.className = 'val na';
+    }
+    const gpuEl = document.getElementById('hGpu');
+    if (h.gpu) {
+      gpuEl.textContent = `${h.gpu.tempC}°C · ${h.gpu.utilPercent}%`;
+      gpuEl.className = 'val ' + healthClass(h.gpu.tempC, 75, 85);
+    } else {
+      gpuEl.textContent = 'n/a'; gpuEl.className = 'val na';
+    }
+  } catch (e) { /* leave last-known values on a transient fetch failure */ }
+}
+
 applySettingsToUI();
 renderCounters();
 poll();
 setInterval(poll, 3000);
+pollHealth();
+setInterval(pollHealth, 10000);
 </script>
 </body>
 </html>

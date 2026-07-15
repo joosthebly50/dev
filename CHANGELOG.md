@@ -6,6 +6,18 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## SOC Alarmdashboard: System Health Bar (CPU/RAM/Disk/Network/GPU)
+
+Added the first piece of the "System Health Bar" from the SOC Dashboard v2 roadmap: a thin strip below the header showing the Bazzite host's own CPU, RAM, disk, network throughput, and GPU (temp + utilization), refreshed every 10s via a new `GET /api/health` endpoint backed by a fully standalone module (`health.mjs`) that reads directly from `/proc` and `nvidia-smi` -- no dependency on Security Onion or the alert pipeline.
+
+Found and fixed one real bug while building this: the first version read disk usage from `/`, which returned 100% by default. Bazzite is an immutable OS (ostree/composefs) -- `/` is a small (~45MB), always-full, read-only image overlay, not a meaningful measure of actual disk space. Switched to `/var/home`, the real LUKS-encrypted btrfs volume where this project and all the VMs actually live.
+
+Network throughput is read from `virbr10` (the lab network itself, 192.168.50.254) rather than the host's general internet uplink -- more relevant to a SOC dashboard. Color-coded thresholds (green/amber/red) confirmed live via screenshot during testing (RAM at 91% correctly showed red, disk at 80% correctly showed amber).
+
+Security Onion's own component health (Suricata/Zeek/Elasticsearch/Fleet) remains unbuilt -- that needs a separate check against Security Onion itself, not an extension of this purely local host-metrics module.
+
+Full detail: `docs/guides/alarm_dashboard.md`.
+
 ## SOC Alarmdashboard: Default Voice Switched to Amy
 
 Changed the default voice from `en_US-hfc_female-medium` to `en_US-amy-medium` (client-side `DEFAULT_SETTINGS.voice`, server-side fallback in `synthesizeSpokenClip`, and `tts/synth.py`'s `DEFAULT_VOICE`) after Joost compared it against the newly-expanded 14-voice picker. The original voice remains fully selectable, just no longer the out-of-the-box default for a fresh browser profile.

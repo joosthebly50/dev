@@ -19,6 +19,7 @@ import http from 'node:http';
 import { attachToDaemon } from '../lib/browser.mjs';
 import { BASE } from '../lib/pages.mjs';
 import { categorize, CATEGORIES } from './categorize.mjs';
+import { getHostHealth } from './health.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -262,6 +263,13 @@ const server = http.createServer(async (req, res) => {
     }
     res.writeHead(200, { 'Content-Type': 'audio/wav' });
     fs.createReadStream(filePath).pipe(res);
+    return;
+  }
+
+  if (url.pathname === '/api/health') {
+    const health = await getHostHealth().catch((e) => ({ error: e.message }));
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(health));
     return;
   }
 
