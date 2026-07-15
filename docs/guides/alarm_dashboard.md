@@ -4,10 +4,12 @@
 
 Live, lokale alarmering op de Bazzite-host: elke keer dat Security Onion een
 Suricata-alert genereert, verschijnt binnen ~20 seconden een banner met
-geluid op de host zelf, gecategoriseerd naar aanvalstype (scan/recon,
-exploit, reverse shell, DDoS, SQL-injectie, cross-site scripting). Gebouwd
-op verzoek van Joost tijdens Fase 3 (detection engineering), 2026-07-15,
-direct na het afronden van Tier 1 van het §12-aanvalsplan.
+een gesproken melding (sirentoon + vrouwenstem, offline neurale TTS) op de
+host zelf, gecategoriseerd naar aanvalstype (scan/recon, exploit, reverse
+shell, DDoS, SQL-injectie, cross-site scripting). Gebouwd op verzoek van
+Joost tijdens Fase 3 (detection engineering), 2026-07-15, direct na het
+afronden van Tier 1 van het §12-aanvalsplan; de gesproken melding is
+diezelfde dag als uitbreiding toegevoegd.
 
 Dit is **niet hetzelfde** als het langer geplande "vier niveaus
 (INFO/WARNING/HIGH/CRITICAL) met Discord/Telegram-doorsturing" uit
@@ -29,22 +31,29 @@ Security Onion (Hunt/Elasticsearch, Suricata-alerts)
 browser/alert-dashboard/server.mjs
    │  pollt elke 20s, categoriseert elk nieuw alert,
    │  dedupt geluid/banner per signature (max 1x per 60s),
+   │  genereert bij een te-melden alert eerst de audio
+   │  (tts/synth.py, ZIE HIERONDER) vóórdat het alert
+   │  zichtbaar wordt voor het dashboard — anders zou de
+   │  clip soms nooit afgespeeld worden
    │  serveert een lokale HTTP-API + de dashboardpagina
    ▼
 browser/alert-dashboard/dashboard.html
    │  op http://127.0.0.1:8765, geopend in een los
    │  Chrome-app-venster (geen browserbalk)
    ▼
-Banner + geluid (Web Audio API, geen externe bestanden) + live feed
+Banner + gesproken melding (siren + stem, gequeued zodat
+twee tegelijk-vurende alerts niet over elkaar heen praten)
++ live feed
 ```
 
 ### Bestanden
 
 | Bestand | Rol |
 |---|---|
-| `browser/alert-dashboard/server.mjs` | Poll-loop + lokale HTTP-server (poort 8765) |
+| `browser/alert-dashboard/server.mjs` | Poll-loop + lokale HTTP-server (poort 8765) + TTS-orkestratie |
 | `browser/alert-dashboard/categorize.mjs` | Keyword-classificatie van signature+categorie naar aanvalstype |
-| `browser/alert-dashboard/dashboard.html` | De dashboardpagina zelf: tellers, live feed, banners, geluid |
+| `browser/alert-dashboard/dashboard.html` | De dashboardpagina zelf: tellers, live feed, banners, audio-queue |
+| `browser/alert-dashboard/tts/synth.py` | Genereert sirentoon + gesproken melding (Piper, offline neurale TTS) |
 | `browser/alert-dashboard/start.sh` | Zorgt dat de SO-daemon + server draaien, opent het dashboardvenster |
 | `scripts/soc-alarm-dashboard.sh` | Dunne wrapper (zelfde stijl als `soc-browser.sh`), aangeroepen door de launcher |
 | `launchers/SOC Alarmdashboard.desktop` | Desktop-launcher, gesymlinkt naar `~/Desktop/` en `~/.local/share/applications/` |
@@ -98,6 +107,72 @@ Dit is een aanpasbare standaardwaarde, geen vast ontwerp — pas
 
 ---
 
+## Gesproken meldingen (TTS)
+
+Toegevoegd 2026-07-15, dezelfde dag als het dashboard zelf, op verzoek van
+Joost. Elk te-melden alert (`notify: true`) krijgt naast de banner ook een
+gesproken aankondiging: een korte tweetoons-sirene, gevolgd door een
+vrouwenstem die de categorie, het bron-IP en de naam van het aangevallen
+systeem noemt.
+
+### Stem en techniek
+
+**Piper** (offline, neuraal TTS — geen cloud-afhankelijkheid, geen API-key)
+in plaats van het al aanwezige `espeak-ng`/`speech-dispatcher`, omdat die
+laatste twee duidelijk robotachtig/formant-synthese klinken, niet wat
+bedoeld werd met "AI-gegenereerd". Geïnstalleerd via
+`pip3 install --user piper-tts`.
+
+Vier vrouwelijke Engelse stemmen beluisterd, Joost koos
+**`en_US-hfc_female-medium`**. Stemmodel gedownload naar
+`~/.cache/soc-alarm-dashboard/voices/` (niet in git — binaire modellen,
+~60 MB, opnieuw te downloaden op een nieuwe machine, zie Setup hieronder).
+
+### Wat er gezegd wordt
+
+`"<Categorie> detected. Source <bron-IP>. Target: <systeemnaam>."` —
+bijvoorbeeld: *"Scan detected. Source 192.168.50.50. Target:
+Metasploitable 2."*
+
+Bewuste keuzes, beide op Joost's expliciete verzoek:
+
+- **Alleen het bron-IP** (de aanvaller), niet het IP van het doelsysteem.
+- **De naam van het aangevallen systeem, niet zijn IP** — een vaste
+  IP-naam-tabel (`HOST_NAMES` in `server.mjs`, uit
+  `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §9) zet bijvoorbeeld
+  `192.168.50.70` om naar "Metasploitable 2".
+
+**Bewust weggelaten uit de spraak:** de ruwe Suricata-signature-tekst. Een
+vroege versie sprak die wél uit — een volledige signature-naam plus een
+cijfer-voor-cijfer uitgesproken IP-adres duurde 12–15 seconden, te lang
+voor een live alarm. De signature blijft wel volledig zichtbaar in de
+banner en de feed, alleen niet in de gesproken samenvatting. Een typische
+clip duurt nu ~8–9 seconden (sirene + korte zin).
+
+### Afspeel-volgorde
+
+Omdat dedup per signature werkt (niet globaal), kunnen twee verschillende
+signatures binnen dezelfde poll-cyclus allebei een melding verdienen.
+Zonder maatregel zouden twee stemmen dan tegelijk praten. `dashboard.html`
+houdt daarom een simpele afspeelwachtrij bij (`voiceQueue`, een
+belofteketen) — clips spelen na elkaar, nooit over elkaar heen.
+
+### Setup (nieuwe machine / na een herinstallatie)
+
+```
+pip3 install --user piper-tts
+python3 -m piper.download_voices \
+  --download-dir ~/.cache/soc-alarm-dashboard/voices \
+  en_US-hfc_female-medium
+```
+
+Zonder deze twee stappen faalt `synth.py` met een duidelijke
+`FileNotFoundError` die exact dit commando toont — de server crasht niet,
+het betreffende alert valt terug op de synthetische pieptoon
+(`playBeepFallback` in `dashboard.html`).
+
+---
+
 ## Gebruik
 
 - **Starten:** dubbelklik de "SOC Alarmdashboard"-launcher, of start
@@ -134,3 +209,12 @@ niet alleen via de API.
 een echt bijpassend testevent (de tests vandaag waren allemaal Scan/Recon).
 Dat vereist Tier 2-technieken (exploitatie), die nog expliciet buiten scope
 staan zonder aparte toestemming van Joost.
+
+**Gesproken meldingen (TTS) — live bevestigd**, zelfde dag: een scan tegen
+Metasploitable2 leverde 2 nieuwe alerts op, beide met een correct
+gegenereerde `audioUrl`, `pollErrors: 0`. Zowel via een directe download
+van de audio (`curl` + `paplay`) als in het dashboardvenster zelf hoorbaar
+bevestigd door Joost — twee meldingen na elkaar, niet overlappend
+(wachtrij werkt). Nog niet getest: gedrag bij ontbrekend stemmodel
+(fallback naar de pieptoon) en gedrag bij >2 gelijktijdige verschillende
+signatures in één poll-cyclus.

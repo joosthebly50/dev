@@ -6,6 +6,18 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## SOC Alarmdashboard: Spoken Alerts via Offline Neural TTS
+
+Extended the same-day SOC Alarmdashboard with spoken announcements: each notify-worthy alert now gets a short two-tone siren followed by a female voice (Piper, offline neural TTS — installed via `pip3 install --user piper-tts`, not the already-present `espeak-ng`/`speech-dispatcher`, which sound clearly robotic/formant-synthesis rather than "AI-generated") saying the category, the attacker's (source) IP, and the friendly name of the system under attack — not its raw IP, per Joost's request. Four female English voices were generated and compared live; Joost picked `en_US-hfc_female-medium`.
+
+One real bug found and fixed during this build: an early version spoke the full raw Suricata signature text plus a digit-by-digit IP address, which took 12-15 seconds per clip — far too long for a live alert. Shortened the spoken text to just category + source + target name (the signature stays fully visible in the banner/feed, just not spoken), bringing clips down to ~8-9 seconds.
+
+Two structural fixes made during integration: (1) audio is now synthesized *before* an alert is exposed to the frontend's incremental poll, since each alert is only ever delivered once — without this, a slow synthesis could mean the audio link never gets seen; (2) added a client-side playback queue, since dedup is per-signature (not global) and two different signatures can legitimately fire in the same poll cycle, which would otherwise mean two voices talking over each other.
+
+Verified live end-to-end: a real scan produced two alerts, both with a correctly generated `audioUrl`, `pollErrors: 0`, and Joost confirmed hearing both announcements play back to back (not overlapping) in the actual dashboard window.
+
+Full detail: `docs/guides/alarm_dashboard.md`.
+
 ## SOC Alarmdashboard: Live Local Alerting by Attack Type
 
 Built on request: a live dashboard on the Bazzite host itself that shows a banner and plays a sound for every Suricata alert Security Onion generates, categorized by attack type (scan/recon, exploit, reverse shell, DDoS, SQL injection, XSS). This is a different, complementary thing from the still-unbuilt four-tier INFO/WARNING/HIGH/CRITICAL-with-Discord/Telegram-forwarding item already on the roadmap — this one categorizes by attack type, stays entirely local, and was built same-day.

@@ -19,13 +19,61 @@ import { BASE } from '../lib/pages.mjs';
 import { categorize, CATEGORIES } from './categorize.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execFileP = promisify(execFile);
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const PORT = 8765;
 const POLL_INTERVAL_MS = 20_000;
 const NOTIFY_COOLDOWN_MS = 60_000;
 const LOOKBACK_ON_START_MS = 2 * 60_000;
+
+// Spoken alerts: a two-tone siren + Piper (offline neural TTS, female
+// voice, Joost picked en_US-hfc_female-medium 2026-07-15) announcement of
+// category + signature + attacker IP + the friendly name of the system
+// under attack (per Joost's request: source IP only, target by name not
+// raw destination IP -- easier to act on at a glance). Generated on
+// demand per notify-worthy alert; cached under ~/.cache so re-generating
+// the same alert (e.g. after a server restart within the same poll
+// window) is free.
+const TTS_SCRIPT = path.join(DIR, 'tts', 'synth.py');
+const TTS_CACHE_DIR = path.join(os.homedir(), '.cache', 'soc-alarm-dashboard', 'tts-cache');
+fs.mkdirSync(TTS_CACHE_DIR, { recursive: true });
+
+// Lab asset inventory (docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md §9) -- IP
+// to friendly system name, for spoken announcements only.
+const HOST_NAMES = {
+  '192.168.50.1': 'OPNsense firewall',
+  '192.168.50.10': 'D C 0 1',
+  '192.168.50.20': 'Windows 11 workstation',
+  '192.168.50.30': 'Security Onion',
+  '192.168.50.40': 'Ubuntu server',
+  '192.168.50.50': 'Kali',
+  '192.168.50.70': 'Metasploitable 2',
+};
+function hostLabel(ip) {
+  return HOST_NAMES[ip] || ip;
+}
+
+async function synthesizeAudio(alert) {
+  const hash = crypto.createHash('sha1').update(alert.id).digest('hex').slice(0, 16);
+  const filename = `${hash}.wav`;
+  const outPath = path.join(TTS_CACHE_DIR, filename);
+  const categoryLabel = (CATEGORIES[alert.bucket] || CATEGORIES.OTHER).label;
+  const targetLabel = hostLabel(alert.dstIp);
+
+  if (!fs.existsSync(outPath)) {
+    await execFileP('python3', [
+      TTS_SCRIPT, outPath, categoryLabel, alert.srcIp, targetLabel,
+    ]);
+  }
+  alert.audioUrl = `/api/tts/${filename}`;
+}
 
 let alerts = []; // newest first, capped
 const MAX_ALERTS = 500;
@@ -73,7 +121,7 @@ async function pollOnce(page) {
     const shouldNotify = now - lastNotify >= NOTIFY_COOLDOWN_MS;
     if (shouldNotify) lastNotifiedAt.set(signature, now);
 
-    alerts.unshift({
+    const alert = {
       id: key,
       timestamp: ts,
       srcIp, srcPort, dstIp, dstPort,
@@ -81,7 +129,23 @@ async function pollOnce(page) {
       bucket,
       notify: shouldNotify,
       receivedAt: now,
-    });
+    };
+
+    // Synthesize BEFORE exposing the alert to the frontend's incremental
+    // (since=) poll -- each alert is only ever delivered to the dashboard
+    // once, so if audioUrl weren't set yet on first delivery, the voice
+    // clip would never play. Adds ~1-2s per notify-worthy alert to this
+    // poll cycle, which is fine given the 60s-per-signature dedup keeps
+    // volume low.
+    if (shouldNotify) {
+      try {
+        await synthesizeAudio(alert);
+      } catch (e) {
+        console.error('[tts error]', e.message);
+      }
+    }
+
+    alerts.unshift(alert);
     addedCount++;
     if (ts > newest) newest = ts;
   }
@@ -121,6 +185,19 @@ const server = http.createServer((req, res) => {
     const html = fs.readFileSync(path.join(DIR, 'dashboard.html'), 'utf8');
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(html);
+    return;
+  }
+
+  if (url.pathname.startsWith('/api/tts/')) {
+    const filename = path.basename(url.pathname); // strip any path traversal
+    const filePath = path.join(TTS_CACHE_DIR, filename);
+    if (!filename.endsWith('.wav') || !fs.existsSync(filePath)) {
+      res.writeHead(404);
+      res.end('Not found');
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'audio/wav' });
+    fs.createReadStream(filePath).pipe(res);
     return;
   }
 

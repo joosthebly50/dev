@@ -78,7 +78,7 @@
     border-radius: 12px; padding: 1rem 1.3rem; color: #fff;
     box-shadow: 0 10px 30px rgba(0,0,0,0.45);
     display: flex; align-items: center; gap: 0.9rem;
-    animation: slidein 0.35s cubic-bezier(.2,.8,.2,1), fadeout 0.5s ease-in forwards 5.5s;
+    animation: slidein 0.35s cubic-bezier(.2,.8,.2,1), fadeout 0.5s ease-in forwards 9.5s;
   }
   @keyframes slidein { from { opacity: 0; transform: translateY(-16px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
   @keyframes fadeout { to { opacity: 0; transform: translateY(-8px); } }
@@ -132,7 +132,9 @@ function ensureAudio() {
   return audioCtx;
 }
 
-function playAlarm(bucket, severity) {
+// Fallback synthetic beep -- used only if a spoken-alert audio clip isn't
+// available (e.g. Piper/TTS failed server-side for this alert).
+function playBeepFallback(bucket, severity) {
   if (muted) return;
   try {
     const ctx = ensureAudio();
@@ -152,6 +154,25 @@ function playAlarm(bucket, severity) {
       osc.stop(start + 0.18);
     }
   } catch (e) { /* audio not available yet (needs a user gesture first in some browsers) */ }
+}
+
+// Spoken alert: siren + female-voice (Piper, offline neural TTS)
+// announcement generated server-side per alert. Falls back to the
+// synthetic beep if no audio clip was produced. Queued (not overlapped) --
+// each clip is ~4-9s, and two different signatures can legitimately fire
+// in the same poll cycle (dedup is per-signature, not global), which
+// would otherwise mean two voices talking over each other.
+let voiceQueue = Promise.resolve();
+function playSpokenAlert(a) {
+  if (muted) return;
+  if (!a.audioUrl) { playBeepFallback(a.bucket, a.severity); return; }
+  voiceQueue = voiceQueue.then(() => new Promise((resolve) => {
+    if (muted) { resolve(); return; } // re-check: could've been muted while queued
+    const audio = new Audio(a.audioUrl);
+    audio.onended = resolve;
+    audio.onerror = () => { playBeepFallback(a.bucket, a.severity); resolve(); };
+    audio.play().catch(() => { playBeepFallback(a.bucket, a.severity); resolve(); });
+  }));
 }
 
 function renderCounters() {
@@ -197,7 +218,7 @@ function showBanner(a) {
     </div>
   `;
   stack.appendChild(b);
-  setTimeout(() => b.remove(), 6200);
+  setTimeout(() => b.remove(), 10200);
 }
 
 function escapeHtml(s) {
@@ -216,7 +237,7 @@ async function poll() {
     for (const a of newOnes) {
       counts[a.bucket] = (counts[a.bucket] || 0) + 1;
       addRow(a);
-      if (a.notify) { showBanner(a); playAlarm(a.bucket, a.severity); }
+      if (a.notify) { showBanner(a); playSpokenAlert(a); }
       lastSince = Math.max(lastSince, a.receivedAt);
     }
     if (newOnes.length) renderCounters();
