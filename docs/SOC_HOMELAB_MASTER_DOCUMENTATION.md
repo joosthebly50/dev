@@ -577,6 +577,6 @@ Every important change: update the specific source doc → `CHANGELOG.md` → `d
 ## Document index
 
 Root: `README.md`, `LAB_OVERVIEW.md`, `PROJECT_RULES.md`, `AI_ACCESS_POLICY.md`, `NETWORK.md`, `SERVERS.md`, `SECURITY.md`, `ACTIVE_DIRECTORY.md`, `CHANGELOG.md`.
-`docs/`: `INDEX.md`, `ASSET_INVENTORY.md`, `GLOSSARY.md`, `PROJECT_STATUS.md`, `OPNSENSE_AUDIT_2026-07-13.md`, `ROADMAP_ENDPOINT_MONITORING.md`, `decisions/*.md`, `guides/*.md` (11 files), `troubleshooting/01`–`08`, `chat_history/*.md` (6 files), `daily/*/`.
+`docs/`: `INDEX.md`, `ASSET_INVENTORY.md`, `GLOSSARY.md`, `PROJECT_STATUS.md`, `OPNSENSE_AUDIT_2026-07-13.md`, `ROADMAP_ENDPOINT_MONITORING.md`, `PHASE1_CLOSURE_SUMMARY.md`, `ROADMAP_OPNSENSE_LOGGING.md` (Phase 2 design proposal, not yet executed), `decisions/*.md`, `guides/*.md` (11 files), `troubleshooting/01`–`12`, `chat_history/*.md` (6 files), `daily/*/`, `screenshots/`.
 
 `pentest.lab - by Joost Hebly.md` (repo root) is an earlier, unmerged concatenation of the same sources, built for the portfolio deliverable — this document supersedes it as the synthesized reference.
