@@ -6,6 +6,12 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## SOC Alarmdashboard: Live-Verified Threat Highlighting Against a Real Exploit
+
+Re-ran the already-validated vsftpd 2.3.4 backdoor (CVE-2011-2523) from Kali against Metasploitable2 -- an nmap service scan followed by the FTP `USER x:)` trigger and a read-only root shell (`id`/`whoami`/`uname`/`hostname`) via TCP/6200 -- specifically to test the new dashboard features against real traffic instead of synthetic `nc` connections. Nothing left on the target (no files/users/persistence, confirmed via `ss -tn` on Kali), consistent with the earlier run of this same scenario, so no VM restore was needed.
+
+Confirmed live: the scan populated 16 RECON alerts in the counters strip; the exploit produced the same nuanced result as before (trigger itself undetected, but `GPL ATTACK_RESPONSE id check returned root` fired on the root shell's own output, correctly bucketed PRIV_ESC). The connections panel showed a red "NET" row for `192.168.50.70 -> 192.168.50.50` (Metasploitable2 to Kali, PRIV_ESC) -- correctly synthetic since that traffic never touches the Bazzite host -- plus the host's own ssh session to Kali also glowing red/orange as a side effect of Kali itself now being a flagged IP. All threat/VoIP/synthetic-row logic behaved as designed against real attack traffic, not just the earlier manual test.
+
 ## SOC Alarmdashboard: Alert-Only "NET" Rows for Non-Host Lab Traffic
 
 Immediately after the previous fix, Joost reported scans showing up in the left alert feed but never lighting up anything in the right connections panel. Root cause: that panel only ever sees the Bazzite host's own `ss` sockets -- traffic between two other lab machines (e.g. Kali scanning Metasploitable2, or Kali's own DHCP traffic to OPNsense) never touches the host's network stack at all, so it structurally can never appear as a real row, confirmed live with the `ET INFO Possible Kali Linux hostname in DHCP Request Packet` alert (192.168.50.50 -> 192.168.50.1), which had no matching line in `ss -tnp`/`-unp` on the host.
