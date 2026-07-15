@@ -372,7 +372,7 @@ Fixed procedure for any alert — real, test, or exercise:
 |---|---|---|
 | Full port/service scan — Metasploitable2 | ✅ Done, 2026-07-15 | See [§6.1](#61-what-this-soc-should-detect) "Metasploitable2 Tier 1 scan" — 172 Suricata alerts, 65,801 Zeek events, flipped 2 rows to ✅ |
 | Web app recon — Juice Shop (`nikto`, `gobuster`/`ffuf`) | ✅ Done, 2026-07-15 | See "Juice Shop Tier 1 web recon" below — 3,637 Suricata alerts, no §6.1 row flipped outright (see notes) |
-| AD/domain enumeration — DC01 (`enum4linux-ng`, `netexec smb`, anonymous LDAP) | ⏳ Planned, read-only only | — |
+| AD/domain enumeration — DC01 (`enum4linux-ng`, `netexec smb`, anonymous LDAP) | ✅ Done, 2026-07-15, read-only only | See "DC01 Tier 1 AD enumeration" below — 3 Suricata alerts incl. a high-severity anonymous-LDAP-bind signature; no existing §6.1 row fits, flagged separately |
 | Network sweep (`.0/24`) | ✅ Already done (`nmap -sn`, confirmed known IPs only, per [§12](#12-attack-scope-agreed-red-team-test-plan) "Preparation already done") | — |
 
 **Juice Shop Tier 1 web recon — confirmed 2026-07-15:**
@@ -385,7 +385,16 @@ Fixed procedure for any alert — real, test, or exercise:
 - **Hunt evidence, same source/dest/window, port 3000:** **4,557 total events**, of which **3,637 are real Suricata alerts** (`event.module:"suricata"`), not raw traffic. Distinct signatures: `ET EXPLOIT QNAP Shellshock CVE-2014-6271` (**high**, Attempted Administrator Privilege Gain — nikto's Shellshock-probe header), `GPL WEB_SERVER iisadmin access` (**high**, Web Application Attack), `ET WEB_SERVER WEB-PHP phpinfo access`, `GPL WEB_SERVER global.asa access`, `GPL WEB_SERVER printenv access`, `GPL WEB_SERVER /~root access`, `ET WEB_SERVER Possible Cherokee Web Server GET AUX Request DoS Attempt`, `ET INFO Proxy TRACE Request - inbound`, `ET INFO Dotted Quad Host DLL Request`.
 - **Why no §6.1 row is flipped outright:** these signatures are mostly nikto's own vulnerability-probe requests and gobuster's wordlist entries coincidentally matching legacy CGI/PHP/IIS signature paths — real detections, but not a clean match for any existing §6.1 row. The Shellshock signature is the closest (`ET EXPLOIT ...`), but "Known exploit signatures / reverse shells / Metasploit indicators" also explicitly covers reverse-shell/Meterpreter indicators, which are untested here (Tier 2 scope, not yet approved) — flipping that row fully would overclaim based on this evidence alone. Recorded as strong supporting evidence for that row once Tier 2 actually tests exploitation.
 
-**Tier 2 and Tier 3 remain explicitly out of scope without new, separate explicit approval** — this session's authorization covers Tier 1 recon only (full port scan done, Juice Shop web recon done; DC01 AD enumeration next, read-only).
+**DC01 Tier 1 AD enumeration — confirmed 2026-07-15, read-only only:**
+
+- **Commands:** `enum4linux-ng -A 192.168.50.10` (full read-only sweep: SMB dialects, null-session domain info, RPC users/groups/shares/policy/printers), `netexec smb 192.168.50.10 --shares` (anonymous share enum), `ldapsearch -x -H ldap://192.168.50.10 -b "dc=pentest,dc=lab" -s base` (anonymous LDAP bind). No credentials used anywhere, no write/modify operation attempted.
+- **Source:** ATTACK-Kali (`192.168.50.50`). **Target:** DC01 (`192.168.50.10`).
+- **Time window:** `2026-07-15 02:04:46Z`–`02:05:05Z`.
+- **AD-side result — DC01 correctly rejected enumeration:** null-session SMB connected and revealed only basic domain identity (NetBIOS name `DC01`, domain `PENTEST`/`pentest.lab`, domain SID) — every actual enumeration call (`querydispinfo`, `enumdomusers`, `enumalsgroups`, `enumdomgroups`, share list, policy, printers) returned `STATUS_ACCESS_DENIED`. `netexec` confirmed null-auth accepted at the protocol level but got `STATUS_USER_SESSION_DELETED` on share enumeration. Anonymous LDAP bind was rejected outright (`Operations error` — "a successful bind must be completed"). This is a real, confirmed security posture, not assumed.
+- **Hunt evidence, same source/dest/window:** 76 total events; **3 real Suricata alerts** (`event.module:"suricata"`): `ET INFO NTLM Session Setup Request - Auth` (low), `ET INFO NTLM Session Setup Request - Negotiate` (low), and **`ET INFO Anonymous LDAPv3 Bind Request Outbound`** (**high**, "Potential Corporate Privacy Violation") — a purpose-built signature that fired precisely on the anonymous LDAP bind attempt.
+- **Why no §6.1 row is flipped:** none of the current 6 rows is a clean match for "AD/LDAP/SMB enumeration detection" specifically (closest is "SSH/FTP/SMB brute force," which implies repeated auth attempts, not a single null-session probe). Flagged as an open question rather than force-fit: **worth considering a new §6.1 row for AD/LDAP enumeration detection**, given a real, purpose-built, high-severity signature exists and fired correctly — this table addition needs Joost's decision, not a unilateral restructure.
+
+**Tier 1 complete as of 2026-07-15** — all three planned scenarios (Metasploitable2 full-port scan, Juice Shop web recon, DC01 read-only AD enumeration) executed and validated in Hunt with direct evidence. **Tier 2 and Tier 3 remain explicitly out of scope without new, separate explicit approval.**
 
 ---
 

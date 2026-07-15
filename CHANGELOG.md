@@ -6,6 +6,18 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## Phase 3 Tier 1 Complete: DC01 Read-Only AD Enumeration Confirmed in Hunt
+
+Ran the third and final planned Tier 1 scenario: read-only AD enumeration against DC01 from ATTACK-Kali — `enum4linux-ng -A`, `netexec smb --shares`, and an anonymous `ldapsearch` bind. No credentials used, no write/modify operation attempted.
+
+Two things confirmed simultaneously: **DC01 correctly rejected every actual enumeration call** (null-session SMB connected but every RPC call — users, groups, shares, policy, printers — returned `STATUS_ACCESS_DENIED`; anonymous LDAP bind was rejected outright) — a real, confirmed security posture, not assumed. And **Security Onion detected the attempt anyway**: 3 real Suricata alerts in the same window, including a high-severity `ET INFO Anonymous LDAPv3 Bind Request Outbound` signature that fired precisely on the LDAP bind attempt.
+
+This doesn't cleanly flip any existing §6.1 detection-use-case row — none of the current 6 rows covers "AD/LDAP/SMB enumeration" specifically. Flagged as an open question rather than restructuring the table unilaterally: worth considering a new row, given a real purpose-built signature exists and works.
+
+**Tier 1 of the §12 attack-scope plan is now complete** — all three planned recon scenarios (Metasploitable2 full-port scan, Juice Shop web recon, DC01 AD enumeration) executed and validated with direct Hunt evidence. Tier 2 (exploitation) and Tier 3 (AD attack chain, firewall loosening) remain out of scope without separate explicit approval.
+
+Full evidence: `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §6.3, "DC01 Tier 1 AD enumeration."
+
 ## Phase 3 Tier 1: Juice Shop Web Recon Confirmed in Hunt
 
 Ran the second Tier 1 scenario from `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §12: `nikto` (8,907 requests, 95s) followed by `gobuster dir` (dirb `common.txt`, length-excluded to filter the Juice Shop SPA's HTTP-200-for-everything wildcard behavior) from ATTACK-Kali against Juice Shop (`192.168.50.40:3000`).
