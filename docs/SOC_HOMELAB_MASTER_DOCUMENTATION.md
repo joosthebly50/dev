@@ -329,7 +329,7 @@ ssh security-onion "tail -20 /opt/so/log/so-firewall.log"
 | SSH / FTP / SMB brute force | ⚠️ (SMB relevant especially toward DC01) |
 | **AD / LDAP / SMB enumeration** | ✅ Confirmed 2026-07-15 — see "DC01 Tier 1 AD enumeration" below. Deliberately a separate row from brute force: enumeration (single null-session/anonymous-bind probes reading directory/share structure) and brute force (repeated authentication attempts against credentials) are different behaviors with different signatures, and shouldn't be collapsed into one row. |
 | Suspicious DNS requests | ⚠️ (Zeek `dns.log`; Sysmon event 22 on DC01) |
-| Known exploit signatures / reverse shells / Metasploit indicators | ⚠️ (Suricata rulesets; Sysmon process-creation for host-side) |
+| Known exploit signatures / reverse shells / Metasploit indicators | ✅ Confirmed 2026-07-15, with an important nuance — see "Metasploitable2 Tier 2 exploitation" below |
 | SQLi / command injection / directory traversal | ⚠️ (Suricata web-attack rulesets) |
 
 **Metasploitable2 Tier 1 scan — TCP scans + OS fingerprinting/banner grabbing, confirmed 2026-07-15:**
@@ -395,7 +395,29 @@ Fixed procedure for any alert — real, test, or exercise:
 - **Hunt evidence, same source/dest/window:** 76 total events; **3 real Suricata alerts** (`event.module:"suricata"`): `ET INFO NTLM Session Setup Request - Auth` (low), `ET INFO NTLM Session Setup Request - Negotiate` (low), and **`ET INFO Anonymous LDAPv3 Bind Request Outbound`** (**high**, "Potential Corporate Privacy Violation") — a purpose-built signature that fired precisely on the anonymous LDAP bind attempt.
 - **New §6.1 row added, 2026-07-15: "AD / LDAP / SMB enumeration," status ✅.** None of the original 6 rows was a clean match — closest was "SSH/FTP/SMB brute force," but that implies repeated authentication attempts against credentials, not single null-session/anonymous-bind probes reading directory/share structure. These are different behaviors with different signatures (`ET INFO Anonymous LDAPv3 Bind Request Outbound` / NTLM Session Setup vs. e.g. repeated-failed-logon signatures) and belong in separate rows, not collapsed into one — Joost's explicit decision, not a unilateral restructure.
 
-**Tier 1 complete as of 2026-07-15** — all three planned scenarios (Metasploitable2 full-port scan, Juice Shop web recon, DC01 read-only AD enumeration) executed and validated in Hunt with direct evidence. **Tier 2 and Tier 3 remain explicitly out of scope without new, separate explicit approval.**
+**Tier 1 complete as of 2026-07-15** — all three planned scenarios (Metasploitable2 full-port scan, Juice Shop web recon, DC01 read-only AD enumeration) executed and validated in Hunt with direct evidence.
+
+**Tier 2 explicitly approved by Joost, 2026-07-15** ("test tier 2 met mijn toestemming") — execution started the same day, one scenario at a time per [[feedback_phase3_attack_testing_discipline]].
+
+| Scenario | Status | Evidence |
+|---|---|---|
+| vsftpd 2.3.4 backdoor — Metasploitable2 | ✅ Done, 2026-07-15 | See "Metasploitable2 Tier 2 exploitation" below — real root RCE achieved, nuanced detection result |
+| Samba/NFS/RMI — Metasploitable2 | ⏳ Not yet run | — |
+| OWASP Top 10 — Juice Shop | ⏳ Not yet run | — |
+| UnrealIRCd backdoor — Metasploitable2 | ⏳ Not yet run | — |
+
+**Metasploitable2 Tier 2 exploitation — vsftpd 2.3.4 backdoor (CVE-2011-2523), confirmed 2026-07-15:**
+
+- **Technique:** the classic vsftpd 2.3.4 malicious-backdoor RCE — repeats the exact exploit already noted in [§8](#8-project-timeline) as done once before, outside this documentation trail. First attempted via `msfconsole` (`exploit/unix/ftp/vsftpd_234_backdoor`), which triggered the backdoor correctly (its own console output confirmed `Backdoor has been spawned!`) but didn't cleanly hand control to a Metasploit session due to a payload/session-handler mismatch in this Metasploit version. Reading the module's own source (`/usr/share/metasploit-framework/modules/exploits/unix/ftp/vsftpd_234_backdoor.rb`) showed the exact underlying mechanism: send `USER <random>:)` (a smiley in the FTP username is the trigger), then `PASS <random>`, then connect directly to TCP/6200 for a root shell. Reimplemented that sequence directly in a small Python script for a clean, transparent demonstration, run three times total (two earlier via the `msfconsole` attempts, one final clean manual run).
+- **Source:** ATTACK-Kali (`192.168.50.50`). **Target:** Metasploitable2 (`192.168.50.70`).
+- **Result — real root code execution, all three attempts:** `id` → `uid=0(root) gid=0(root)`, `whoami` → `root`, `uname -a` → `Linux metasploitable 2.6.24-16-server ... i686 GNU/Linux`, `hostname` → `metasploitable`. No files modified, no persistence installed, no pivoting attempted — read-only recon commands only, consistent with this project's lab-exploitation scope.
+- **Detection result — nuanced, both halves independently confirmed in Hunt:**
+  - **The exploit trigger itself (FTP `USER x:)` / `PASS x`, then the connection to 6200) was NOT detected.** `event.module:"suricata"` for `source.ip:"192.168.50.50" AND destination.ip:"192.168.50.70"` in the exact exploit windows returns zero hits — only Zeek `conn`/`weird` (`active_connection_reuse`, an artefact of the rapid back-to-back connections) logged the traffic at all. No ET/GPL signature exists in this ruleset for the vsftpd-backdoor trigger sequence specifically.
+  - **The post-exploitation confirmation WAS detected, all three times.** `GPL ATTACK_RESPONSE id check returned root` fired on the *reverse-direction* traffic (`source.ip:"192.168.50.70"` port `6200` → `destination.ip:"192.168.50.50"`, medium severity, category "Potentially Bad Traffic") at `11:48:21.761Z`, `11:48:50.650Z`, and `11:53:46.630Z` — each timestamp lines up exactly with an `id` command's root-output response crossing the wire. This is a generic content-inspection signature (it looks for `uid=0(root)` appearing in any TCP response, not a vsftpd-specific rule) — it would fire on *any* technique that causes root `id` output to traverse the network, not just this one.
+- **Why this flips the §6.1 row, with a caveat:** the row asks about "known exploit signatures / reverse shells / Metasploit indicators" broadly, and a real, reproducible signature did fire on real successful exploitation, three times, with second-level timestamp precision. But it's honest to note this is **detection of the symptom (a root shell responding), not the specific exploit** — a more targeted attacker who avoided ever running `id` (or similar output-leaking commands) over that particular connection would not have tripped this signature. This is a genuine, useful, but narrow detection — not a dedicated vsftpd-backdoor rule. Recorded as a real capability, not overclaimed as complete coverage.
+- **SOC Alarmdashboard cross-check:** the same `GPL ATTACK_RESPONSE id check returned root` alerts also appeared in the live alarm dashboard, bucketed as `SCAN` (via the generic "potentially bad traffic" category-text fallback) — arguably a better fit for `EXPLOIT` given it's literally a post-compromise confirmation, not reconnaissance. Not changed in this pass to avoid re-iterating the categorizer without being asked; flagged here for a future categorization refinement.
+
+**Tier 2 continues** with the remaining three scenarios (Samba/NFS/RMI, Juice Shop OWASP Top 10, UnrealIRCd backdoor), one at a time. **Tier 3 remains explicitly out of scope without new, separate explicit approval.**
 
 ---
 
@@ -582,7 +604,7 @@ Every important change: update the specific source doc → `CHANGELOG.md` → `d
 2. **AD attack chain (Tier 3) — build the escalation path first.** The environment currently has none (`IT Admin 01` isn't a Domain Admin). Before Kerberoasting/privilege-escalation practice: set an SPN on `SQL Service`, give `IT Admin 01` real elevated rights. This is an infrastructure change — full change procedure ([§4](#4-architecture-security--ai-rules)), its own explained/confirmed step, not bundled into the attack.
 3. **WIN11-01 becomes a target too, after cleanup** — move `DESKTOP-EFKB8GQ` into `OU=Workstations`, general tidy-up, *then* deliberately loosen its firewall for lateral-movement testing (WIN11-01 → DC01).
 
-**Preparation already done:** pre-change snapshots (`DC01`: `2026-07-13-pre-ad-escalation-path`, `WIN11-01`: `2026-07-13-pre-target-cleanup`). One `nmap -sn` sweep run (confirmed known IPs only); a Metasploitable2 full-port scan was started and deliberately stopped at Joost's request. **No exploitation, AD changes, or firewall changes executed yet.**
+**Preparation already done:** pre-change snapshots (`DC01`: `2026-07-13-pre-ad-escalation-path`, `WIN11-01`: `2026-07-13-pre-target-cleanup`). Tier 1 (recon) fully executed and validated 2026-07-15 ([§6.3](#63-detection-validation-plan)). Tier 2 explicitly approved by Joost 2026-07-15 and started the same day — vsftpd 2.3.4 backdoor exploitation against Metasploitable2 done (real root RCE, nuanced detection result, see [§6.3](#63-detection-validation-plan)), three scenarios remain. **AD changes and firewall changes (Tier 3) remain not executed**, still pending separate explicit approval.
 
 ### Tier 1 — Reconnaissance & enumeration
 
@@ -595,12 +617,12 @@ Every important change: update the specific source doc → `CHANGELOG.md` → `d
 
 ### Tier 2 — Exploitation of intentionally-vulnerable targets
 
-| Scenario | Target | Technique |
-|---|---|---|
-| vsftpd backdoor | Metasploitable2:21 | `vsftpd_234_backdoor` (repeats the historical exploit, [§8](#8-project-timeline)) |
-| Samba/NFS/RMI | Metasploitable2 | `usermap_script`, anonymous NFS mount, Java-RMI deserialization |
-| OWASP Top 10 | Juice Shop | SQLi, broken auth, IDOR, XSS — built-in scored challenges |
-| UnrealIRCd backdoor | Metasploitable2:6667 | Known backdoor trigger |
+| Scenario | Target | Technique | Status |
+|---|---|---|---|
+| vsftpd backdoor | Metasploitable2:21 | `vsftpd_234_backdoor` (repeats the historical exploit, [§8](#8-project-timeline)) | ✅ Done 2026-07-15, root RCE confirmed, see [§6.3](#63-detection-validation-plan) |
+| Samba/NFS/RMI | Metasploitable2 | `usermap_script`, anonymous NFS mount, Java-RMI deserialization | ⏳ Not yet run |
+| OWASP Top 10 | Juice Shop | SQLi, broken auth, IDOR, XSS — built-in scored challenges | ⏳ Not yet run |
+| UnrealIRCd backdoor | Metasploitable2:6667 | Known backdoor trigger | ⏳ Not yet run |
 
 ### Tier 3 — Active Directory attack chain (after the escalation-path build)
 

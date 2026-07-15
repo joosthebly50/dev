@@ -6,6 +6,18 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## Phase 3 Tier 2 Started: vsftpd 2.3.4 Backdoor Gets Real Root RCE, Nuanced Detection Result
+
+Joost explicitly authorized Tier 2 (exploitation) — "test tier 2 met mijn toestemming" — and the first scenario from the already-agreed §12 plan ran the same day: the classic vsftpd 2.3.4 malicious-backdoor RCE (CVE-2011-2523) against Metasploitable2, the same exploit this project's own timeline (§8) already referenced as done once before.
+
+`msfconsole`'s own module triggered the backdoor correctly but didn't hand off to a clean Metasploit session (a payload/session-handler mismatch in this Metasploit version). Read the module's own source to find the exact underlying mechanism — an FTP `USER <random>:)` / `PASS <random>` trigger followed by a raw connection to TCP/6200 — and reimplemented it directly in a small Python script for a transparent demonstration. Real root code execution confirmed three times: `id` → `uid=0(root) gid=0(root)`, `whoami` → `root`, `uname -a` → the expected Metasploitable2 kernel string. No files modified, no persistence, no pivoting — read-only recon commands only.
+
+The detection result is genuinely nuanced, both halves confirmed independently in Hunt: the exploit trigger itself was **not** detected (zero Suricata alerts in either direction during the trigger window, only Zeek's passive connection logging), but the post-exploitation confirmation **was** — `GPL ATTACK_RESPONSE id check returned root` fired on the reverse-direction traffic (Metasploitable2:6200 → Kali) all three times, each timestamp lining up exactly with an `id` command's root output crossing the wire. This is a generic content-inspection signature, not a vsftpd-specific rule — it would catch any technique that leaks `uid=0(root)` over that connection, not just this one exploit.
+
+Flips the §6.1 row "Known exploit signatures / reverse shells / Metasploit indicators" to ✅, with the nuance spelled out explicitly rather than overclaimed: this is detection of the symptom (a root shell talking back), not the specific exploit technique. Three Tier 2 scenarios remain (Samba/NFS/RMI, Juice Shop OWASP Top 10, UnrealIRCd backdoor), to be run one at a time per the established discipline. Tier 3 (AD escalation, firewall loosening) remains out of scope pending separate approval.
+
+Full evidence: `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §6.1/§6.3/§12.
+
 ## SOC Alarmdashboard: Fix Categorization Miscall, Cleaner Spoken Category Names
 
 Two small fixes found via a real dashboard run and a live listening test, both same day as the dashboard itself.

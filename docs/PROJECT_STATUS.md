@@ -167,7 +167,23 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
     toegevoegd — bewust een eigen rij, niet samengevoegd met brute force
     (andere gedragingen, andere signatures).
   Tier 2 (exploitatie) en Tier 3 (AD-escalatie, firewallversoepeling)
-  blijven buiten scope zonder aparte expliciete toestemming. Zie
+  bleven buiten scope zonder aparte expliciete toestemming. Zie
+  `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §6.1/§6.3/§12.
+- ✅ **Phase 3, Tier 2: Exploitatie gestart met expliciete toestemming
+  (2026-07-15, "test tier 2 met mijn toestemming").** Eerste scenario:
+  vsftpd 2.3.4-backdoor (CVE-2011-2523) tegen Metasploitable2 — echte
+  root-RCE bereikt (`uid=0(root)`), drie keer herhaald. Genuanceerd
+  detectieresultaat: de exploit-trigger zelf (FTP `USER x:)`/`PASS x` +
+  verbinding met poort 6200) werd **niet** gedetecteerd (nul
+  Suricata-alerts, alleen Zeek zag het verkeer), maar de
+  root-shell-bevestiging (`id` → `uid=0(root)`) **wel**, via de generieke
+  signature `GPL ATTACK_RESPONSE id check returned root`, alle drie keer
+  met seconden-precisie. Flipt de §6.1-rij "Known exploit signatures /
+  reverse shells / Metasploit indicators" naar ✅, met de expliciete
+  kanttekening dat dit detectie van het symptoom is (root-shell-output),
+  niet van de specifieke exploit. Drie Tier 2-scenario's resteren
+  (Samba/NFS/RMI, Juice Shop OWASP Top 10, UnrealIRCd-backdoor), één voor
+  één. Tier 3 blijft buiten scope zonder aparte toestemming. Zie
   `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §6.1/§6.3/§12.
 - ✅ **SOC Alarmdashboard (2026-07-15).** Live, lokale alarmering op de
   Bazzite-host: banner + geluid per aanvalstype (scan/recon, exploit,
