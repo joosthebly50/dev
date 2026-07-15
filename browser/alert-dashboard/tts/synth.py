@@ -28,7 +28,7 @@ from pathlib import Path
 
 import numpy as np
 
-DEFAULT_VOICE = "en_US-hfc_female-medium"
+DEFAULT_VOICE = "en_US-amy-medium"
 VOICES_DIR = Path.home() / ".cache" / "soc-alarm-dashboard" / "voices"
 SAMPLE_RATE = 22050
 

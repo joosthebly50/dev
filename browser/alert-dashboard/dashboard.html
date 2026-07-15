@@ -209,7 +209,7 @@ function priorityRank(bucket) {
 // Persisted to localStorage so they survive a page refresh (Joost's
 // explicit requirement, SOC Dashboard v2 roadmap, 2026-07-15).
 const SETTINGS_KEY = 'soc-dashboard-voice-settings-v1';
-const DEFAULT_SETTINGS = { voiceEnabled: true, voice: 'en_US-hfc_female-medium', rate: 1.0, cooldownSec: 30, filterLevel: 'all' };
+const DEFAULT_SETTINGS = { voiceEnabled: true, voice: 'en_US-amy-medium', rate: 1.0, cooldownSec: 30, filterLevel: 'all' };
 function loadSettings() {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);

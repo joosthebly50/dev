@@ -34,8 +34,10 @@ const PORT = 8765;
 const POLL_INTERVAL_MS = 20_000;
 const LOOKBACK_ON_START_MS = 2 * 60_000;
 
-// Spoken alerts: a two-tone siren + Piper (offline neural TTS, female
-// voice, Joost picked en_US-hfc_female-medium 2026-07-15). Generated on
+// Spoken alerts: a two-tone siren + Piper (offline neural TTS). Joost
+// picked en_US-hfc_female-medium 2026-07-15, then switched the default to
+// en_US-amy-medium the same day after the voice picker was expanded to 14
+// options -- both, plus 12 others, remain selectable. Generated on
 // demand (POST /api/tts/generate) when the client decides to announce;
 // cached under ~/.cache keyed by content so repeat requests (e.g. the
 // same category firing again after its cooldown) are free.
@@ -90,7 +92,7 @@ const KNOWN_VOICES = new Set([
 ]);
 
 async function synthesizeSpokenClip({ bucket, srcIp, dstIp, verbose, multiple, voice, rate, text }) {
-  const safeVoice = KNOWN_VOICES.has(voice) ? voice : 'en_US-hfc_female-medium';
+  const safeVoice = KNOWN_VOICES.has(voice) ? voice : 'en_US-amy-medium';
   const safeRate = Number.isFinite(rate) && rate >= 0.5 && rate <= 2.0 ? rate : 1.0;
 
   // Voice preview (settings panel "listen to this voice" on change) --

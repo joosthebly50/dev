@@ -263,9 +263,12 @@ scan (9 alerts, 8 SCAN + 1 EXPLOIT) — categorisering, dedup en
 door Joost in het echte dashboardvenster.
 
 **v1 spraak (TTS):** sirentoon + stemkeuze (4 stemmen vergeleken, Joost
-koos `en_US-hfc_female-medium`), verkorte spreektekst (12-15s → ~8-9s na
-het weglaten van de ruwe signature-tekst), audio-afspeelwachtrij. Live
-bevestigd — twee meldingen na elkaar gehoord, niet overlappend.
+koos aanvankelijk `en_US-hfc_female-medium`), verkorte spreektekst
+(12-15s → ~8-9s na het weglaten van de ruwe signature-tekst),
+audio-afspeelwachtrij. Live bevestigd — twee meldingen na elkaar gehoord,
+niet overlappend. **Standaardstem later dezelfde dag gewijzigd naar
+`en_US-amy-medium`**, na uitbreiding van de stemkeuze naar 14 opties (zie
+hierboven) — de oude standaard blijft gewoon selecteerbaar.
 
 **v2 (15 categorieën + instellingen + prioriteit/cooldown/escalatie):**
 

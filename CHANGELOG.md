@@ -6,6 +6,10 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## SOC Alarmdashboard: Default Voice Switched to Amy
+
+Changed the default voice from `en_US-hfc_female-medium` to `en_US-amy-medium` (client-side `DEFAULT_SETTINGS.voice`, server-side fallback in `synthesizeSpokenClip`, and `tts/synth.py`'s `DEFAULT_VOICE`) after Joost compared it against the newly-expanded 14-voice picker. The original voice remains fully selectable, just no longer the out-of-the-box default for a fresh browser profile.
+
 ## SOC Alarmdashboard: 10 More Voices Added to the Settings Menu
 
 Expanded the voice picker from 4 to 14 options, grouped by category (Female US, Female GB, Male) in the settings dropdown. Added four male voices with distinct character (Norman, Bryce, HFC Male, Alan) as the closest available stand-ins for a "game/viking/hacker" feel -- Piper's catalog doesn't have literally-themed voices, so these were picked and compared by ear for timbre. Added six more female voices (Kristin, LJSpeech at both medium and high quality, Cori, Semaine, Aru), rounding out essentially every clean single-speaker English voice Piper offers.
