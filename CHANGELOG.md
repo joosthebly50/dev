@@ -14,7 +14,15 @@ Fixed by setting Contents to exactly **Firewall, DHCP (Kea), DNS (Unbound)**. Va
 
 DNS did not validate — root-caused as a **separate, not-yet-enabled Unbound setting** (`unbound.advanced.logqueries`, confirmed off by default), not a pipeline defect, so it's split into a distinct Phase 2B rather than reopening Phase 2A. TLS transport and OPNsense's own Suricata remain explicitly deferred, unchanged from the original design.
 
-Full evidence and validation steps: `docs/ROADMAP_OPNSENSE_LOGGING.md`. Phase 2B research (not yet enabled): `docs/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md`.
+Full evidence and validation steps: `docs/ROADMAP_OPNSENSE_LOGGING.md`. Phase 2B research: `docs/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md`.
+
+## Decision: Phase 2B (Unbound DNS Query Logging) Deferred, Not a Bug
+
+Researched the three questions needed to decide: the setting is `unbound.advanced.logqueries` ("Log Queries", DNS Resolver → Advanced → Logging Settings), confirmed off by default on this install (OPNsense 26.1.11_6), and — while its per-query CPU cost is negligible — enabling it would add the highest-frequency traffic category on the network to the ingest pipeline, on top of a full per-host DNS history retained in Elasticsearch.
+
+Joost's decision: leave it off for now. Phase 2A (Firewall + Kea DHCP) already fully proves the syslog pipeline; DNS query logging is an additional visibility feature, not something needed to close that out, and the volume/privacy cost is worth weighing deliberately rather than defaulting into. No OPNsense configuration changes were made. To be reassessed during Phase 3 detection engineering, specifically when designing DNS tunneling/beaconing detections — that's the concrete scenario where the tradeoff would tip in favor of enabling it.
+
+Current Phase 2 status: Firewall logging ✅ working, Kea DHCP logging ✅ working, Unbound query logging ⏸️ deliberately deferred, OPNsense Suricata forwarding ⏸️ deliberately not enabled (unchanged from the original design), TLS migration 🔜 still an open follow-up item. Full record: `docs/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md`.
 
 ## Decision: Kali Will Not Get an Elastic Agent — Endpoint-Monitoring Phase Closed
 

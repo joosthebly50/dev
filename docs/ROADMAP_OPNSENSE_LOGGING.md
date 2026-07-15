@@ -1,18 +1,19 @@
 # Roadmap: OPNsense Logging into Security Onion
 
-**Status: Phase 2A ✅ VALIDATED (2026-07-15) — Phase 2B proposed, not yet
-executed.** This is Phase 2 of the roadmap Joost set on 2026-07-14 (see
-`docs/PHASE1_CLOSURE_SUMMARY.md` for the closed Phase 1). Split into two
-sub-phases to keep each change independently validatable:
+**Status: Phase 2A ✅ VALIDATED (2026-07-15) — Phase 2B ⏸️ DEFERRED
+(decided 2026-07-15, not an open question).** This is Phase 2 of the
+roadmap Joost set on 2026-07-14 (see `docs/PHASE1_CLOSURE_SUMMARY.md` for
+the closed Phase 1). Split into two sub-phases to keep each change
+independently validatable:
 
 - **Phase 2A — Remote syslog (Firewall + Kea DHCP), TLS/Suricata deferred.**
   Implemented and validated with direct evidence 2026-07-15. See "Phase 2A
   validation evidence" below.
 - **Phase 2B — Unbound DNS query logging.** Deliberately split off as a
   separate change once Phase 2A validation showed DNS wasn't a syslog-pipeline
-  problem but a distinct, not-yet-enabled Unbound setting. See
-  `docs/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md` — design/research only, nothing
-  enabled yet.
+  problem but a distinct, not-yet-enabled Unbound setting. Researched, then
+  **deliberately deferred** — not a bug, an optional feature with a real
+  volume/privacy cost. See `docs/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md`.
 
 This was already anticipated, in outline, in
 `docs/ROADMAP_ENDPOINT_MONITORING.md`'s "Expliciet buiten scope" section:
@@ -207,6 +208,7 @@ Phase 2A is complete. Remaining open items, none blocking:
 3. Log-everything vs. blocks-only for the firewall stream — observed
    behavior so far is that pass events *are* being logged (not blocks-only),
    worth revisiting for storage/volume once real usage accumulates.
-4. Phase 2B (DNS query logging) — see
-   `docs/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md`, awaiting Joost's decision on
-   whether to enable it.
+4. Phase 2B (DNS query logging) — **deferred, decided 2026-07-15** (not an
+   open question). See `docs/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md`; to be
+   reassessed during Phase 3 detection engineering, specifically for DNS
+   tunneling/beaconing detections.

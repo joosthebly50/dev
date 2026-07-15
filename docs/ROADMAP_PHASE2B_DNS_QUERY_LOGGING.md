@@ -1,7 +1,9 @@
-# Phase 2B: Unbound DNS Query Logging — Research Only
+# Phase 2B: Unbound DNS Query Logging
 
-**Status: RESEARCH ONLY — query logging has NOT been enabled. No changes
-have been made to OPNsense.** Split off from Phase 2A
+**Status: DEFERRED / bewust niet ingeschakeld (besloten 2026-07-15).**
+Query logging is NOT enabled. No changes have been made to OPNsense, and
+none are currently planned — this is an explicit, considered decision, not
+an open task waiting on more research. Split off from Phase 2A
 (`docs/ROADMAP_OPNSENSE_LOGGING.md`) on 2026-07-15 once Phase 2A's
 validation showed the missing DNS events weren't a syslog-pipeline defect —
 Firewall and DHCP both proved end-to-end — but a distinct Unbound setting
@@ -105,26 +107,39 @@ ephemeral.
 
 ---
 
-## Recommendation
+## Decision (2026-07-15)
 
-Enabling **Log Queries only** (not Log Replies) is a reasonable, low-risk
-choice given this lab's small scale, and directly serves the already-
-planned Phase 3 DNS-based detection work. The main real cost is storage
-growth, which is worth watching rather than pre-solving — Security Onion's
-existing ILM policy already manages retention lab-wide, so this isn't a
-novel operational burden, just a bigger contributor to it.
+**Unbound `Log Queries` stays off for now.** Joost's reasoning:
 
-**Not enabled.** This is Joost's call to make explicitly — the framing
-matters: this is an **additional feature** being deliberately considered,
-not a bug being fixed. Phase 2A (Firewall + DHCP + transport + ingest) is
-already complete and validated independent of this decision.
+- Phase 2A already fully proves the syslog pipeline for Firewall and Kea
+  DHCP — nothing about DNS query logging is needed to close that out.
+- DNS query logging is an **additional visibility feature, not a
+  necessary bugfix** — the same framing this document already used, now
+  confirmed as the deciding factor rather than just a caveat.
+- It can generate significant extra log volume and a complete per-host DNS
+  history (see Performance impact / Privacy consideration above) — a cost
+  worth weighing deliberately, not defaulting into.
+- Better to first get real operating experience with the current ingest
+  volume (Firewall + Kea DHCP) before adding the highest-frequency traffic
+  category on top of it.
+
+**No OPNsense configuration changes were made.** This is not an open task
+blocked on more research — it's a considered "not now."
+
+**Reassess during Phase 3 (detection engineering)**, specifically when
+designing DNS tunneling/beaconing detections — that's the concrete
+scenario where the tradeoff (storage/noise/privacy vs. detection value)
+would tip back in favor of enabling it. Until then, Phase 3 work should
+assume DNS query-level visibility does **not** exist yet.
 
 ---
 
-## Next step
+## Current Phase 2 status summary
 
-Awaiting Joost's decision on whether to enable `Log Queries`. If yes, the
-validation would follow the same pattern as Phase 2A: enable, generate a
-distinctive test query, confirm it lands in Hunt with correct content,
-then decide on go/no-go based on real observed volume rather than the
-estimate above.
+| Component | Status |
+|---|---|
+| Firewall logging | ✅ Working (Phase 2A) |
+| Kea DHCP logging | ✅ Working (Phase 2A) |
+| Unbound DNS query logging | ⏸️ Deferred / deliberately not enabled (Phase 2B, this decision) |
+| OPNsense Suricata forwarding | ⏸️ Deliberately not enabled (out of scope by original Phase 2 design, `docs/ROADMAP_OPNSENSE_LOGGING.md`) |
+| TLS migration | 🔜 Still-open follow-up item, not yet scheduled |
