@@ -137,15 +137,15 @@ achterlaat (niet alleen op het netwerk).
    `docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`
    (plus een apart opgeloste, langlopende DHCP-reservation-bug:
    `docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`).
-3. **ATTACK-Kali** — bewust nog niet gedaan, zie de scope/privacy-
-   afweging hierboven. Uitstellen tot een concrete Purple Team-oefening
-   erom vraagt én de databewaar-/toegangsscope expliciet is besproken.
+3. **ATTACK-Kali** — ❌ **definitief besloten, geen Elastic Agent** (2026-07-15).
+   Niet nodig gebleken voor Red/Blue Team, nuttig-maar-niet-essentieel
+   voor Purple Team-correlatie — zie sectie 3 hierboven voor de volledige
+   afweging.
 4. OPNsense, Metasploitable2, MGMT-Debian — bewust niet gepland (zie
    redenen hierboven).
 
-**De endpoint-monitoringfase als geheel is pas volledig afgerond zodra
-ook Kali is opgepakt (of bewust definitief buiten scope wordt
-verklaard)** — prioriteit 1 én 2 zijn nu klaar, dat is niet de hele fase.
+**De endpoint-monitoringfase als geheel is volledig afgerond (2026-07-15).**
+Prioriteit 1, 2 én de Kali-beslissing zijn nu allemaal klaar.
 
 Elke stap hierboven vereist, wanneer die daadwerkelijk wordt uitgevoerd:
 een aparte, expliciete goedkeuring — dit document is de planning, niet de
