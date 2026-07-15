@@ -365,9 +365,31 @@ palet volgt (CPU geel, GPU groen, RAM paars — Disk en Net kregen een
 eigen kleur, cyaan resp. oranje, aangezien dit dashboard meer metrieken
 toont dan MangoHud standaard doet), dunne verticale scheidingsstreepjes
 tussen elke metriek, en kleine inline sparkline-grafiekjes (canvas,
-laatste ~20 metingen = ~200s geschiedenis) naast CPU en GPU. De
+laatste ~20 metingen geschiedenis) naast CPU en GPU. De
 severity-kleurcodering (groen/amber/rood) blijft behouden, alleen nu
 toegepast op de waarde zelf in plaats van op een badge-achtergrond.
+
+**Kunnen we MangoHud niet gewoon zelf aanroepen?** Nee — en dat hoeft ook
+niet. MangoHud is een Vulkan/OpenGL-overlay-laag voor games, geen
+achtergronddienst met een aanroepbare interface; het leest zelf ook
+gewoon `/proc`, `/sys/class/hwmon` en `nvidia-smi`/NVML — exact dezelfde
+bronnen als `health.mjs` al gebruikte. Het "trager reageren"-gevoel kwam
+puur van het pol-interval (10s), niet van de onderliggende methode. Nu
+verlaagd naar 1s client-side (elke serverkant-meting kost sowieso maar
+~100-200ms).
+
+**Extra metrics toegevoegd (op verzoek):**
+- **CPU-temperatuur**: gelezen uit `/sys/class/hwmon/hwmonN/tempM_input`,
+  specifiek het sensor-label "Package id 0" (coretemp-driver) — dynamisch
+  opgezocht op naam, niet een hardgecodeerd hwmon-nummer (die nummering
+  is niet stabiel over reboots heen).
+- **CPU-klokfrequentie**: gemiddelde van
+  `/sys/devices/system/cpu/cpuN/cpufreq/scaling_cur_freq` over alle
+  cores, in GHz.
+- **GPU VRAM-gebruik in %**: `nvidia-smi --query-gpu=memory.used,memory.total`.
+
+Live bevestigd via screenshot: CPU 57°C/4.80 GHz, GPU 8% VRAM — kloppen
+met wat de host op dat moment daadwerkelijk deed.
 
 **Nog niet gebouwd:** Security Onion's eigen componentstatus
 (Suricata/Zeek/Elasticsearch/Fleet) — dat vereist een aparte check tegen

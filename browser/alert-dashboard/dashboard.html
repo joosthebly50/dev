@@ -156,6 +156,8 @@
     <span class="health-metric cpu">
       <span class="label">CPU</span> <span class="val na" id="hCpu">–</span><span class="unit">%</span>
       <canvas id="gCpu" width="42" height="14"></canvas>
+      <span class="val na" id="hCpuTemp">–</span><span class="unit">°C</span>
+      <span class="val na" id="hCpuGHz">–</span><span class="unit">GHz</span>
     </span>
     <span class="health-metric mem">
       <span class="label">RAM</span> <span class="val na" id="hMem">–</span><span class="unit">%</span>
@@ -169,6 +171,7 @@
     <span class="health-metric gpu">
       <span class="label">GPU</span> <span class="val na" id="hGpu">–</span>
       <canvas id="gGpu" width="42" height="14"></canvas>
+      <span class="val na" id="hGpuVram">–</span><span class="unit">% VRAM</span>
     </span>
   </div>
 
@@ -565,6 +568,9 @@ async function pollHealth() {
       el.className = 'val ' + (val == null ? 'na' : healthClass(val, 70, 90));
     };
     setMetric('hCpu', h.cpu);
+    setMetric('hCpuTemp', h.cpuTempC);
+    document.getElementById('hCpuGHz').textContent = h.cpuGHz != null ? h.cpuGHz.toFixed(2) : 'n/a';
+    document.getElementById('hCpuGHz').className = 'val ' + (h.cpuGHz != null ? '' : 'na');
     setMetric('hMem', h.mem);
     setMetric('hDisk', h.disk);
     pushHistory(cpuHistory, h.cpu);
@@ -579,12 +585,16 @@ async function pollHealth() {
     }
 
     const gpuEl = document.getElementById('hGpu');
+    const vramEl = document.getElementById('hGpuVram');
     if (h.gpu) {
       gpuEl.textContent = `${h.gpu.utilPercent}% ${h.gpu.tempC}°C`;
       gpuEl.className = 'val ' + healthClass(h.gpu.tempC, 75, 85);
+      vramEl.textContent = h.gpu.vramPercent != null ? h.gpu.vramPercent : 'n/a';
+      vramEl.className = 'val ' + (h.gpu.vramPercent != null ? healthClass(h.gpu.vramPercent, 70, 90) : 'na');
       pushHistory(gpuHistory, h.gpu.utilPercent);
     } else {
       gpuEl.textContent = 'n/a'; gpuEl.className = 'val na';
+      vramEl.textContent = 'n/a'; vramEl.className = 'val na';
       pushHistory(gpuHistory, null);
     }
     drawSparkline('gGpu', gpuHistory, '#4fe881');
@@ -596,7 +606,7 @@ renderCounters();
 poll();
 setInterval(poll, 3000);
 pollHealth();
-setInterval(pollHealth, 10000);
+setInterval(pollHealth, 1000);
 </script>
 </body>
 </html>

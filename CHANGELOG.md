@@ -6,6 +6,16 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## SOC Alarmdashboard: Faster Polling, CPU Temp/Clock, GPU VRAM
+
+Joost asked whether the health bar could call MangoHud directly, since MangoHud feels more responsive. Explained why not, and why it doesn't matter: MangoHud is a Vulkan/OpenGL overlay for games, not a background service with a callable interface -- it reads the exact same sources (`/proc`, `/sys/class/hwmon`, `nvidia-smi`/NVML) that `health.mjs` already used. The perceived slowness was purely the 10s poll interval, not the underlying method. Lowered it to 1s client-side (each server-side measurement only takes ~100-200ms anyway).
+
+Added the three metrics requested: CPU temperature (read from `/sys/class/hwmon/hwmonN/tempM_input`, specifically the "Package id 0" coretemp sensor, found dynamically by name rather than a hardcoded hwmon number since that numbering isn't stable across reboots), CPU clock speed (averaged across all cores' `scaling_cur_freq`), and GPU VRAM usage as a percentage (`nvidia-smi --query-gpu=memory.used,memory.total`).
+
+Confirmed live via screenshot: CPU 57°C/4.80GHz, GPU 8% VRAM, matching what the host was actually doing at the time.
+
+Full detail: `docs/guides/alarm_dashboard.md`.
+
 ## SOC Alarmdashboard: Restyled Health Bar to Match MangoHud
 
 Joost shared a screenshot of his own MangoHud in-game overlay (Linux gaming performance HUD) as a visual reference and asked for the health bar to match it. Rebuilt the styling: transparent-dark backdrop, bold values with smaller unit text beside them, a fixed color per metric label following MangoHud's own palette (CPU yellow, GPU green, RAM purple; Disk and Net got their own colors, cyan and orange, since this dashboard shows more metrics than MangoHud does by default), thin vertical separators between metrics, and small inline sparkline graphs (canvas, last ~20 samples / ~200s of history) next to CPU and GPU. Kept the existing severity color coding (green/amber/red) but applied to the value text itself rather than a badge background.
