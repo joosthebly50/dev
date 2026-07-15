@@ -6,6 +6,10 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## WIN11-01: Fresh Snapshot to Replace Stale Pre-Install Pointer
+
+While checking Kali/Metasploitable2/WIN11-01 for leftover exploit artifacts (none found on any of the three -- Kali and WIN11-01 have not been attack targets yet, Metasploitable2's last exploit run left no files/persistence per its own changelog entry), found WIN11-01's current snapshot was still `2026-07-14-pre-sysmon-elastic-agent`, i.e. from *before* Sysmon and Elastic Agent were installed -- the live disk had since moved on but no snapshot reflected that. Took a fresh offline snapshot (VM was shut off) `2026-07-15-post-sysmon-elastic-agent` so the current-snapshot pointer matches the actual monitored state; old snapshot left in place in the tree as a rollback point.
+
 ## SOC Alarmdashboard: Alert Table Gets Hostnames + Severity Badges
 
 Next step on the v2 roadmap after the health bar: the alert feed now shows a severity badge (H/M/L, red/orange/blue circle, from Suricata's own low/medium/high severity field) and resolved hostnames instead of bare IPs ("Kali -> Metasploitable2" instead of just the raw addresses), with the raw `ip:port` still shown as a small muted line underneath for anyone who wants the exact address.
