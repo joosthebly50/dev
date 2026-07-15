@@ -6,6 +6,14 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## Phase 3 Tier 1: Juice Shop Web Recon Confirmed in Hunt
+
+Ran the second Tier 1 scenario from `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §12: `nikto` (8,907 requests, 95s) followed by `gobuster dir` (dirb `common.txt`, length-excluded to filter the Juice Shop SPA's HTTP-200-for-everything wildcard behavior) from ATTACK-Kali against Juice Shop (`192.168.50.40:3000`).
+
+Checked Hunt for the same source/dest/window (`01:58:31Z`–`02:01:09Z`, port 3000): 4,557 total events, of which 3,637 are real Suricata alerts — `ET EXPLOIT QNAP Shellshock CVE-2014-6271` (high), `GPL WEB_SERVER iisadmin access` (high), plus several medium/low web-vulnerability-probe signatures nikto's own scripted checks and gobuster's wordlist entries happened to trigger. Deliberately did **not** flip any §6.1 row on this evidence alone — the Shellshock signature is suggestive for "known exploit signatures" but that row also covers reverse-shell/Meterpreter indicators, which remain untested (Tier 2, not yet approved). Recorded as supporting evidence for that row instead.
+
+Full evidence: `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §6.3, "Juice Shop Tier 1 web recon."
+
 ## Phase 3 Detection Engineering Started: Metasploitable2 Tier 1 Scan Confirms TCP-Scan and OS-Fingerprinting Detection
 
 Kicked off Phase 3 (detection engineering) by executing the already-agreed §12 attack-scope plan's Tier 1, starting with a full port/service scan (`nmap -sV -sC -p-`) from ATTACK-Kali against Metasploitable2 — a scan previously started and deliberately stopped, now run to completion (136.31s, 30 open ports, matches the target's known stock fingerprint).

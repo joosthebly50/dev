@@ -371,11 +371,21 @@ Fixed procedure for any alert — real, test, or exercise:
 | Scenario | Status | Evidence |
 |---|---|---|
 | Full port/service scan — Metasploitable2 | ✅ Done, 2026-07-15 | See [§6.1](#61-what-this-soc-should-detect) "Metasploitable2 Tier 1 scan" — 172 Suricata alerts, 65,801 Zeek events, flipped 2 rows to ✅ |
-| Web app recon — Juice Shop (`nikto`, `gobuster`/`ffuf`) | ⏳ Next | — |
+| Web app recon — Juice Shop (`nikto`, `gobuster`/`ffuf`) | ✅ Done, 2026-07-15 | See "Juice Shop Tier 1 web recon" below — 3,637 Suricata alerts, no §6.1 row flipped outright (see notes) |
 | AD/domain enumeration — DC01 (`enum4linux-ng`, `netexec smb`, anonymous LDAP) | ⏳ Planned, read-only only | — |
 | Network sweep (`.0/24`) | ✅ Already done (`nmap -sn`, confirmed known IPs only, per [§12](#12-attack-scope-agreed-red-team-test-plan) "Preparation already done") | — |
 
-**Tier 2 and Tier 3 remain explicitly out of scope without new, separate explicit approval** — this session's authorization covers Tier 1 recon only (full port scan done; web recon and AD enumeration next, read-only).
+**Juice Shop Tier 1 web recon — confirmed 2026-07-15:**
+
+- **Commands:** `nikto -h http://192.168.50.40:3000` (8,907 requests, 95s, 25 items reported), then `gobuster dir -u http://192.168.50.40:3000 -w /usr/share/wordlists/dirb/common.txt --exclude-length 9903` (the Juice Shop SPA returns HTTP 200 for any unmatched path — length-excluded to filter that wildcard).
+- **Source:** ATTACK-Kali (`192.168.50.50`). **Target:** ubuntu-server-01 / Juice Shop (`192.168.50.40:3000`).
+- **Time window:** `2026-07-15 01:58:31Z`–`02:01:09Z` (nikto `01:58:34`–`02:00:09Z`; gobuster `02:00:14`–`02:01:09Z`, back-to-back, both timestamped independently).
+- **Nikto findings:** exposed `.bash_history`/`.sh_history`/`.htpasswd`-shaped paths, several `*.json` endpoints ("might be interesting"), a `x-recruiting` header, missing CSP/referrer-policy/HSTS headers — informational web-hygiene findings, not a Suricata-detection test in themselves.
+- **Gobuster findings:** real endpoints confirmed — `/api`, `/rest*`, `/assets`, `/media`, `/promotion`, `/ftp`, `/robots.txt`, plus an oddity worth a separate look later (`/Video` and `/video` both returning a 2.2 MB body).
+- **Hunt evidence, same source/dest/window, port 3000:** **4,557 total events**, of which **3,637 are real Suricata alerts** (`event.module:"suricata"`), not raw traffic. Distinct signatures: `ET EXPLOIT QNAP Shellshock CVE-2014-6271` (**high**, Attempted Administrator Privilege Gain — nikto's Shellshock-probe header), `GPL WEB_SERVER iisadmin access` (**high**, Web Application Attack), `ET WEB_SERVER WEB-PHP phpinfo access`, `GPL WEB_SERVER global.asa access`, `GPL WEB_SERVER printenv access`, `GPL WEB_SERVER /~root access`, `ET WEB_SERVER Possible Cherokee Web Server GET AUX Request DoS Attempt`, `ET INFO Proxy TRACE Request - inbound`, `ET INFO Dotted Quad Host DLL Request`.
+- **Why no §6.1 row is flipped outright:** these signatures are mostly nikto's own vulnerability-probe requests and gobuster's wordlist entries coincidentally matching legacy CGI/PHP/IIS signature paths — real detections, but not a clean match for any existing §6.1 row. The Shellshock signature is the closest (`ET EXPLOIT ...`), but "Known exploit signatures / reverse shells / Metasploit indicators" also explicitly covers reverse-shell/Meterpreter indicators, which are untested here (Tier 2 scope, not yet approved) — flipping that row fully would overclaim based on this evidence alone. Recorded as strong supporting evidence for that row once Tier 2 actually tests exploitation.
+
+**Tier 2 and Tier 3 remain explicitly out of scope without new, separate explicit approval** — this session's authorization covers Tier 1 recon only (full port scan done, Juice Shop web recon done; DC01 AD enumeration next, read-only).
 
 ---
 
