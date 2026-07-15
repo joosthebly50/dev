@@ -20,6 +20,7 @@ import { attachToDaemon } from '../lib/browser.mjs';
 import { BASE } from '../lib/pages.mjs';
 import { categorize, CATEGORIES } from './categorize.mjs';
 import { getHostHealth } from './health.mjs';
+import { getActiveConnections } from './connections.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -270,6 +271,13 @@ const server = http.createServer(async (req, res) => {
     const health = await getHostHealth().catch((e) => ({ error: e.message }));
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(health));
+    return;
+  }
+
+  if (url.pathname === '/api/connections') {
+    const connections = await getActiveConnections().catch(() => []);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ connections }));
     return;
   }
 

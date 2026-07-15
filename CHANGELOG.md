@@ -6,6 +6,18 @@ All important project changes are documented here.
 
 # 2026-07-15
 
+## SOC Alarmdashboard: Active Connections Panel
+
+Added a new sidepanel next to the alert feed showing the Bazzite host's own live network connections (PID, process name, local/peer address:port), refreshed every 1s, per Joost's request ("een plek op mijn dashboard waar je actieve verbinden laat zien met pid en source ip adres ook live 1 sec").
+
+New module `connections.mjs`: runs `ss -tnp`/`ss -unp`, parses the `users:(("proc",pid=N,fd=N))` annotation `ss` attaches to each socket. No sudo needed -- `ss` only hides PID/process info for sockets owned by other users, and on a single-user desktop there aren't any. Exposed via a new `GET /api/connections` route. Lab-subnet (`192.168.50.x`) connections are sorted to the top and visually highlighted, since that's the traffic actually relevant to a SOC dashboard.
+
+First version only showed PID in a hover tooltip; since the ask was explicitly "met pid" (with PID), reworked the row so PID shows inline next to the process name (e.g. `chrome ·155305`), widening the panel (480px to 600px) to fit it legibly.
+
+Confirmed live via screenshot: 65 active connections, lab-subnet ones (chrome to Security Onion :443, ssh to DC01/Kali/ubuntu-server-01/OPNsense) correctly sorted to the top and highlighted, PIDs visible inline.
+
+Full detail: `docs/guides/alarm_dashboard.md`.
+
 ## SOC Alarmdashboard: Faster Polling, CPU Temp/Clock, GPU VRAM
 
 Joost asked whether the health bar could call MangoHud directly, since MangoHud feels more responsive. Explained why not, and why it doesn't matter: MangoHud is a Vulkan/OpenGL overlay for games, not a background service with a callable interface -- it reads the exact same sources (`/proc`, `/sys/class/hwmon`, `nvidia-smi`/NVML) that `health.mjs` already used. The perceived slowness was purely the 10s poll interval, not the underlying method. Lowered it to 1s client-side (each server-side measurement only takes ~100-200ms anyway).

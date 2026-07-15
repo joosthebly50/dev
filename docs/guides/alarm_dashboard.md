@@ -395,3 +395,36 @@ met wat de host op dat moment daadwerkelijk deed.
 (Suricata/Zeek/Elasticsearch/Fleet) — dat vereist een aparte check tegen
 Security Onion zelf (bijv. `so-status` of een Fleet-API-aanroep), niet
 zomaar uit te breiden vanuit deze puur-lokale hostmetrics-module.
+
+### Actieve verbindingen-paneel (`connections.mjs`)
+
+Nieuw sidepaneel naast de alert-feed: live lijst van actieve netwerk-
+verbindingen van de Bazzite-host zelf, elke 1s ververst, op verzoek van
+Joost ("een plek op mijn dashboard waar je actieve verbinden laat zien
+met pid en source ip adres ook live 1 sec").
+
+**Methode:** `ss -tnp` (TCP) en `ss -unp` (UDP), geparsed met een regex op
+de `users:(("proces",pid=NNNN,fd=N))`-annotatie die `ss` toevoegt. Geen
+`sudo` nodig: `ss` verbergt PID/proces-info alleen voor sockets van
+*andere* gebruikers — op een single-user desktop is dat niemand. Nieuw
+bestand `connections.mjs`, geëxporteerd als `getActiveConnections()`,
+ontsloten via `GET /api/connections`.
+
+**Sortering:** lab-subnet-verbindingen (`192.168.50.x`, lokaal of remote)
+staan altijd bovenaan — dat is het relevante verkeer voor een SOC-
+dashboard — en worden visueel gemarkeerd (`.lab`-klasse). Binnen elke
+groep: hoogste lokale poort eerst (meestal de meest recent geopende
+ephemere verbinding).
+
+**Weergave:** proto, lokaal adres:poort, pijl, peer-adres:poort,
+procesnaam + PID inline (bijv. `chrome ·155305`). PID stond in de eerste
+versie alleen in een hover-tooltip; op basis van de expliciete vraag
+("met pid ... ") is dat aangepast zodat de PID altijd zichtbaar is naast
+de procesnaam, niet pas bij hovering. Paneel verbreed (480px → 600px) en
+de kolom-breedte voor proces/PID vergroot om dat leesbaar te laten
+passen.
+
+Live bevestigd via screenshot: 65 actieve verbindingen, lab-subnet-
+verbindingen (chrome→Security Onion :443, ssh naar DC01/Kali/ubuntu-
+server/OPNsense) correct bovenaan en gemarkeerd, PID's zichtbaar
+(`chrome ·155305`, `ssh ·55313`, `ssh ·91807`, etc.).
