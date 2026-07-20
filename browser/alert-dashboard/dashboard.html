@@ -69,6 +69,10 @@
   .health-metric.disk .label { color: #4fd1e8; }
   .health-metric.net .label { color: #f0954f; }
   .health-metric.gpu .label { color: #4fe881; }
+  .health-metric.wan .label { color: #4fa0e8; }
+  .health-metric.wan.spike { animation: wanspike 1s ease-in-out infinite; }
+  .health-metric.wan.spike .label, .health-metric.wan.spike .val { color: #e0313c !important; }
+  @keyframes wanspike { 0%, 100% { background: rgba(224,49,60,0.15); } 50% { background: rgba(224,49,60,0.32); } }
   .health-metric canvas { display: block; height: 14px; width: 42px; margin-left: 0.15rem; }
 
   #settingsPanel {
@@ -112,10 +116,71 @@
     display: flex; justify-content: space-between; align-items: center;
   }
   .conn-panel h2 .count { font-family: ui-monospace, monospace; color: var(--text); }
+  .conn-search-wrap { padding: 0.5rem 1rem; border-bottom: 1px solid var(--border); }
+  .conn-search-wrap input {
+    width: 100%; box-sizing: border-box; background: var(--surface-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 4px; padding: 0.4rem 0.6rem;
+    font-size: 0.75rem; font-family: inherit;
+  }
+  .conn-search-wrap input:focus { outline: 1px solid var(--accent, #2b8fd1); }
   .conn-list { flex: 1; overflow-y: auto; font-family: ui-monospace, monospace; font-size: 0.72rem; }
+  .conn-empty { padding: 1rem; color: var(--muted); font-size: 0.72rem; text-align: center; }
   .conn-row {
-    display: grid; grid-template-columns: 32px 1fr 14px 1fr 130px; gap: 0.4rem;
+    display: grid; grid-template-columns: 32px 1fr 14px 1fr 88px 108px; gap: 0.4rem;
     padding: 0.35rem 1rem; border-bottom: 1px solid var(--surface-2); align-items: center;
+  }
+  .conn-actions { display: flex; gap: 2px; justify-content: flex-end; }
+  .conn-actions button {
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 4px; width: 20px; height: 20px; padding: 0; cursor: pointer; font-size: 0.7rem;
+    line-height: 1; display: flex; align-items: center; justify-content: center;
+  }
+  .conn-actions button:hover { border-color: var(--scan); }
+  .conn-actions button.danger:hover { border-color: var(--exploit); }
+  .duration-choice { display: flex; gap: 0.5rem; margin-top: 0.8rem; flex-wrap: wrap; }
+  .duration-choice button {
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 6px; padding: 0.45rem 0.9rem; cursor: pointer; font-size: 0.8rem;
+  }
+  .duration-choice button:hover { border-color: var(--exploit); }
+  .banlist-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.5rem 0; border-bottom: 1px solid var(--surface-2); gap: 0.6rem;
+  }
+  .banlist-row .bip { font-family: ui-monospace, monospace; }
+  .banlist-row .bmeta { color: var(--muted); font-size: 0.72rem; }
+  .banlist-row button {
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 6px; padding: 0.3rem 0.7rem; cursor: pointer; font-size: 0.75rem; flex-shrink: 0;
+  }
+
+  .lookup-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 90; display: none;
+  }
+  .lookup-backdrop.open { display: block; }
+  .lookup-modal {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 91;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    width: 560px; max-width: 90vw; max-height: 70vh; display: flex; flex-direction: column;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.5); font-size: 0.85rem;
+  }
+  .lookup-modal h4 {
+    margin: 0; padding: 0.8rem 1rem; border-bottom: 1px solid var(--border);
+    font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;
+  }
+  .lookup-modal .lclose { background: none; border: none; color: var(--muted); font-size: 1.1rem; cursor: pointer; }
+  .lookup-modal .lbody { padding: 1rem; overflow-y: auto; }
+  .lookup-modal .lbody pre {
+    white-space: pre-wrap; word-break: break-all; font-family: ui-monospace, monospace;
+    font-size: 0.72rem; color: var(--text); margin: 0;
+  }
+  .lookup-modal .lrow { display: flex; gap: 0.5rem; padding: 0.2rem 0; }
+  .lookup-modal .lrow .lk { color: var(--muted); width: 90px; flex-shrink: 0; }
+  .lookup-modal .lwarn { color: var(--exploit); font-weight: 600; margin-bottom: 0.6rem; }
+  .lookup-modal .lmap-link { display: inline-block; margin-top: 0.6rem; color: var(--scan); }
+  .lookup-modal .lreturn {
+    margin-top: 0.9rem; background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 6px; padding: 0.4rem 0.9rem; cursor: pointer; font-size: 0.8rem;
   }
   .conn-row.lab { background: var(--accent-soft, rgba(43,143,209,0.08)); }
   .conn-row.threat-warning { background: rgba(224,140,44,0.18); box-shadow: inset 3px 0 0 #e08c2c; }
@@ -130,11 +195,17 @@
   .conn-row .proc { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .conn-row .pid { color: #7c8a80; }
   .row {
-    display: grid; grid-template-columns: 6px 82px 34px 100px 1fr auto; gap: 0.9rem;
+    display: grid; grid-template-columns: 6px 82px 34px 100px 1fr auto auto; gap: 0.9rem;
     align-items: center; background: var(--surface); border: 1px solid var(--border);
     border-radius: 8px; padding: 0.55rem 0.9rem; font-size: 0.85rem;
     animation: fadein 0.3s ease-out;
   }
+  .row .block-src {
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 4px; width: 24px; height: 24px; padding: 0; cursor: pointer; font-size: 0.8rem;
+    line-height: 1; display: flex; align-items: center; justify-content: center;
+  }
+  .row .block-src:hover { border-color: var(--exploit); }
   @keyframes fadein { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
   .row .bar { width: 6px; align-self: stretch; border-radius: 4px; }
   .row .sev {
@@ -187,6 +258,8 @@
       <span><span id="statusDot" class="dot"></span><span id="statusText">verbinden...</span></span>
       <span id="totalCount" class="mono">0 alerts</span>
       <button id="mute">🔊 Geluid aan</button>
+      <button id="clearBtn">🗑️ Wis meldingen</button>
+      <button id="banListBtn">🚫 Banlijst</button>
       <button id="settingsBtn">⚙️ Instellingen</button>
     </div>
   </header>
@@ -211,6 +284,10 @@
       <span class="label">GPU</span> <span class="val na" id="hGpu">–</span>
       <canvas id="gGpu" width="42" height="14"></canvas>
       <span class="val na" id="hGpuVram">–</span><span class="unit">% VRAM</span>
+    </span>
+    <span class="health-metric wan" id="hWanMetric" title="Inkomend verkeer op je KPN-verbinding (enp6s0), met piekdetectie">
+      <span class="label">WAN</span> <span class="val na" id="hWan">–</span><span class="unit">Mbps</span>
+      <canvas id="gWan" width="42" height="14"></canvas>
     </span>
   </div>
 
@@ -253,12 +330,21 @@
     <div class="radiorow"><input type="radio" name="filterLevel" id="filterAll" value="all"><label for="filterAll" style="display:inline;text-transform:none;color:inherit">Alles uitspreken</label></div>
   </div>
 
+  <div class="lookup-backdrop" id="lookupBackdrop"></div>
+  <div class="lookup-modal" id="lookupModal" style="display:none">
+    <h4><span id="lookupTitle">Lookup</span><button class="lclose" id="lookupClose">✕</button></h4>
+    <div class="lbody" id="lookupBody"></div>
+  </div>
+
   <div class="counters" id="counters"></div>
 
   <main>
     <div class="feed-wrap"><div class="feed" id="feed"><div class="empty">Wachten op de eerste poll...</div></div></div>
     <div class="conn-panel">
       <h2>Actieve verbindingen <span class="count" id="connCount">–</span></h2>
+      <div class="conn-search-wrap">
+        <input type="text" id="connSearch" placeholder="Zoek: discord, qbittorrent, youtube, tcp, ssh/auth, voip, IP, poort...">
+      </div>
       <div class="conn-list" id="connList"></div>
     </div>
   </main>
@@ -346,6 +432,44 @@ function isVoipOrGame(process) {
   const p = (process || '').toLowerCase();
   return VOIP_GAME_KEYWORDS.some((k) => p.includes(k));
 }
+
+// Well-known authentication/login ports -- lets the connections search box
+// match "auth"/"ssh"/"rdp"/etc. against the *port*, not just the process
+// name (a remote SSH/RDP/LDAP session rarely has a recognizable local
+// process name on the peer side).
+const AUTH_PORTS = {
+  22: 'ssh auth', 3389: 'rdp auth', 389: 'ldap auth', 636: 'ldaps auth',
+  88: 'kerberos auth', 464: 'kpasswd auth', 5985: 'winrm auth', 5986: 'winrm auth',
+};
+function authTagFor(localPort, peerPort) {
+  return AUTH_PORTS[Number(localPort)] || AUTH_PORTS[Number(peerPort)] || '';
+}
+
+// YouTube/Google traffic -- Joost's explicit request, 2026-07-20 (wanted to
+// spot an idle YouTube tab explaining WAN traffic during a spike test).
+// Unlike Discord/Steam this never shows a distinct process name (it's just
+// "chrome" making an HTTPS connection), so there's nothing to match on
+// except the peer IP falling in one of Google's known ranges. Not
+// exhaustive -- covers the common googlevideo.com/Google Front End ranges
+// actually seen in this host's own traffic (IPv4 + the IPv6 range from the
+// 2a00:1450:... rows already visible in the connections panel).
+const GOOGLE_IP_PREFIXES = [
+  '172.217.', '142.250.', '216.58.', '74.125.', '173.194.', '108.177.',
+  '2a00:1450', '2607:f8b0',
+];
+function isGoogleIp(ip) {
+  const lower = (ip || '').toLowerCase();
+  return GOOGLE_IP_PREFIXES.some((p) => lower.startsWith(p));
+}
+
+// Free-text filter for the connections panel (proces, protocol, ip, poort,
+// voip, auth) -- Joost's explicit request, 2026-07-20. Pure substring
+// match against a per-row search blob, case-insensitive.
+let connSearchTerm = '';
+document.getElementById('connSearch').addEventListener('input', (e) => {
+  connSearchTerm = e.target.value.trim().toLowerCase();
+  pollConnections();
+});
 
 // --- Settings: voice on/off, voice, rate, cooldown, severity filter.
 // Persisted to localStorage so they survive a page refresh (Joost's
@@ -559,6 +683,7 @@ function addRow(a) {
       <div class="net-host">${escapeHtml(hostLabel(a.srcIp))} <span class="arrow">→</span> ${escapeHtml(hostLabel(a.dstIp))}</div>
       <div class="net-ip mono">${a.srcIp}:${a.srcPort} → ${a.dstIp}:${a.dstPort}</div>
     </div>
+    <button class="block-src" data-action="block" data-ip="${escapeHtml(a.srcIp)}" title="Bron-IP blokkeren via OPNsense (${escapeHtml(a.srcIp)})">🛑</button>
   `;
   feed.prepend(row);
   while (feed.children.length > 300) feed.removeChild(feed.lastChild);
@@ -621,6 +746,22 @@ document.getElementById('mute').addEventListener('click', () => {
   if (!muted) ensureAudio();
 });
 
+document.getElementById('clearBtn').addEventListener('click', async () => {
+  if (!confirm('Alle meldingen in het dashboard wissen? Dit wist niets in Security Onion zelf, alleen deze weergave.')) return;
+  try {
+    await fetch('/api/alerts/clear', { method: 'POST' });
+  } catch (e) {
+    console.error('[clear] mislukt', e);
+    return;
+  }
+  document.getElementById('feed').innerHTML = '<div class="empty">Wachten op de eerste poll...</div>';
+  counts = Object.fromEntries(ORDER.map(k => [k, 0]));
+  renderCounters();
+  threatIps.clear();
+  recentAlertLinks.clear();
+  document.getElementById('totalCount').textContent = '0 alerts (deze sessie)';
+});
+
 document.getElementById('settingsBtn').addEventListener('click', () => {
   document.getElementById('settingsPanel').classList.toggle('open');
 });
@@ -657,6 +798,8 @@ function healthClass(pct, warnAt, critAt) {
 const HIST_LEN = 20; // 20 samples * 10s poll = last ~200s
 const cpuHistory = [];
 const gpuHistory = [];
+const wanHistory = [];
+let wanWasSpiking = false; // edge-detect: only alert on the false->true transition
 function drawSparkline(canvasId, history, color) {
   const canvas = document.getElementById(canvasId);
   const ctx = canvas.getContext('2d');
@@ -717,12 +860,273 @@ async function pollHealth() {
       pushHistory(gpuHistory, null);
     }
     drawSparkline('gGpu', gpuHistory, '#4fe881');
+
+    const wanEl = document.getElementById('hWan');
+    const wanMetricEl = document.getElementById('hWanMetric');
+    if (h.wan) {
+      wanEl.textContent = h.wan.inMbps.toFixed(1);
+      wanEl.className = 'val ' + (h.wan.spike ? '' : healthClass(h.wan.inMbps, 50, 150));
+      wanMetricEl.classList.toggle('spike', h.wan.spike);
+      pushHistory(wanHistory, Math.min(h.wan.inMbps, 100));
+      if (h.wan.spike && !wanWasSpiking) announceWanSpike(h.wan);
+      wanWasSpiking = h.wan.spike;
+    } else {
+      wanEl.textContent = 'n/a'; wanEl.className = 'val na';
+      wanMetricEl.classList.remove('spike');
+      pushHistory(wanHistory, null);
+    }
+    drawSparkline('gWan', wanHistory, '#4fa0e8');
   } catch (e) { /* leave last-known values on a transient fetch failure */ }
+}
+
+// WAN traffic-spike alert -- Joost's explicit request, 2026-07-20 (DDoS
+// concern while gaming). Deliberately separate from the Suricata-alert
+// voice/banner pipeline above: this isn't a categorized alert with a
+// src/dst IP, it's a local host-traffic anomaly on the KPN-facing NIC. Only
+// fires on the false->true transition (see wanWasSpiking in pollHealth),
+// not on every poll while still spiking, and respects the same mute state.
+async function announceWanSpike(wan) {
+  showBanner({ bucket: 'DOS', signature: `Verkeerspiek op WAN: ${wan.inMbps.toFixed(1)} Mbps inkomend (baseline ${wan.baselineInMbps.toFixed(1)} Mbps) -- mogelijk DDoS` });
+  if (muted || !settings.voiceEnabled) return;
+  let audioUrl = null;
+  try {
+    const res = await fetch('/api/tts/generate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ voice: settings.voice, rate: settings.rate, text: 'Warning. WAN traffic spike detected. Possible denial of service attack.' }),
+    });
+    ({ audioUrl } = await res.json());
+  } catch (e) { /* falls back to beep */ }
+  playClip(audioUrl, 'DOS');
 }
 
 // Active connections (Bazzite host itself, ss -tnp/-unp) -- PID + source
 // IP, live, 1s refresh matching the health bar's cadence.
 function escapeHtml2(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Per-row lookup buttons (WHOIS, GeoIP, SYN-scan) -- Joost's explicit
+// request, 2026-07-20. The scan button is rendered on EVERY row (including
+// Joost's own general internet traffic -- Discord, Steam, torrent peers),
+// but only ever actually fires against an authorized scan-scope (see
+// scan-scopes.mjs); anything else gets a blocking warning instead (see
+// runLookup('scan', ...)). The real gate is server-side (isAuthorizedScanTarget()
+// in server.mjs) -- this client-side copy is just so the warning shows
+// instantly without a round-trip. Scopes are fetched once at load, not
+// hardcoded here, so adding a future client engagement in scan-scopes.mjs
+// is the only place that ever needs to change.
+let authorizedScopes = [];
+async function loadScanScopes() {
+  try {
+    const { scopes } = await (await fetch('/api/scan-scopes')).json();
+    authorizedScopes = scopes || [];
+  } catch (e) { authorizedScopes = []; }
+}
+function ipToIntClient(ip) {
+  const parts = (ip || '').split('.').map(Number);
+  if (parts.length !== 4 || parts.some((p) => !Number.isInteger(p) || p < 0 || p > 255)) return null;
+  return ((parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]) >>> 0;
+}
+function ipInCidrClient(ip, cidr) {
+  const [range, bitsStr] = cidr.split('/');
+  const bits = Number(bitsStr);
+  const ipInt = ipToIntClient(ip), rangeInt = ipToIntClient(range);
+  if (ipInt == null || rangeInt == null) return false;
+  const mask = bits === 0 ? 0 : (0xFFFFFFFF << (32 - bits)) >>> 0;
+  return (ipInt & mask) === (rangeInt & mask);
+}
+function isAuthorizedScanTargetClient(ip) {
+  return authorizedScopes.some((s) => ipInCidrClient(ip, s.cidr));
+}
+function connActionsHtml(ip, pid, process) {
+  const safe = escapeHtml2(ip || '');
+  const killBtn = pid
+    ? `<button class="danger" data-action="kill" data-ip="${safe}" data-pid="${pid}" data-proc="${escapeHtml2(process || '')}" title="Proces killen (${escapeHtml2(process || '')} · ${pid})">🚫</button>`
+    : '';
+  return `<span class="conn-actions">
+    <button data-action="whois" data-ip="${safe}" title="WHOIS-opzoeking">🔍</button>
+    <button data-action="geoip" data-ip="${safe}" title="Geolocatie">🌍</button>
+    <button data-action="scan" data-ip="${safe}" title="SYN-scan (alleen geautoriseerd scan-scope)">🎯</button>
+    <button class="danger" data-action="block" data-ip="${safe}" title="IP blokkeren via OPNsense">🛑</button>
+    ${killBtn}
+  </span>`;
+}
+
+// --- Lookup modal (shared by WHOIS / GeoIP / SYN-scan) ------------------
+function openLookupModal(title) {
+  document.getElementById('lookupTitle').textContent = title;
+  document.getElementById('lookupModal').style.display = 'flex';
+  document.getElementById('lookupBackdrop').classList.add('open');
+}
+function closeLookupModal() {
+  document.getElementById('lookupModal').style.display = 'none';
+  document.getElementById('lookupBackdrop').classList.remove('open');
+}
+function setLookupBody(html) {
+  document.getElementById('lookupBody').innerHTML = html;
+}
+document.getElementById('lookupClose').addEventListener('click', closeLookupModal);
+document.getElementById('lookupBackdrop').addEventListener('click', closeLookupModal);
+
+async function runLookup(action, ip) {
+  if (action === 'whois') {
+    openLookupModal('WHOIS — ' + ip);
+    setLookupBody('<p class="lk">Bezig...</p>');
+    try {
+      const r = await (await fetch('/api/whois?ip=' + encodeURIComponent(ip))).json();
+      setLookupBody('<pre>' + escapeHtml2(r.text || r.error || '(geen resultaat)') + '</pre>');
+    } catch (e) { setLookupBody('<pre>Opzoeking mislukt: ' + escapeHtml2(e.message) + '</pre>'); }
+    return;
+  }
+  if (action === 'geoip') {
+    openLookupModal('GeoIP — ' + ip);
+    setLookupBody('<p class="lk">Bezig...</p>');
+    try {
+      const g = await (await fetch('/api/geoip?ip=' + encodeURIComponent(ip))).json();
+      if (g.status === 'fail') {
+        setLookupBody('<p>' + escapeHtml2(g.message || 'Geen geolocatie beschikbaar.') + '</p>');
+        return;
+      }
+      const rows = [
+        ['Land', g.country], ['Regio', g.regionName], ['Stad', g.city],
+        ['ISP', g.isp], ['Org', g.org], ['AS', g.as],
+      ].filter(([, v]) => v).map(([k, v]) => `<div class="lrow"><span class="lk">${k}</span><span>${escapeHtml2(String(v))}</span></div>`).join('');
+      const mapLink = (g.lat != null && g.lon != null)
+        ? `<a class="lmap-link" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${g.lat}&mlon=${g.lon}#map=8/${g.lat}/${g.lon}">Open op kaart (OpenStreetMap) ↗</a>`
+        : '';
+      setLookupBody(rows + mapLink);
+    } catch (e) { setLookupBody('<p>Opzoeking mislukt: ' + escapeHtml2(e.message) + '</p>'); }
+    return;
+  }
+  if (action === 'scan') {
+    if (!isAuthorizedScanTargetClient(ip)) {
+      const scopesText = authorizedScopes.length
+        ? authorizedScopes.map((s) => `${s.label} (${s.cidr})`).join(', ')
+        : '(geen enkele scope geconfigureerd)';
+      openLookupModal('SYN-scan geweigerd');
+      setLookupBody(
+        '<p class="lwarn">⚠ Buiten het geautoriseerde scan-scope</p>' +
+        '<p>' + escapeHtml2(ip) + ' valt buiten elk geautoriseerd scan-scope. ' +
+        'Deze knop scant alleen expliciet geautoriseerde doelen, nooit willekeurige internet-adressen ' +
+        '(Discord, Steam, torrent-peers, etc.) die toevallig in je verkeer voorkomen.</p>' +
+        '<p class="lk">Momenteel geautoriseerd: ' + escapeHtml2(scopesText) + '</p>' +
+        '<button class="lreturn" id="lookupReturn">← Terug naar overzicht</button>'
+      );
+      document.getElementById('lookupReturn').addEventListener('click', closeLookupModal);
+      return;
+    }
+    openLookupModal('SYN-scan (nmap, via Kali) — ' + ip);
+    setLookupBody('<p class="lk">Bezig met SYN-scan via Kali (top 100 poorten)... dit kan enkele seconden duren.</p>');
+    try {
+      const r = await (await fetch('/api/nmap-scan?ip=' + encodeURIComponent(ip))).json();
+      setLookupBody('<pre>' + escapeHtml2(r.text || r.message || r.error || '(geen resultaat)') + '</pre>');
+    } catch (e) { setLookupBody('<pre>Scan mislukt: ' + escapeHtml2(e.message) + '</pre>'); }
+    return;
+  }
+  if (action === 'block') {
+    openLookupModal('IP blokkeren — ' + ip);
+    setLookupBody(
+      '<p>Blokkeer ' + escapeHtml2(ip) + ' via de OPNsense-firewall (dashboard_blocklist-alias). Kies de duur:</p>' +
+      '<div class="duration-choice">' +
+      '<button data-dur="10m">10 minuten</button>' +
+      '<button data-dur="60m">60 minuten</button>' +
+      '<button data-dur="permanent">Permanent</button>' +
+      '</div>'
+    );
+    document.querySelectorAll('.duration-choice button').forEach((b) => {
+      b.addEventListener('click', async () => {
+        setLookupBody('<p class="lk">Bezig met blokkeren...</p>');
+        try {
+          const res = await fetch('/api/block-ip', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ip, duration: b.dataset.dur }),
+          });
+          const r = await res.json();
+          if (r.error) { setLookupBody('<p class="lwarn">⚠ ' + escapeHtml2(r.message || r.error) + '</p>'); return; }
+          setLookupBody('<p>✅ ' + escapeHtml2(ip) + ' geblokkeerd (' + escapeHtml2(b.dataset.dur) + ').</p>');
+        } catch (e) { setLookupBody('<p class="lwarn">Blokkeren mislukt: ' + escapeHtml2(e.message) + '</p>'); }
+      });
+    });
+    return;
+  }
+  if (action === 'kill') {
+    return; // handled directly in the click listener (needs pid/proc from the button)
+  }
+}
+
+async function runKill(pid, proc, ip) {
+  openLookupModal('Proces killen');
+  setLookupBody(
+    '<p class="lwarn">⚠ Weet je het zeker?</p>' +
+    '<p>SIGTERM naar <b>' + escapeHtml2(proc || '(onbekend proces)') + '</b> (PID ' + pid + '), verbonden met ' + escapeHtml2(ip) + '.</p>' +
+    '<div class="duration-choice"><button id="killConfirm">Ja, kill dit proces</button><button id="killCancel">Annuleren</button></div>'
+  );
+  document.getElementById('killCancel').addEventListener('click', closeLookupModal);
+  document.getElementById('killConfirm').addEventListener('click', async () => {
+    setLookupBody('<p class="lk">Bezig...</p>');
+    try {
+      const res = await fetch('/api/kill-process', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pid: Number(pid) }),
+      });
+      const r = await res.json();
+      if (r.error) { setLookupBody('<p class="lwarn">⚠ ' + escapeHtml2(r.error) + '</p>'); return; }
+      setLookupBody('<p>✅ SIGTERM verstuurd naar ' + escapeHtml2(r.process || proc || '') + ' (PID ' + pid + ').</p>');
+    } catch (e) { setLookupBody('<p class="lwarn">Killen mislukt: ' + escapeHtml2(e.message) + '</p>'); }
+  });
+}
+
+document.getElementById('connList').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-action]');
+  if (!btn) return;
+  if (btn.dataset.action === 'kill') {
+    runKill(btn.dataset.pid, btn.dataset.proc, btn.dataset.ip);
+    return;
+  }
+  runLookup(btn.dataset.action, btn.dataset.ip);
+});
+document.getElementById('feed').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-action="block"]');
+  if (!btn) return;
+  runLookup('block', btn.dataset.ip);
+});
+
+// --- Ban list modal -------------------------------------------------------
+function formatRemaining(expiresAt) {
+  if (expiresAt == null) return 'permanent';
+  const ms = expiresAt - Date.now();
+  if (ms <= 0) return 'verloopt zo';
+  const min = Math.ceil(ms / 60000);
+  return min >= 60 ? `${(min / 60).toFixed(1)}u resterend` : `${min}m resterend`;
+}
+async function openBanList() {
+  openLookupModal('Banlijst (OPNsense)');
+  setLookupBody('<p class="lk">Laden...</p>');
+  try {
+    const { blocklist } = await (await fetch('/api/block-list')).json();
+    if (!blocklist || !blocklist.length) {
+      setLookupBody('<p>Geen IP\'s momenteel geblokkeerd.</p>');
+      return;
+    }
+    const rows = blocklist.map((b) => `
+      <div class="banlist-row">
+        <div><div class="bip">${escapeHtml2(b.ip)}</div><div class="bmeta">${escapeHtml2(formatRemaining(b.expiresAt))}</div></div>
+        <button data-unblock="${escapeHtml2(b.ip)}">Ontgrendel</button>
+      </div>`).join('');
+    setLookupBody(rows);
+    document.querySelectorAll('[data-unblock]').forEach((b) => {
+      b.addEventListener('click', async () => {
+        b.disabled = true; b.textContent = '...';
+        try {
+          await fetch('/api/unblock-ip', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ip: b.dataset.unblock }),
+          });
+          openBanList();
+        } catch (e) { b.textContent = 'mislukt'; }
+      });
+    });
+  } catch (e) { setLookupBody('<p class="lwarn">Laden mislukt: ' + escapeHtml2(e.message) + '</p>'); }
+}
+document.getElementById('banListBtn').addEventListener('click', openBanList);
 async function pollConnections() {
   try {
     const { connections } = await (await fetch('/api/connections')).json();
@@ -742,10 +1146,31 @@ async function pollConnections() {
     }
     syntheticLinks.sort((a, b) => b.until - a.until);
 
-    document.getElementById('connCount').textContent = connections.length + syntheticLinks.length;
+    const totalCount = connections.length + syntheticLinks.length;
     const list = document.getElementById('connList');
+    const term = connSearchTerm;
 
-    const syntheticHtml = syntheticLinks.map((link) => {
+    const filteredSynthetic = syntheticLinks.filter((link) => {
+      if (!term) return true;
+      const meta = CATEGORIES[link.bucket] || CATEGORIES.OTHER;
+      const blob = `net ${link.srcIp} ${link.dstIp} ${meta.label}`.toLowerCase();
+      return blob.includes(term);
+    });
+
+    const filteredReal = connections.filter((c) => {
+      if (!term) return true;
+      const voip = isVoipOrGame(c.process) ? 'voip voice game' : '';
+      const auth = authTagFor(c.localPort, c.peerPort);
+      const google = isGoogleIp(c.peerAddr) ? 'youtube google googlevideo' : '';
+      const blob = `${c.proto} ${c.localAddr} ${c.localPort} ${c.peerAddr} ${c.peerPort} ${c.process || ''} ${voip} ${auth} ${google}`.toLowerCase();
+      return blob.includes(term);
+    });
+
+    document.getElementById('connCount').textContent = term
+      ? `${filteredSynthetic.length + filteredReal.length} / ${totalCount}`
+      : String(totalCount);
+
+    const syntheticHtml = filteredSynthetic.map((link) => {
       const meta = CATEGORIES[link.bucket] || CATEGORIES.OTHER;
       return `<div class="conn-row synthetic threat-${link.level}" title="Suricata-alert (${meta.label}) -- geen live verbinding op deze host, verkeer tussen andere labmachines">
         <span class="proto">NET</span>
@@ -753,10 +1178,11 @@ async function pollConnections() {
         <span class="arrow">→</span>
         <span class="addr" title="${escapeHtml2(link.dstIp)}">${escapeHtml2(link.dstIp)}</span>
         <span class="proc">${meta.icon} ${escapeHtml2(meta.label)} <span class="pid">(niet deze host)</span></span>
+        ${connActionsHtml(link.dstIp)}
       </div>`;
     }).join('');
 
-    const realHtml = connections.map((c) => {
+    const realHtml = filteredReal.map((c) => {
       const isLab = (c.localAddr || '').startsWith('192.168.50.') || (c.peerAddr || '').startsWith('192.168.50.');
       // Only the peer side matters here -- localAddr is always the host's
       // own address, so matching on it would light up every single row
@@ -775,15 +1201,17 @@ async function pollConnections() {
         <span class="arrow">→</span>
         <span class="addr" title="${escapeHtml2(c.peerAddr)}:${c.peerPort}">${escapeHtml2(c.peerAddr)}:${c.peerPort}</span>
         <span class="proc" title="${c.process || ''} (${c.pid || '?'})">${c.process ? escapeHtml2(c.process) : '<span class="pid">?</span>'}<span class="pid">${c.pid ? ' ·' + c.pid : ''}</span></span>
+        ${connActionsHtml(c.peerAddr, c.pid, c.process)}
       </div>`;
     }).join('');
 
-    list.innerHTML = syntheticHtml + realHtml;
+    list.innerHTML = (syntheticHtml + realHtml) || (term ? `<div class="conn-empty">Geen verbindingen gevonden voor "${escapeHtml2(term)}"</div>` : '');
   } catch (e) { /* leave last-known list on a transient fetch failure */ }
 }
 
 applySettingsToUI();
 renderCounters();
+loadScanScopes();
 poll();
 setInterval(poll, 3000);
 pollHealth();

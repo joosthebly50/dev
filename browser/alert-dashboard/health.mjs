@@ -11,12 +11,25 @@
 import fs from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { getActiveConnections } from './connections.mjs';
 
 const execFileP = promisify(execFile);
 
 // The lab-facing interface (192.168.50.254, see NETWORK.md) -- more
 // relevant to a SOC dashboard than the host's general internet uplink.
 const NETWORK_INTERFACE = 'virbr10';
+
+// Joost's actual internet-facing NIC (192.168.2.6, behind his KPN modem/
+// router) -- confirmed via `ip -br addr` 2026-07-20. Separate from the lab
+// entirely: this host is dual-homed, with the pentest lab (virbr10, above)
+// isolated behind OPNsense on a different subnet. Gaming/Discord/general
+// traffic all goes out here, so THIS is the interface that matters for
+// "am I being flooded" -- not the lab bridge, and not OPNsense's WAN (which
+// currently only serves the isolated lab, not this host's own internet
+// path -- see docs/guides/alarm_dashboard.md, "WAN-piekdetectie").
+// Hardcoded interface name, like NETWORK_INTERFACE above: not guaranteed
+// stable if hardware changes, but stable across reboots on this host.
+const KPN_INTERFACE = 'enp6s0';
 
 function parseProcStatCpuLine(text) {
   // First line of /proc/stat: "cpu  user nice system idle iowait irq softirq steal ..."
@@ -125,23 +138,81 @@ async function getDiskPercent() {
   }
 }
 
-async function readNetBytes() {
+async function readNetBytes(iface) {
   const text = await fs.readFile('/proc/net/dev', 'utf8');
-  const line = text.split('\n').find((l) => l.trim().startsWith(`${NETWORK_INTERFACE}:`));
+  const line = text.split('\n').find((l) => l.trim().startsWith(`${iface}:`));
   if (!line) return null;
   const fields = line.split(':')[1].trim().split(/\s+/).map(Number);
   return { rx: fields[0], tx: fields[8] };
 }
 
 async function getNetworkThroughputKbps() {
-  const a = await readNetBytes();
+  const a = await readNetBytes(NETWORK_INTERFACE);
   if (!a) return null;
   await new Promise((r) => setTimeout(r, 100));
-  const b = await readNetBytes();
+  const b = await readNetBytes(NETWORK_INTERFACE);
   if (!b) return null;
   const rxKbps = Math.round(((b.rx - a.rx) * 8) / 1024 / 0.1);
   const txKbps = Math.round(((b.tx - a.tx) * 8) / 1024 / 0.1);
   return { rxKbps, txKbps };
+}
+
+// --- WAN (KPN) traffic-spike detection ----------------------------------
+// Same instantaneous-rate technique as getNetworkThroughputKbps() (sample
+// twice, 100ms apart), plus a rolling baseline maintained ACROSS polls
+// (module-level state, not reset each call -- pollHealth() on the client
+// calls getHostHealth() every 1s, so this naturally builds a ~2 minute
+// baseline window over time).
+const WAN_BASELINE_WINDOW = 120; // ~2 minutes at a 1s poll interval
+const wanRateHistory = []; // { inMbps }, newest last
+
+async function getWanTraffic() {
+  const a = await readNetBytes(KPN_INTERFACE);
+  if (!a) return null;
+  await new Promise((r) => setTimeout(r, 100));
+  const b = await readNetBytes(KPN_INTERFACE);
+  if (!b) return null;
+  const inMbps = ((b.rx - a.rx) * 8) / 1024 / 1024 / 0.1;
+  const outMbps = ((b.tx - a.tx) * 8) / 1024 / 1024 / 0.1;
+
+  const baselineSamples = wanRateHistory.slice();
+  const baselineInMbps = baselineSamples.length
+    ? baselineSamples.reduce((s, r) => s + r.inMbps, 0) / baselineSamples.length
+    : inMbps;
+
+  wanRateHistory.push({ inMbps });
+  while (wanRateHistory.length > WAN_BASELINE_WINDOW) wanRateHistory.shift();
+
+  // Spike: inbound rate is both a large multiple of the recent baseline AND
+  // above an absolute floor -- the floor avoids flagging normal noise when
+  // baseline is near-zero (idle connection -> any small blip would
+  // otherwise look like "infinite times baseline"). Floor raised to 500
+  // Mbps (Joost's explicit request, 2026-07-20) after a legitimate torrent
+  // burst peaked around ~516 Mbps and correctly-but-unhelpfully triggered
+  // the old 30 Mbps floor -- 500 Mbps sits above normal heavy-download
+  // bursts on his connection while still catching a real flood.
+  const WAN_SPIKE_FLOOR_MBPS = 500;
+  let spike = baselineSamples.length >= 10 && inMbps > Math.max(baselineInMbps * 6, WAN_SPIKE_FLOOR_MBPS);
+
+  // Exclude qBittorrent (Joost's explicit request, 2026-07-20): the metric
+  // can't be filtered per-process at the /proc/net/dev level (that's
+  // whole-interface, not per-socket), so instead the spike *flag* is
+  // suppressed for any poll where qBittorrent currently has active
+  // connections -- Mbps/baseline are still recorded and shown normally,
+  // only the "possible DDoS" alert is skipped while a known, expected
+  // heavy-traffic process is running.
+  if (spike) {
+    const connections = await getActiveConnections().catch(() => []);
+    const torrentActive = connections.some((c) => (c.process || '').toLowerCase().includes('qbittorrent'));
+    if (torrentActive) spike = false;
+  }
+
+  return {
+    inMbps: Math.round(inMbps * 10) / 10,
+    outMbps: Math.round(outMbps * 10) / 10,
+    baselineInMbps: Math.round(baselineInMbps * 10) / 10,
+    spike,
+  };
 }
 
 async function getGpuStats() {
@@ -164,7 +235,7 @@ async function getGpuStats() {
 }
 
 export async function getHostHealth() {
-  const [cpu, cpuTempC, cpuGHz, mem, disk, net, gpu] = await Promise.all([
+  const [cpu, cpuTempC, cpuGHz, mem, disk, net, gpu, wan] = await Promise.all([
     getCpuPercent().catch(() => null),
     getCpuTempC().catch(() => null),
     getCpuClockGHz().catch(() => null),
@@ -172,6 +243,7 @@ export async function getHostHealth() {
     getDiskPercent().catch(() => null),
     getNetworkThroughputKbps().catch(() => null),
     getGpuStats().catch(() => null),
+    getWanTraffic().catch(() => null),
   ]);
-  return { cpu, cpuTempC, cpuGHz, mem, disk, net, gpu, interface: NETWORK_INTERFACE };
+  return { cpu, cpuTempC, cpuGHz, mem, disk, net, gpu, wan, interface: NETWORK_INTERFACE, wanInterface: KPN_INTERFACE };
 }

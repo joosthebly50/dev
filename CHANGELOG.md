@@ -4,6 +4,39 @@ All important project changes are documented here.
 
 ---
 
+# 2026-07-20
+
+## SOC Alarmdashboard: Search, Per-Connection Lookups, Block/Kill, WAN-DDoS Detection
+
+Large single-session expansion of the Alarmdashboard. Full detail:
+`docs/guides/alarm_dashboard.md` (2026-07-20 section). Summary:
+
+- **Clear-alerts button** (`🗑️`) and a **connections search bar**
+  (process/protocol/IP/port, plus semantic `voip`/`auth`/`youtube` tags).
+- **Per-connection lookup buttons**: WHOIS, GeoIP (with an OpenStreetMap
+  link), and a Kali-driven SYN-scan gated by a new hand-edited
+  `scan-scopes.mjs` allowlist (never UI-editable -- active scanning
+  without written authorization is illegal, so adding a scope is a
+  deliberate file edit, not a click).
+- **Block-IP (via a real OPNsense alias) + kill-process + a ban list**,
+  now also available directly from each alert-feed row. Building this
+  surfaced and fixed two real bugs (missing CSRF token on OPNsense
+  mutating calls; OPNsense returning HTTP 200 even on a logical failure,
+  which had produced a false "blocked" success). Confirmed the OPNsense
+  alias/rule were created correctly, but also confirmed empirically that
+  a block has no effect on same-subnet lab-to-lab traffic -- it only
+  helps for traffic that actually needs to cross OPNsense.
+- **WAN traffic-spike (DDoS) detection**, reading the host's actual
+  internet-facing NIC (`enp6s0`, behind Joost's KPN modem, separate from
+  the isolated lab network) rather than OPNsense -- OPNsense currently
+  only firewalls the lab. Threshold raised to 500 Mbps and qBittorrent
+  traffic excluded after a real torrent download correctly-but-
+  unhelpfully triggered a false DDoS alert during testing.
+- **Poll interval lowered from 20s to 5s** (~24s -> ~9s worst-case
+  alert-detection latency).
+
+---
+
 # 2026-07-15
 
 ## WIN11-01: Fresh Snapshot to Replace Stale Pre-Install Pointer

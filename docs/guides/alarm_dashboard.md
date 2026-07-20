@@ -3,7 +3,8 @@
 ## Doel
 
 Live, lokale alarmering op de Bazzite-host: elke keer dat Security Onion een
-Suricata-alert genereert, verschijnt binnen ~20 seconden een banner met
+Suricata-alert genereert, verschijnt binnen ~9 seconden (zie
+"Poll-snelheid" hieronder, 2026-07-20) een banner met
 een gesproken melding (sirentoon + vrouwenstem, offline neurale TTS) op de
 host zelf, gecategoriseerd naar aanvalstype. Gebouwd op verzoek van Joost
 tijdens Fase 3 (detection engineering), 2026-07-15, direct na het
@@ -521,3 +522,176 @@ Beide moeten met de hand gesynchroniseerd blijven met het IP-plan uit
 Live bevestigd via screenshot: severity-badges kloppen (H voor de Nmap-
 scans, M voor de privilege-escalation-alert, etc.), hostnamen resolven
 correct voor alle labmachines inclusief de host zelf ("Bazzite-host").
+
+---
+
+## 2026-07-20: Wis-knop, zoekbalk, per-rij lookups, blokkeren/killen, WAN-DDoS-detectie
+
+Grote uitbreiding in één sessie, op verzoek van Joost. Hieronder per stuk.
+
+### Wis meldingen
+
+`🗑️ Wis meldingen`-knop in de header: `POST /api/alerts/clear` leegt
+`server.mjs`'s in-memory `alerts`-array. Laat bewust `seenKeys`/
+`lastCheckedISO` ongemoeid (de poll-cursor is al voorbij het gewiste
+punt, dus niets komt terug) en raakt Security Onion zelf niet aan — puur
+een lokale weergave-reset. Client-side reset feed/tellers/threat-
+highlighting.
+
+### Zoekbalk (active connections)
+
+Vrije-tekst-filter boven het connections-paneel: proces (discord,
+qbittorrent), protocol (tcp/udp), IP, poort, plus twee semantische tags:
+`voip`/`voice` (dezelfde `VOIP_GAME_KEYWORDS`-lijst als de bestaande
+groene highlighting) en `auth`/`ssh`/`rdp`/etc. (poort-gebaseerd, via
+`AUTH_PORTS`, omdat een binnenkomende SSH/RDP-sessie zelden een
+herkenbare procesnaam heeft). Later uitgebreid met `youtube`/`google`
+(Joost's verzoek, om een vergeten YouTube-tab te kunnen vinden tijdens
+een WAN-test) — IP-prefix-match tegen een handvol bekende Google-
+netwerken, want dat verkeer zit gewoon binnen het `chrome`-proces, geen
+eigen procesnaam. Teller toont `gefilterd / totaal` zolang er een
+zoekterm actief is.
+
+### WHOIS / GeoIP / SYN-scan per verbinding
+
+Drie knoppen per rij (🔍🌍🎯), in een gedeelde lookup-modal:
+- **WHOIS**: `whois`-CLI server-side, private/lab-IP's krijgen direct een
+  "geen data"-melding zonder het commando uit te voeren.
+- **GeoIP**: `ip-api.com` (gratis, geen key), 10 minuten server-side
+  gecached per IP; toont land/regio/stad/ISP/org/AS plus een link naar
+  OpenStreetMap op de exacte coördinaat.
+- **SYN-scan**: draait via SSH op **Kali** (het lab's aanvalsmachine),
+  niet op deze host — `nmap -sS -T4 --top-ports 100`. Knop staat op élke
+  rij (ook Discord/Steam/torrent-verkeer), maar vuurt alleen tegen
+  IP's in `scan-scopes.mjs`. Alles daarbuiten krijgt een blokkade-melding
+  vóór er ooit een netwerkverzoek verstuurd wordt — client-side voor
+  directe feedback, maar **hard afgedwongen server-side** (403), want de
+  connections-lijst toont ook Joost's eigen algemene internetverkeer, en
+  een scanknop mag nooit per ongeluk een derde partij raken.
+
+`scan-scopes.mjs` is bewust een **handmatig bewerkt bestand, geen
+UI-instelling**: actief scannen zonder schriftelijke autorisatie is
+illegaal, dus het toevoegen van een scope moet altijd een bewuste
+bestandswijziging zijn, nooit één klik. Bevat nu: de eigen lab-subnet
+(doorlopend geautoriseerd) en een veilige demo-scope (`203.0.113.0/24`,
+RFC 5737 TEST-NET-3, niet-routeerbaar — laat de tweede-scope-flow zien
+zonder ooit een echt systeem te raken). Sjabloon aanwezig voor een
+toekomstige externe pentest-opdracht (Joost's CEH-plannen).
+
+### Blokkeren (OPNsense) + proces killen + banlijst
+
+**Kill proces** (🚫, alleen op rijen met een PID): bevestiging met
+proces+PID, dan `SIGTERM`. Server-side geblokkeerd tegen PID 1, het
+dashboard-serverproces zelf, en elk PID dat niet écht in de live
+`ss`-lijst staat.
+
+**Blokkeer IP** (🛑, elke rij, óók de alert-feed zelf via het bron-IP):
+kiest 10 min / 60 min / permanent, voegt het IP toe aan een OPNsense-
+alias via de `alias_util`-API. Beschermd tegen het blokkeren van
+kritieke infrastructuur (`192.168.50.1` OPNsense, `192.168.50.30`
+Security Onion, `192.168.50.254` deze host zelf). Auto-expire elke 30s
+op de achtergrond; blocklist-state staat in
+`~/.cache/soc-alarm-dashboard/blocklist.json`, overleeft dus een
+serverherstart. **Banlijst**-knop in de header toont alle actieve
+blokkades met resterende tijd en een "Ontgrendel"-knop per IP.
+
+In tegenstelling tot de SYN-scan-knop heeft blokkeren **geen**
+scan-scopes-achtige doelbeperking: het raakt alleen je eigen firewall,
+nooit een derde partij, dus elk IP is toegestaan (inclusief externe
+IP's — relevant voor een toekomstige externe-aanvaller-scenario, bijv.
+een Kali-bak bij Joost's ouders).
+
+**Eenmalige OPNsense-setup** (handmatig door Joost gedaan via de UI,
+2026-07-20): alias `dashboard_blocklist` (type Host(s) — **geen
+streepjes toegestaan** in OPNsense-aliasnamen, vandaar underscore i.p.v.
+het oorspronkelijk geplande `dashboard-blocklist`) plus een Floating-
+regel (Block, Quick, LAN+WAN, direction in, source = de alias). Ik heb
+dit zelf aangemaakt via de echte OPNsense-UI-formulieren (Playwright
+stuurt het formulier aan, niet een gegokte API-payload), na expliciete
+toestemming van Joost ("je kan zelf in de firewall").
+
+**Twee bugs gevonden en gefixt tijdens het bouwen:**
+1. Elke mutatie-actie in OPNsense vereist een `X-CSRFToken`-header. Die
+   staat niet in een leesbare cookie (beide sessiecookies zijn
+   httpOnly), maar wordt server-side in de pagina-HTML gebakken
+   (`$.ajaxSetup`-hook, ontdekt door echte UI-traffic te capturen).
+   `opnsense-block.mjs` leest 'm nu uit de huidige pagina voor elke POST.
+2. OPNsense's `alias_util`-endpoints geven **HTTP 200 terug, ook bij een
+   mislukking** (bijv. `{"status":"failed","status_msg":"nonexistent
+   alias..."}`) — de eerste versie van de code checkte alleen de
+   HTTP-status, dus een mislukte blokkade zag er voor het dashboard uit
+   als succes. Dit veroorzaakte een écht vals-positief: Joost kreeg
+   "geblokkeerd" te zien terwijl er niets gebeurd was. Gefixt door ook
+   `json.status !== 'failed'` te checken.
+
+**Belangrijke architecturale beperking, empirisch bevestigd:** binnen
+het huidige platte 192.168.50.0/24-netwerk stopt een blokkade géén
+verkeer tussen twee labmachines onderling — dat verkeer gaat nooit via
+OPNsense's LAN/WAN-interface (rechtstreeks via de switch/bridge, zelfde
+subnet). Getest: Kali bleef Metasploitable2 gewoon volledig kunnen
+scannen ondanks een actieve blokkade van Kali's IP. Effectief is de
+blokkade voor verkeer dat wél via OPNsense moet — relevant zodra Joost
+zijn toekomstplan uitvoert om OPNsense voor zijn hele netwerk te zetten.
+
+### WAN-verkeerspiek-detectie (DDoS)
+
+Aanleiding: Joost gamet veel en wil een signaal wanneer hij mogelijk
+wordt aangevallen. Eerste aanname (OPNsense's WAN-interface monitoren)
+bleek fout: Joost's gaming-/algemene verkeer loopt rechtstreeks via zijn
+**KPN-modem** (`enp6s0`, 192.168.2.x), niet via OPNsense — die firewalt
+alleen het geïsoleerde pentest-lab. `browser/alert-dashboard/
+opnsense-traffic.mjs` is gebouwd voor die eerste aanname en blijft
+ongebruikt liggen als voorbereiding op Joost's eigen toekomstplan (later
+OPNsense voor het hele netwerk zetten, met fallback naar de originele
+KPN-opstelling) — bewust niet in de huidige polling-cyclus gehaakt.
+
+De echte implementatie zit in `health.mjs`: leest `/proc/net/dev` voor
+`enp6s0` (net als de bestaande lab-NET-metric, maar dan voor de KPN-NIC),
+houdt een rollend gemiddelde bij over de laatste ~2 minuten (module-
+level state, bouwt op via de bestaande 1s-pollcyclus), en vlagt een piek
+als het inkomend verkeer >6× de baseline is **én** boven een vaste vloer.
+
+Vloer stond eerst op 30 Mbps, maar bleek te laag: een gewone qBittorrent-
+download piekte naar ~516 Mbps en werd (terecht volgens de eigen regels,
+maar onbruikbaar in de praktijk) als "DDoS" gemeld. Verhoogd naar
+**500 Mbps** (Joost's verzoek). Daarna ook expliciet **qBittorrent
+uitgesloten**: niet per-proces filterbaar op het `/proc/net/dev`-niveau
+(dat is interface-breed, niet per socket), dus in plaats daarvan wordt de
+piek-*vlag* onderdrukt zodra `getActiveConnections()` een actieve
+`qbittorrent`-verbinding ziet — de Mbps-waarde blijft gewoon zichtbaar.
+
+Nieuwe `WAN`-metric in de gezondheidsbalk (Mbps + sparkline), rood
+pulserend bij een piek. Bij de eerste piek (false→true-overgang, niet
+elke poll): banner via de bestaande DOS-categorie plus een losstaande
+gesproken waarschuwing (`/api/tts/generate` met een los `text`-veld,
+buiten het normale alert-categoriesysteem om, want dit heeft geen
+src/dst-IP zoals een Suricata-alert).
+
+Live getest met een echte torrent-download: baseline liep mee van 5.4
+naar 64.9 Mbps terwijl de rate zelf van 170 naar 516 Mbps piekte, banner
++ spraak vuurden correct af op de eerste overgang. **Eerlijke
+kanttekening**: dit detecteert een **piek**, geen **DDoS** specifiek —
+er is geen onderscheid tussen "veel legitiem verkeer" en "veel
+kwaadaardig verkeer", puur volume-gebaseerd. Een langzaam opbouwende
+aanval kan de baseline "meetrainen" en zo de drempel ontwijken (bevestigd
+binnen ~12s tijdens de torrent-test).
+
+### Poll-snelheid
+
+`POLL_INTERVAL_MS` verlaagd van 20s naar 5s (Joost's verzoek: meldingen
+kwamen traag binnen). Elke cyclus besteedt ook nog ~3.5s aan wachten tot
+de Hunt-pagina gerenderd is voor er gescraped wordt, dus de werkelijke
+worst-case detectielatentie ging van ~24s naar ~9s — gemeten via
+`lastPollOk`-tijdstempels (niet via de poll-log, die alleen logt bij
+nieuwe alerts en dus een vertekend beeld gaf).
+
+### Bekende terugkerende fout deze sessie (geen code-bug)
+
+Meerdere keren tijdens deze sessie raakte de Security Onion browser-
+daemon (poort 9223) of de `server.mjs`-pollLoop losgekoppeld
+("Target page, context or browser has been closed"), vermoedelijk door
+de achtergrond-commandoafhandeling van de sessie zelf, niet door de
+dashboardcode. Herstelprocedure: daemon herstarten
+(`node browser/operator.mjs --daemon --wait-login`), dan pas
+`server.mjs` herstarten (in die volgorde — een nieuwe `page` moet
+verbinden met een levende daemon).
