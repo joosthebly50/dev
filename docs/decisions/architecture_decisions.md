@@ -410,6 +410,12 @@ Joost asked for "an agent that investigates alerts and removes false positives" 
 
 **Known limitation, disclosed up front**: `CronCreate` jobs are session-only -- nothing is written to disk, the job dies when this Claude Code session ends, and it auto-expires after 7 days regardless. This is not a 24/7 production watcher; it only runs while a Claude Code session covering this project is open. The local engine (`local-agent.mjs`) *is* always available (it's just part of the running dashboard server), but can only recognize patterns someone explicitly taught it -- it will say "uncertain" far more often than the AI check, by design: a wrong local "dismiss" has no judgement behind it at all, so the bar is higher. If unattended 24/7 *AI* coverage is ever actually needed, that's the point to reconsider the standalone-service option and its secret-management tradeoff properly, not before.
 
+## Update 2026-07-21: automatic at-ingestion triage, not button/cron-only
+
+After repeatedly clearing the same recurring pattern by hand (ET TOR relay alerts coinciding with the active torrent burst, 5-6 times in one evening), Joost's instruction was explicit: **"AL DEZE FALSE POSITIEFS MOETEN DEFINITIEF VERDWIJDEN"** -- these should stop appearing at all, not require re-confirming via a button or waiting for the next cron pass. `pollOnce()` in `server.mjs` now runs the local engine automatically on every newly-ingested alert (bucket not `P2P`, not in `NEVER_AUTO_DISMISS_BUCKETS`) *before* it's ever added to `alerts` -- a confirmed false positive never flashes onto the feed and gets retracted a moment later, it simply never appears, while still being logged to `dismissedLog` (source `local-agent-auto`) for audit. The connection list is fetched once per poll batch, not once per alert, to avoid redundant `ss` calls.
+
+This does **not** change the hard safety rule -- `NEVER_AUTO_DISMISS_BUCKETS` is checked both here and again inside `investigateAlert()` itself (belt and suspenders), so REVERSE_SHELL/PRIV_ESC/EXPLOIT/CRED_ACCESS/LATERAL_MOVEMENT/PERSISTENCE/MITM/SQLI/XSS are exactly as visible as before -- only the categories that were already eligible for dismissal (DOS/RECON/OS_FINGERPRINT/ENUMERATION/WIRELESS/OTHER) can now be caught pre-emptively, and only with the same articulable evidence the button/cron path already required.
+
 ## How it works
 
 - **Local engine** (`local-agent.mjs` + `known-traffic.mjs`, 2026-07-21): three checks, in order --

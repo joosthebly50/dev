@@ -25,6 +25,7 @@ import { AUTHORIZED_SCOPES } from './scan-scopes.mjs';
 import { opnsenseAddBlock, opnsenseRemoveBlock, opnsenseListBlocked } from './opnsense-block.mjs';
 import { pollWanTrafficOnce, getWanTrafficState } from './opnsense-traffic.mjs';
 import { investigateAlert, getSuggestedRules } from './local-agent.mjs';
+import { NEVER_AUTO_DISMISS_BUCKETS } from './known-traffic.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -180,6 +181,18 @@ function dismissAlertsByIds(ids, reason, source) {
   return dismissed;
 }
 
+// Used by the automatic per-poll triage below -- a candidate that never
+// made it into `alerts` at all (caught before ever being added, so
+// there's nothing to filter out), still logged to dismissedLog for the
+// same audit trail as a manual/button dismissal.
+function logAutoDismissal(candidate, reason) {
+  dismissedLog.unshift({
+    id: candidate.id, signature: candidate.signature, srcIp: candidate.srcIp, dstIp: candidate.dstIp,
+    bucket: candidate.bucket, reason, source: 'local-agent-auto', dismissedAt: Date.now(),
+  });
+  if (dismissedLog.length > MAX_DISMISSED_LOG) dismissedLog = dismissedLog.slice(0, MAX_DISMISSED_LOG);
+}
+
 // Queue for the "🤖 AI onderzoeken" button -- the periodic Claude Code
 // cron job checks this first each cycle so a button click gets faster
 // turnaround than waiting for the general ~23-minute sweep. Session-only,
@@ -301,6 +314,12 @@ async function pollOnce(page) {
 
   let newest = lastCheckedISO;
   let addedCount = 0;
+  let autoDismissedCount = 0;
+
+  // Fetch the connection list once for this whole batch (not once per
+  // alert) -- local-agent.mjs's process-correlation check accepts a
+  // pre-fetched list via ctx.connections for exactly this reason.
+  const connections = await getActiveConnections().catch(() => []);
 
   for (const r of rows) {
     // Column layout observed all session for suricata.alert rows:
@@ -314,8 +333,7 @@ async function pollOnce(page) {
     seenKeys.add(key);
 
     const bucket = categorize(signature, category);
-
-    alerts.unshift({
+    const candidate = {
       id: key,
       timestamp: ts,
       srcIp, srcPort, dstIp, dstPort,
@@ -323,13 +341,37 @@ async function pollOnce(page) {
       bucket,
       filterLevel: severityToFilterLevel(severity),
       receivedAt: Date.now(),
-    });
+    };
+
+    // Automatic triage (2026-07-21, Joost's explicit "definitief
+    // verdwijnen" instruction after repeatedly clearing the same ET-TOR/
+    // torrent-coincidence pattern by hand): every eligible alert gets
+    // checked by the local rule-based agent BEFORE it's ever added to
+    // `alerts` -- a confirmed false positive never becomes visible at
+    // all, rather than flashing onto the feed and then being retracted a
+    // moment later. P2P skips this (already handled at categorization,
+    // and re-running the agent on it would double-count/hide the P2P
+    // counter tile's own tally). NEVER_AUTO_DISMISS_BUCKETS is also
+    // re-checked inside investigateAlert() itself -- belt and suspenders,
+    // this is the one gate that must never have a bug.
+    if (bucket !== 'P2P' && !NEVER_AUTO_DISMISS_BUCKETS.has(bucket)) {
+      const result = await investigateAlert(candidate, { recentAlerts: alerts, connections }).catch(() => null);
+      if (result?.verdict === 'dismiss') {
+        logAutoDismissal(candidate, result.reason);
+        autoDismissedCount++;
+        if (ts > newest) newest = ts;
+        continue; // never added to `alerts` -- never rendered, never voiced
+      }
+    }
+
+    alerts.unshift(candidate);
     addedCount++;
     if (ts > newest) newest = ts;
   }
 
   if (alerts.length > MAX_ALERTS) alerts = alerts.slice(0, MAX_ALERTS);
-  if (addedCount > 0) lastCheckedISO = newest;
+  if (addedCount > 0 || autoDismissedCount > 0) lastCheckedISO = newest;
+  if (autoDismissedCount > 0) console.log(`[local-agent-auto] ${autoDismissedCount} nieuwe melding(en) automatisch als false positive herkend en nooit getoond`);
   return addedCount;
 }
 

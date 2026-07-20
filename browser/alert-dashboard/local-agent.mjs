@@ -79,8 +79,11 @@ export async function investigateAlert(alert, ctx = {}) {
   }
 
   // 2. Process correlation -- alert's counterpart IP is currently a live
-  //    peer of a known, expected local process.
-  const connections = await getActiveConnections().catch(() => []);
+  //    peer of a known, expected local process. Accepts a pre-fetched
+  //    connection list (ctx.connections) so a caller processing a whole
+  //    batch of alerts -- e.g. server.mjs's automatic per-poll triage --
+  //    only has to shell out to `ss` once, not once per alert.
+  const connections = ctx.connections || await getActiveConnections().catch(() => []);
   for (const proc of KNOWN_PROCESSES) {
     const active = connections.filter((c) =>
       proc.processMatch.some((m) => (c.process || '').toLowerCase().includes(m)));

@@ -4,6 +4,22 @@ All important project changes are documented here.
 
 ---
 
+# 2026-07-21 (cont'd 4)
+
+## Automatic At-Ingestion False-Positive Triage
+
+Joost: "AL DEZE FALSE POSITIEFS MOETEN DEFINITIEF VERDWIJDEN" -- after
+manually clearing the same ET-TOR/torrent-coincidence pattern several
+times in one evening, the local triage engine now runs automatically
+on every newly-polled alert (`server.mjs` `pollOnce()`), before it's
+ever added to the visible feed, instead of only on button click or the
+periodic cron pass. Confirmed false positives never appear at all
+(still logged to the audit trail, source `local-agent-auto`). Hard
+safety rule unchanged: REVERSE_SHELL/PRIV_ESC/EXPLOIT/CRED_ACCESS/
+LATERAL_MOVEMENT/PERSISTENCE/MITM/SQLI/XSS are never touched. Verified
+live: board went from repeated ET TOR noise to 0 non-P2P alerts across
+multiple poll cycles.
+
 # 2026-07-21 (cont'd 3)
 
 ## Local Rule-Based Triage Engine + Per-Alert Investigate Buttons
