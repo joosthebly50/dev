@@ -6,6 +6,25 @@ All important project changes are documented here.
 
 # 2026-07-21
 
+## Fix: OPNsense-WAN DDoS Alert Fired on Normal Torrent Traffic
+
+`opnsense-traffic.mjs` (OPNsense's own WAN spike detector, used for the
+`OPN-WAN` health-bar metric and its voice-alerted "DOS" banner) never got
+the qBittorrent exclusion that `health.mjs`'s KPN-facing metric already
+had (2026-07-20). Since Phase 4 of the OPNsense migration put this
+host's own default route through OPNsense, that WAN counter now also
+sees this host's own torrent traffic, not just lab VM traffic -- a
+normal download/upload burst was firing as a spoken "DOS" alert.
+Ported the same fix: the spike flag is suppressed (rate/baseline still
+recorded) whenever qBittorrent has active connections. Verified live:
+33 active qBittorrent connections, `spike: false`.
+
+Also found and fixed in passing: the alert-dashboard's Suricata poll
+loop had silently stopped adding new alerts for ~1 hour after the
+"Wis meldingen" clear action (server restart recovered it -- same
+known daemon-reattach pattern as before, root cause not further
+investigated tonight).
+
 ## WiFi-Behind-OPNsense: Hardware Dead Ends Documented, Project Paused
 
 Picked the deferred WiFi-segmentation project back up; ruled out two

@@ -6,6 +6,7 @@
 // Read-only (GET, no CSRF needed) -- same daemon-page pattern as
 // opnsense-block.mjs.
 import { chromium } from 'playwright';
+import { getActiveConnections } from './connections.mjs';
 
 const CDP_URL = 'http://127.0.0.1:9333';
 
@@ -67,7 +68,20 @@ export async function pollWanTrafficOnce() {
         // baseline AND above an absolute floor -- the floor avoids flagging
         // normal noise when baseline is near-zero (e.g. 0.05 -> 0.5 Mbps is
         // technically "10x" but meaningless).
-        const spike = baselineSamples.length >= 3 && inMbps > Math.max(baselineInMbps * 5, 20) && inMbps > 5;
+        let spike = baselineSamples.length >= 3 && inMbps > Math.max(baselineInMbps * 5, 20) && inMbps > 5;
+
+        // Exclude qBittorrent (same rule as health.mjs's KPN-facing metric,
+        // extended here 2026-07-21): since Phase 4 of the OPNsense-migration
+        // (this host's own default route now goes via OPNsense's LAN), this
+        // WAN counter sees this host's own torrent traffic too, not just lab
+        // VM traffic -- a normal download/upload burst was firing as a DOS
+        // alert with sound. Mbps/baseline still recorded normally, only the
+        // spike flag is suppressed while qBittorrent has active connections.
+        if (spike) {
+          const connections = await getActiveConnections().catch(() => []);
+          const torrentActive = connections.some((c) => (c.process || '').toLowerCase().includes('qbittorrent'));
+          if (torrentActive) spike = false;
+        }
 
         current = { inMbps, outMbps, baselineInMbps, spike, available: true };
       }
