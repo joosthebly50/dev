@@ -23,6 +23,7 @@ import { getHostHealth } from './health.mjs';
 import { getActiveConnections } from './connections.mjs';
 import { AUTHORIZED_SCOPES } from './scan-scopes.mjs';
 import { opnsenseAddBlock, opnsenseRemoveBlock, opnsenseListBlocked } from './opnsense-block.mjs';
+import { pollWanTrafficOnce, getWanTrafficState } from './opnsense-traffic.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -226,6 +227,15 @@ async function sweepExpiredBlocks() {
 }
 setInterval(() => { sweepExpiredBlocks().catch(() => {}); }, 30_000);
 
+// OPNsense's own WAN traffic (the lab's real external link since Phase 2
+// of the OPNsense-as-primary-router migration, 2026-07-20) -- separate
+// from health.mjs's KPN-facing metric, which is this HOST's own internet,
+// not the lab's. Polled every 10s (matches opnsense-traffic.mjs's
+// baseline-window assumption) so the burn-in period has both spike
+// detection and a simple "is the new WAN interface still up" signal.
+pollWanTrafficOnce().catch(() => {});
+setInterval(() => { pollWanTrafficOnce().catch(() => {}); }, 10_000);
+
 function friendlyOpnsenseError(e) {
   if (String(e.message || e).includes('ECONNREFUSED')) {
     return "OPNsense browser-daemon niet actief. Start eerst: node browser/launch-opnsense-daemon.mjs (en log in als dat gevraagd wordt).";
@@ -360,6 +370,12 @@ const server = http.createServer(async (req, res) => {
     const health = await getHostHealth().catch((e) => ({ error: e.message }));
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(health));
+    return;
+  }
+
+  if (url.pathname === '/api/opnsense-wan') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(getWanTrafficState()));
     return;
   }
 

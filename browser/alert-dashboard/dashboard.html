@@ -73,6 +73,12 @@
   .health-metric.wan.spike { animation: wanspike 1s ease-in-out infinite; }
   .health-metric.wan.spike .label, .health-metric.wan.spike .val { color: #e0313c !important; }
   @keyframes wanspike { 0%, 100% { background: rgba(224,49,60,0.15); } 50% { background: rgba(224,49,60,0.32); } }
+  .health-metric.opnwan .label { color: #c99a1f; }
+  .health-metric.opnwan.spike { animation: wanspike 1s ease-in-out infinite; }
+  .health-metric.opnwan.spike .label, .health-metric.opnwan.spike .val { color: #e0313c !important; }
+  .health-metric.opnwan.offline { animation: opnwanoffline 1.4s ease-in-out infinite; }
+  .health-metric.opnwan.offline .label, .health-metric.opnwan.offline .val { color: #8b97a3 !important; }
+  @keyframes opnwanoffline { 0%, 100% { background: rgba(139,151,163,0.1); } 50% { background: rgba(139,151,163,0.22); } }
   .health-metric canvas { display: block; height: 14px; width: 42px; margin-left: 0.15rem; }
 
   #settingsPanel {
@@ -289,6 +295,10 @@
     <span class="health-metric wan" id="hWanMetric" title="Inkomend verkeer op je KPN-verbinding (enp6s0), met piekdetectie">
       <span class="label">WAN</span> <span class="val na" id="hWan">–</span><span class="unit">Mbps</span>
       <canvas id="gWan" width="42" height="14"></canvas>
+    </span>
+    <span class="health-metric opnwan" id="hOpnWanMetric" title="OPNsense's eigen WAN (het lab, sinds Fase 2 van de migratie) -- inbrand-monitoring: piekdetectie + is de interface nog in leven">
+      <span class="label">OPN-WAN</span> <span class="val na" id="hOpnWan">–</span><span class="unit">Mbps</span>
+      <canvas id="gOpnWan" width="42" height="14"></canvas>
     </span>
   </div>
 
@@ -900,6 +910,72 @@ async function announceWanSpike(wan) {
   playClip(audioUrl, 'DOS');
 }
 
+// OPNsense's own WAN (the lab's real external link since Phase 2 of the
+// OPNsense-as-primary-router migration, 2026-07-20) -- separate from the
+// KPN-facing metric above, which is this HOST's own internet. Polled
+// every 10s (server-side already samples this cadence; polling more
+// often client-side would just re-read the same cached value). Serves
+// Phase 3's "burn-in" monitoring: piekdetectie (zelfde patroon als
+// hierboven) EN een "is de interface nog in leven"-signaal via
+// `available` -- if OPNsense or its new WAN NIC dies, this is the
+// first thing that would notice.
+const opnWanHistory = [];
+let opnWanWasSpiking = false;
+let opnWanWasOffline = false;
+async function pollOpnWan() {
+  try {
+    const wan = await (await fetch('/api/opnsense-wan')).json();
+    const el = document.getElementById('hOpnWan');
+    const metricEl = document.getElementById('hOpnWanMetric');
+    if (!wan.available) {
+      el.textContent = 'DOWN'; el.className = 'val na';
+      metricEl.classList.remove('spike');
+      metricEl.classList.add('offline');
+      pushHistory(opnWanHistory, null);
+      if (!opnWanWasOffline) announceOpnWanOffline();
+      opnWanWasOffline = true;
+      opnWanWasSpiking = false;
+      drawSparkline('gOpnWan', opnWanHistory, '#c99a1f');
+      return;
+    }
+    opnWanWasOffline = false;
+    metricEl.classList.remove('offline');
+    el.textContent = wan.inMbps.toFixed(2);
+    el.className = 'val ' + (wan.spike ? '' : healthClass(wan.inMbps, 50, 150));
+    metricEl.classList.toggle('spike', wan.spike);
+    pushHistory(opnWanHistory, Math.min(wan.inMbps, 100));
+    if (wan.spike && !opnWanWasSpiking) announceOpnWanSpike(wan);
+    opnWanWasSpiking = wan.spike;
+    drawSparkline('gOpnWan', opnWanHistory, '#c99a1f');
+  } catch (e) { /* leave last-known values on a transient fetch failure */ }
+}
+async function announceOpnWanSpike(wan) {
+  showBanner({ bucket: 'DOS', signature: `Verkeerspiek op OPNsense's WAN (lab): ${wan.inMbps.toFixed(1)} Mbps inkomend (baseline ${wan.baselineInMbps.toFixed(1)} Mbps)` });
+  if (muted || !settings.voiceEnabled) return;
+  let audioUrl = null;
+  try {
+    const res = await fetch('/api/tts/generate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ voice: settings.voice, rate: settings.rate, text: 'Warning. Traffic spike on the OPNsense lab WAN.' }),
+    });
+    ({ audioUrl } = await res.json());
+  } catch (e) { /* falls back to beep */ }
+  playClip(audioUrl, 'DOS');
+}
+async function announceOpnWanOffline() {
+  showBanner({ bucket: 'DOS', signature: "OPNsense's WAN (lab) is niet bereikbaar -- interface of OPNsense zelf mogelijk uitgevallen" });
+  if (muted || !settings.voiceEnabled) return;
+  let audioUrl = null;
+  try {
+    const res = await fetch('/api/tts/generate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ voice: settings.voice, rate: settings.rate, text: 'Warning. The OPNsense lab WAN appears to be down.' }),
+    });
+    ({ audioUrl } = await res.json());
+  } catch (e) { /* falls back to beep */ }
+  playClip(audioUrl, 'DOS');
+}
+
 // Active connections (Bazzite host itself, ss -tnp/-unp) -- PID + source
 // IP, live, 1s refresh matching the health bar's cadence.
 function escapeHtml2(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -1240,6 +1316,8 @@ poll();
 setInterval(poll, 3000);
 pollHealth();
 setInterval(pollHealth, 1000);
+pollOpnWan();
+setInterval(pollOpnWan, 10000);
 pollConnections();
 setInterval(pollConnections, 1000);
 </script>

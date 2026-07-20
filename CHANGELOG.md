@@ -62,6 +62,33 @@ the real internet through OPNsense for the first time. Joost's own
 internet (`enp6s0`) was unaffected throughout, confirming the isolation
 this phase was designed for.
 
+## OPNsense-as-Primary-Router Migration: Phase 3 -- Burn-In Monitoring, and a Real Isolation Gap Found + Fixed
+
+Wired `opnsense-traffic.mjs` (built earlier, unused until OPNsense had a
+real WAN) into the dashboard as a new `OPN-WAN` health-bar metric --
+spike detection plus an "offline" state for OPNsense's own WAN, polled
+every 10s, so the burn-in period is actively monitored instead of
+requiring manual checks.
+
+While verifying, found a real security gap: a lab VM (WIN11-01) reached
+a real device on Joost's own KPN home network (`192.168.2.13`, confirmed
+via ARP) instead of just the internet -- because OPNsense's new WAN sits
+on the same subnet as Joost's own devices, and its default LAN->WAN rule
+doesn't distinguish "real internet" from "another device on the same
+home network." Fixed with two new Floating firewall rules (an explicit
+allow for the lab's own subnet, then a block of all other RFC1918
+space). Found and fixed one real bug while building the fix itself: the
+first version of the "allow" exception was created as a single-interface
+(LAN-only) rule, which OPNsense evaluates *after* Floating rules
+regardless of sequence number -- it never took effect, and briefly broke
+lab VMs' DNS resolution against OPNsense's own LAN IP. Verified after
+the fix: lab -> home-network device blocked, lab -> real internet still
+works, lab -> OPNsense's own LAN IP (DNS) restored, lab VM -> lab VM
+unaffected throughout.
+
+Full detail in `docs/decisions/architecture_decisions.md` and
+`docs/guides/alarm_dashboard.md`.
+
 ---
 
 # 2026-07-15

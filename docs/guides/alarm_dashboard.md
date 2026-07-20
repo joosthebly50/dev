@@ -695,3 +695,25 @@ dashboardcode. Herstelprocedure: daemon herstarten
 (`node browser/operator.mjs --daemon --wait-login`), dan pas
 `server.mjs` herstarten (in die volgorde — een nieuwe `page` moet
 verbinden met een levende daemon).
+
+### OPN-WAN-metric (Fase 3 van de OPNsense-migratie)
+
+Nieuwe metric in de gezondheidsbalk, naast de bestaande `WAN` (die is
+voor Joost's KPN-verbinding op deze host). `OPN-WAN` bewaakt OPNsense's
+**eigen** WAN-interface (het lab, sinds Fase 2 van
+`docs/decisions/architecture_decisions.md`'s migratieplan een echte
+verbinding via `enp5s0`) — via `opnsense-traffic.mjs`, die al eerder was
+gebouwd tijdens de DDoS-discussie maar tot nu toe ongebruikt bleef (toen
+had OPNsense nog geen echte WAN om te bewaken). Server pollt elke 10s
+(`GET /api/opnsense-wan`), client toont Mbps + sparkline, met twee
+alarmtoestanden: **piek** (zelfde patroon als de bestaande WAN-metric)
+en **offline** (grijs pulserend — de interface of OPNsense zelf
+reageert niet meer). Beide vuren een banner + gesproken waarschuwing af
+op de eerste overgang, niet elke poll.
+
+Tijdens het testen hiervan kwam een echt isolatie-gat aan het licht: zie
+"Real isolation gap found and fixed" in
+`docs/decisions/architecture_decisions.md` voor de volledige uitleg en
+fix (twee nieuwe Floating-firewallregels die labverkeer naar Joost's
+eigen thuisnetwerk blokkeren, met behoud van labverkeer-onderling en
+echte internettoegang).
