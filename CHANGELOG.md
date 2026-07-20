@@ -35,13 +35,13 @@ Large single-session expansion of the Alarmdashboard. Full detail:
 - **Poll interval lowered from 20s to 5s** (~24s -> ~9s worst-case
   alert-detection latency).
 
-## OPNsense-as-Primary-Router Migration: Phase 0 + Phase 1
+## OPNsense-as-Primary-Router Migration: Phase 0 Through Phase 2
 
-First two phases of Joost's longer-term plan to eventually make OPNsense
-firewall his whole network (not just the isolated lab), with an explicit
-requirement that a tested rollback exist before any real change. Full
-detail: `docs/decisions/architecture_decisions.md` ("Build the Rollback
-Path Before Any OPNsense-as-Primary-Router Migration Step").
+Joost's longer-term plan to eventually make OPNsense firewall his whole
+network (not just the isolated lab), with an explicit requirement that a
+tested rollback exist before any real change. Full detail:
+`docs/decisions/architecture_decisions.md` ("Build the Rollback Path
+Before Any OPNsense-as-Primary-Router Migration Step").
 
 Phase 0: confirmed a second physical NIC (`enp5s0`, previously unused) is
 now cabled to the KPN router and gets a real DHCP lease from it. Phase 1:
@@ -51,6 +51,16 @@ forces this host's internet back onto the direct KPN NIC, independent of
 whatever routing a later migration phase adds. Found and fixed a real
 bug while testing: the route table briefly shows a misleadingly high
 metric right after reactivating the connection, before DHCP settles.
+
+Phase 2: backed up OPNsense's libvirt XML, then used `virt-xml` to switch
+its WAN interface from libvirt's virtual NAT network to a macvtap
+interface directly on `enp5s0` (bridge mode, same MAC preserved) --
+coexists with the host's own use of that NIC without needing a manually
+managed Linux bridge. Verified after reboot: OPNsense's WAN got a real
+DHCP lease from the KPN router (`192.168.2.16/24`), and a lab VM reached
+the real internet through OPNsense for the first time. Joost's own
+internet (`enp6s0`) was unaffected throughout, confirming the isolation
+this phase was designed for.
 
 ---
 
