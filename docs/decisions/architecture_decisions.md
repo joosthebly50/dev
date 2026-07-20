@@ -377,6 +377,24 @@ The only real workaround documented by KPN's own community — wiring a third-pa
 
 ---
 
+# Decision: WiFi-Behind-OPNsense Segmentation Paused — Needs Dedicated AP Hardware
+
+## Choice
+
+Picking the WiFi-behind-OPNsense project back up (2026-07-21), two hardware paths were ruled out; the project is paused again pending Joost sourcing a dedicated access point (new purchase or a repurposed old router), not attempted with anything currently in the lab.
+
+## What was ruled out and why
+
+- **Host's onboard WiFi is not the WAN-side blocker.** Clarified first: bridge-mode (or lack of it) on the KPN Box, documented above, only affects OPNsense's WAN-side NAT — it has no bearing on WiFi segmentation, which only needs an AP on OPNsense's *LAN* side. Worth remembering so this isn't re-litigated.
+- **The Bazzite host's onboard WiFi card (Intel AX210, `0000:07:00.0`) is unusable for this.** It's currently VFIO-passed-through to `ATTACK-Kali` for wireless-pentest work (confirmed by Joost) — using the same radio as both an attack tool and the household's production WiFi was rejected as a conflict even before the next point made it moot.
+- **The AX210 physically cannot run AP mode at all**, on any OS — confirmed via a Netgate/pfSense forum report of the exact same chip: it works fine as a WiFi client but its firmware doesn't support hostap/AP mode. This is a hardware limitation, not a FreeBSD/OPNsense driver gap, so passing it through to the OPNsense VM instead of Kali would not have worked either. The card stays assigned to Kali.
+
+## How to apply
+
+Any future attempt at this project needs a WiFi radio that's either (a) a standalone AP device (new or repurposed old router) plugged into an OPNsense LAN-side interface — the recommended path, sidesteps FreeBSD driver support questions entirely — or (b) if ever done via OPNsense itself, a card from pfSense/OPNsense's own supported-wireless-hardware list (traditionally Atheros `ath(4)`-based cards), never an Intel AX-series chip. No hardware sourced yet as of 2026-07-21; nothing in the lab was changed to reach this conclusion (Kali's passthrough was left untouched).
+
+---
+
 # Overall Architecture Goal
 
 The SOC Homelab is designed to simulate a small enterprise environment.

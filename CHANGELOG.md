@@ -4,6 +4,29 @@ All important project changes are documented here.
 
 ---
 
+# 2026-07-21
+
+## WiFi-Behind-OPNsense: Hardware Dead Ends Documented, Project Paused
+
+Picked the deferred WiFi-segmentation project back up; ruled out two
+hardware paths before any lab change was made (detail in
+`docs/decisions/architecture_decisions.md`, "WiFi-Behind-OPNsense
+Segmentation Paused"):
+
+- Host's onboard Intel AX210 WiFi is VFIO-passed-through to
+  `ATTACK-Kali` for wireless-pentest work -- not available, and using
+  it for both attack and production WiFi would've been a conflict
+  anyway.
+- The AX210 can't run AP mode on any OS regardless (hardware/firmware
+  limitation, confirmed for FreeBSD/OPNsense specifically) -- moving it
+  to OPNsense wouldn't have worked either. Left assigned to Kali,
+  untouched.
+
+Paused pending Joost sourcing a dedicated AP (new purchase or a
+repurposed old router) for OPNsense's LAN side.
+
+---
+
 # 2026-07-20 (cont'd)
 
 ## KPN Box 14 Admin Review: No Bridge Mode Available
