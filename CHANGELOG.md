@@ -89,6 +89,50 @@ unaffected throughout.
 Full detail in `docs/decisions/architecture_decisions.md` and
 `docs/guides/alarm_dashboard.md`.
 
+## OPNsense-as-Primary-Router Migration: Phase 4 -- Cutover Complete, and a Real Lab Outage Found + Fixed
+
+This host's own default route now goes via OPNsense's LAN gateway
+instead of directly out to the KPN modem -- the last phase of the
+migration plan. No new cabling needed: this host already sits on the
+lab bridge (`virbr10`, as `192.168.50.254`) for administration, so it
+was purely a routing change.
+
+The first attempt caused a real incident: activating the routing change
+via `nmcli connection up virbr10` made every lab VM (all six, including
+OPNsense itself) lose its network-bridge attachment simultaneously --
+the whole lab went unreachable from this host for several minutes. Root
+cause: `virbr10` is a NetworkManager `bridge`-type connection, while
+libvirt independently attaches each VM's tap interface to the same
+kernel bridge outside NM's knowledge; a full NM (re)activation rebuilds
+the bridge from NM's own port list and silently drops every tap NM
+doesn't know about. This had never surfaced before because the
+connection had been active, undisturbed, since boot.
+
+Recovered by restarting each affected VM (`Target-Metasploitable2`
+needed a forced `virsh destroy` -- it doesn't support graceful ACPI
+shutdown) so libvirt recreated and reattached fresh taps, and along the
+way found a second, unrelated bug: two duplicate NetworkManager
+connection profiles were both named `virbr10`, and name-based `nmcli`
+commands were silently hitting the wrong one. Fixed by addressing
+connections by UUID from then on, and by establishing a hard rule for
+this bridge going forward: never `nmcli connection up|down` it, only
+`nmcli connection modify <uuid>` + `nmcli device reapply <device>` --
+confirmed repeatedly to update IP/route config live without ever
+disturbing the VMs' bridge ports.
+
+Joost's own internet access was never actually at risk throughout --
+`enp6s0`'s route was untouched and repeatedly confirmed working; what
+broke was the lab, not the home network. Once Phase 4 succeeded, found
+and fixed a second real bug: the panic button
+(`scripts/network-fallback-to-kpn.sh`) no longer actually won against
+the new, lower-metric OPNsense route -- lowered its fallback metric and
+had it explicitly neutralize the OPNsense route too (using the same
+safe `modify`+`reapply` pattern), then re-verified the full cycle:
+cutover works, panic button restores direct KPN, re-enabling the
+cutover afterward works again, lab/bridge intact throughout.
+
+Full detail in `docs/decisions/architecture_decisions.md`.
+
 ---
 
 # 2026-07-15
