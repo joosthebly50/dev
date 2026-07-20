@@ -395,6 +395,29 @@ Any future attempt at this project needs a WiFi radio that's either (a) a standa
 
 ---
 
+# Decision: False-Positive Triage Agent — Claude Code Periodic Check, Not a Standalone Service
+
+## Choice
+
+False-positive review for the alert feed (e.g. the "ET TOR Known Tor Relay" alert investigated manually 2026-07-21, which turned out to just coincide with an active torrent burst) is handled by a **periodic Claude Code check** (a `CronCreate` job re-running the same investigation Claude already does manually: check `ss` for the actual listening/connected process, correlate timing with other alerts, only conclude false-positive with real evidence), not a standalone always-on service calling the Anthropic API directly.
+
+## Reason
+
+Joost asked for "an agent that investigates alerts and removes false positives" and was given the choice explicitly (2026-07-21): a Claude Code periodic check (reuses this same reasoning/tool access, no new secret to manage) vs. a standalone background process with its own Anthropic API key (would run fully unattended, but an API key sitting on the host is in tension with the project's "never store secrets" rule, plus ongoing per-alert token cost). Chose the Claude Code route.
+
+**Known limitation, disclosed up front**: `CronCreate` jobs are session-only -- nothing is written to disk, the job dies when this Claude Code session ends, and it auto-expires after 7 days regardless. This is not a 24/7 production watcher; it only runs while a Claude Code session covering this project is open. If unattended 24/7 coverage is ever actually needed, that's the point to reconsider the standalone-service option and its secret-management tradeoff properly, not before.
+
+## How it works
+
+- Runs every ~23 minutes (job id `09f3aad4`, created 2026-07-21).
+- Fetches `/api/alerts`, skips anything already auto-categorized as known-benign (P2P), investigates ambiguous/repeated low-severity alerts using the same tools/method as the manual ET TOR investigation (`ss -tlnp`/`ss -tnp`, `/api/connections`, timing correlation).
+- **Hard safety rule**: never dismisses anything in REVERSE_SHELL, PRIV_ESC, EXPLOIT, CRED_ACCESS, LATERAL_MOVEMENT, PERSISTENCE, MITM, SQLI, or XSS buckets, regardless of how convincing the investigation seems -- only DOS/RECON/OS_FINGERPRINT/ENUMERATION/WIRELESS/OTHER are in scope, and only with articulable evidence, never a guess.
+- Dismissal requires a stated reason (enforced server-side, `POST /api/alerts/dismiss` returns 400 without one) -- matches the project's existing "no claim without a label/reason" discipline (daily-report reliability labels, `docs/daily/SJABLOON.md`).
+- Dismissed alerts are removed from the live feed/counters but kept in an in-memory `dismissedLog` (server.mjs) for audit -- "remove false positives" doesn't mean "make them unrecoverable".
+- The dashboard (`dashboard.html`) polls `/api/alerts/dismissed` separately (every 15s) to retract rows it already rendered before a dismissal lands.
+
+---
+
 # Overall Architecture Goal
 
 The SOC Homelab is designed to simulate a small enterprise environment.

@@ -508,6 +508,26 @@ function applySettingsToUI() {
 
 let muted = false; // manual quick-toggle (mute button), separate from settings.voiceEnabled
 let lastSince = 0;
+let lastDismissedSince = 0;
+
+// False-positive dismissals (2026-07-21): a periodic Claude Code triage
+// check calls /api/alerts/dismiss server-side; this removes rows that were
+// already rendered here before that ran. Polled independently and less
+// often than the main alert feed -- dismissals aren't time-critical.
+async function pollDismissed() {
+  try {
+    const res = await fetch('/api/alerts/dismissed?since=' + lastDismissedSince);
+    const data = await res.json();
+    for (const d of data.dismissed) {
+      const row = document.querySelector('.row[data-id="' + CSS.escape(d.id) + '"]');
+      if (row) row.remove();
+      if (counts[d.bucket] > 0) counts[d.bucket]--;
+      lastDismissedSince = Math.max(lastDismissedSince, d.dismissedAt);
+    }
+    if (data.dismissed.length) renderCounters();
+  } catch (e) { /* non-critical, next interval will retry */ }
+}
+setInterval(pollDismissed, 15000);
 let counts = Object.fromEntries(ORDER.map(k => [k, 0]));
 let audioCtx = null;
 
@@ -690,6 +710,7 @@ function addRow(a) {
   const row = document.createElement('div');
   row.className = 'row';
   row.dataset.bucket = a.bucket;
+  row.dataset.id = a.id;
   row.innerHTML = `
     <div class="bar" style="background:${meta.color}"></div>
     <div class="time mono">${a.timestamp.slice(11,19)}</div>

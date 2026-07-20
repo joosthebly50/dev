@@ -4,6 +4,22 @@ All important project changes are documented here.
 
 ---
 
+# 2026-07-21 (cont'd 2)
+
+## False-Positive Triage Agent (Alarmdashboard)
+
+Added a dismiss mechanism (`POST /api/alerts/dismiss`, `GET
+/api/alerts/dismissed`) to the alert-dashboard server, and wired a
+periodic Claude Code check (`CronCreate`, every ~23 min, session-only --
+see `docs/decisions/architecture_decisions.md` "False-Positive Triage
+Agent") that investigates ambiguous/repeated low-severity alerts the
+same way the "ET TOR Known Tor Relay" alert was manually investigated
+tonight (turned out to just coincide with an active torrent burst, not
+real Tor usage). Hard safety rule: never touches REVERSE_SHELL,
+PRIV_ESC, EXPLOIT, CRED_ACCESS, LATERAL_MOVEMENT, PERSISTENCE, MITM,
+SQLI, or XSS buckets. Dismissals require a stated reason and are kept
+in an in-memory audit log, not deleted outright.
+
 # 2026-07-21
 
 ## Fix: OPNsense-WAN DDoS Alert Fired on Normal Torrent Traffic

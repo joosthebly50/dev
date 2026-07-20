@@ -147,6 +147,18 @@ async function synthesizeSpokenClip({ bucket, srcIp, dstIp, verbose, multiple, v
 let alerts = []; // newest first, capped
 const MAX_ALERTS = 500;
 const seenKeys = new Set();
+
+// --- False-positive dismissal (2026-07-21) -----------------------------
+// Fed by a periodic Claude Code check (not a standalone always-on agent,
+// see docs/decisions/architecture_decisions.md "False-Positive Triage
+// Agent") that investigates ambiguous alerts (listening ports, timing
+// correlation with other alerts, etc. -- the same manual process used for
+// the "ET TOR" investigation, 2026-07-21) and dismisses confirmed benign
+// ones. Dismissed alerts are removed from `alerts` (so the feed and
+// counters reflect it immediately) but kept in `dismissedLog` for audit --
+// "remove false positives" should never mean "make them unrecoverable".
+let dismissedLog = []; // { id, signature, srcIp, dstIp, reason, dismissedAt }
+const MAX_DISMISSED_LOG = 500;
 let lastCheckedISO = new Date(Date.now() - LOOKBACK_ON_START_MS).toISOString();
 let pollErrors = 0;
 let lastPollOk = null;
@@ -641,6 +653,52 @@ const server = http.createServer(async (req, res) => {
       pollErrors,
       categories: CATEGORIES,
     }));
+    return;
+  }
+
+  // Dismiss confirmed false positives -- called by the periodic Claude
+  // Code triage check, never by the dashboard UI itself. `reason` is
+  // required: a dismissal with no stated reasoning is a mistake, same
+  // rule as the daily-report reliability labels.
+  if (url.pathname === '/api/alerts/dismiss' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', () => {
+      let parsed;
+      try { parsed = JSON.parse(body); } catch { parsed = null; }
+      const ids = Array.isArray(parsed?.ids) ? parsed.ids : [];
+      const reason = (parsed?.reason || '').trim();
+      if (!ids.length || !reason) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'ids[] and reason are required' }));
+        return;
+      }
+      const idSet = new Set(ids);
+      const dismissed = alerts.filter((a) => idSet.has(a.id));
+      alerts = alerts.filter((a) => !idSet.has(a.id));
+      const now = Date.now();
+      for (const a of dismissed) {
+        dismissedLog.unshift({
+          id: a.id, signature: a.signature, srcIp: a.srcIp, dstIp: a.dstIp,
+          bucket: a.bucket, reason, dismissedAt: now,
+        });
+      }
+      if (dismissedLog.length > MAX_DISMISSED_LOG) dismissedLog = dismissedLog.slice(0, MAX_DISMISSED_LOG);
+      console.log(`[dismiss] ${dismissed.length} alert(s) als false positive gemarkeerd: ${reason}`);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ dismissed: dismissed.length, ids: dismissed.map((a) => a.id) }));
+    });
+    return;
+  }
+
+  // Newly-dismissed ids since a given time -- the dashboard polls this
+  // separately from /api/alerts so it can remove rows it already rendered
+  // before the triage check ran.
+  if (url.pathname === '/api/alerts/dismissed') {
+    const since = Number(url.searchParams.get('since') || 0);
+    const list = dismissedLog.filter((d) => d.dismissedAt > since);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ dismissed: list, serverTime: Date.now() }));
     return;
   }
 
