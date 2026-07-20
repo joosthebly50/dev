@@ -350,6 +350,33 @@ Any future step in this migration must keep the rollback script's assumptions va
 
 ---
 
+# Decision: KPN Box 14 Does Not Support Bridge/Modem-Only Mode — Double-NAT Is Permanent for This Setup
+
+## Choice
+
+The double-NAT topology from Phase 2 above (OPNsense's WAN as a regular DHCP client behind the KPN Box, not a single-NAT bridge setup) is accepted as the permanent shape of this network, not a temporary state pending a bridge-mode toggle.
+
+## Reason
+
+Investigated 2026-07-20/21 while scoping a possible future "WiFi behind OPNsense" project (deferred by Joost — *"dit gaan we wel doen ... maar we gaan het nog niet nu doen"*). Checked the KPN Box 14's own admin UI (Settings, Internet connection, Home network, Wi-Fi network, Security incl. DMZ) for a bridge/access-point-only toggle — none exists. Confirmed via KPN's own community forum (multiple threads, 2026) that this is not model-specific: **KPN modems/routers of any type cannot be put into bridge mode**, and on fiber specifically there is no separate modem at all — the Box *is* the ONT (fiber termination) and the router combined, so "bridging" would mean skipping the fiber termination itself, not toggling a setting. This also explains why Internet connection > Information showed the PPP authentication tied to the Box's own MAC address.
+
+The only real workaround documented by KPN's own community — wiring a third-party router directly to the ONT instead of through the Box — was rejected as out of scope: it drops KPN TV and telephony (both routed through the Box), and there's no guarantee KPN's fiber authentication would accept a non-KPN device's MAC. Not worth it for a lab/homelab project when the current double-NAT setup already works for both the completed OPNsense migration (Phases 0-4 above) and any future WiFi-behind-OPNsense work.
+
+## Consequence
+
+- OPNsense's WAN will permanently be a private/NATed address from the KPN Box's own DHCP pool, not a single-NAT public-facing interface. Fine for outbound protection (already proven working); relevant only if something later needs OPNsense reachable *from* the internet (e.g. self-hosted VPN endpoint) — the KPN Box's DMZ feature (found, currently unconfigured) is the fallback for that specific case: forwards all unmatched inbound traffic to one chosen device, not equivalent to bridge mode but closer to it than per-port forwarding.
+- No further time should be spent chasing bridge mode on this hardware (calling KPN support included) — the community consensus is unambiguous and applies to this model.
+
+## Other findings from this same admin-UI review (2026-07-20)
+
+- Model confirmed: KPN Box 14 (`BoxV14`), firmware V14.C.25.08.08, fiber 10 Gbps.
+- Security posture already reasonable out of the box: inbound firewall default-deny (Medium level), UPnP off, DMZ unconfigured, Wi-Fi WPA2/WPA3-Personal.
+- **Flagged to Joost, not yet actioned**: the Box's admin login is still at its factory-default password — should be changed.
+- A WiFi-settings screenshot briefly captured a QR code encoding the real WiFi password; deleted immediately without reading/transcribing it. Standing rule reaffirmed: never keep or further process any screenshot/artifact containing credential material, regardless of source system.
+- Existing IoT devices visible on the home network topology (a robot vacuum, an LED strip, plus a couple of generically-named devices) — relevant context for whenever the deferred WiFi-segmentation project is picked back up.
+
+---
+
 # Overall Architecture Goal
 
 The SOC Homelab is designed to simulate a small enterprise environment.

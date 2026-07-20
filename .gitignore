@@ -8,5 +8,6 @@ evidence/
 # committed, regardless of how the browser/ directory structure evolves.
 browser/profile/
 browser/profile-opnsense/
+browser/profile-kpn/
 browser/artifacts/
 browser/node_modules/

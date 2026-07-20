@@ -4,6 +4,31 @@ All important project changes are documented here.
 
 ---
 
+# 2026-07-20 (cont'd)
+
+## KPN Box 14 Admin Review: No Bridge Mode Available
+
+Investigated the KPN Box 14's admin UI (via a new Playwright/CDP daemon,
+`browser/launch-kpn-daemon.mjs`, mirroring the existing OPNsense/Security
+Onion daemon pattern) to scope a possible future "WiFi behind OPNsense"
+project. Full detail and reasoning in
+`docs/decisions/architecture_decisions.md` ("KPN Box 14 Does Not Support
+Bridge/Modem-Only Mode"). Summary:
+
+- No bridge-mode/access-point-only toggle exists anywhere in the Box 14's
+  consumer admin UI. Confirmed via KPN's own community forum this isn't
+  model-specific -- KPN modems/routers cannot be bridged, and on fiber
+  there is no separate modem at all (the Box is the ONT and router
+  combined). Double-NAT behind the KPN Box is accepted as permanent for
+  this setup, not a temporary state.
+- DMZ (forwards unmatched inbound traffic to one device) exists as a
+  partial alternative if OPNsense ever needs to be reachable from the
+  internet -- currently unconfigured, not needed today.
+- Flagged to Joost, not yet actioned: the Box's admin login is still at
+  its factory-default password.
+- A screenshot briefly captured a WiFi-password QR code; deleted
+  immediately, never read or transcribed.
+
 # 2026-07-20
 
 ## SOC Alarmdashboard: Search, Per-Connection Lookups, Block/Kill, WAN-DDoS Detection
