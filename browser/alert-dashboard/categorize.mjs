@@ -48,6 +48,7 @@ export const CATEGORIES = {
   OS_FINGERPRINT: { label: 'OS Fingerprinting', voiceLabel: 'O S fingerprinting', color: '#2f8fb0', icon: '\u{1F9EC}' },
   RECON: { label: 'Recon', voiceLabel: 'Reconnaissance', color: '#2b8fd1', icon: '\u{1F50D}' },
   DOS: { label: 'DoS', voiceLabel: 'Denial of service', color: '#e0672c', icon: '\u{1F30A}' },
+  P2P: { label: 'P2P/Torrent', voiceLabel: 'Torrent traffic', color: '#4a7a4a', icon: '\u{1F9F2}' },
   OTHER: { label: 'Overig', voiceLabel: 'Unknown attack', color: '#6b7280', icon: '\u{2139}\u{FE0F}' },
 };
 
@@ -57,7 +58,7 @@ export const CATEGORIES = {
 export const PRIORITY = [
   'REVERSE_SHELL', 'PRIV_ESC', 'EXPLOIT', 'CRED_ACCESS', 'LATERAL_MOVEMENT',
   'PERSISTENCE', 'MITM', 'WIRELESS', 'SQLI', 'XSS', 'ENUMERATION',
-  'OS_FINGERPRINT', 'RECON', 'DOS', 'OTHER',
+  'OS_FINGERPRINT', 'RECON', 'DOS', 'P2P', 'OTHER',
 ];
 
 export function priorityRank(bucket) {
@@ -97,6 +98,17 @@ export function categorize(signature, category) {
   // exists specifically to catch those before that happens.
   if (/^(et|gpl)\s+scan\b/.test(sig) || /\bnmap\b/.test(sig)) {
     return 'RECON';
+  }
+
+  // --- P2P / Torrent (Joost's explicit instruction, 2026-07-21: this is
+  // expected traffic from his own qBittorrent use, not a threat -- keep it
+  // out of OTHER (which would otherwise still sound an alert under the
+  // default "Alles uitspreken" setting) so it can be silenced explicitly,
+  // see the passesFilter() override in dashboard.html. Deliberately a
+  // narrow, signature-name match -- broadening this to generic "p2p"
+  // classtype text would risk swallowing genuinely unrelated alerts. ---
+  if (/bittorrent|\bp2p\b.*(transfer|handshake|announce|scrape)/.test(sig)) {
+    return 'P2P';
   }
 
   // --- Credential Access ---

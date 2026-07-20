@@ -383,12 +383,13 @@ const CATEGORIES = {
   OS_FINGERPRINT:  { label: 'OS Fingerprinting',     color: '#2f8fb0', icon: '🧬', freq: 440 },
   RECON:           { label: 'Recon',                 color: '#2b8fd1', icon: '🔍', freq: 494 },
   DOS:             { label: 'DoS',                   color: '#e0672c', icon: '🌊', freq: 262 },
+  P2P:             { label: 'P2P/Torrent',           color: '#4a7a4a', icon: '🧲', freq: 196 },
   OTHER:           { label: 'Overig',                color: '#6b7280', icon: 'ℹ️', freq: 523 },
 };
 const ORDER = [
   'REVERSE_SHELL', 'PRIV_ESC', 'EXPLOIT', 'CRED_ACCESS', 'LATERAL_MOVEMENT',
   'PERSISTENCE', 'MITM', 'WIRELESS', 'SQLI', 'XSS', 'ENUMERATION',
-  'OS_FINGERPRINT', 'RECON', 'DOS', 'OTHER',
+  'OS_FINGERPRINT', 'RECON', 'DOS', 'P2P', 'OTHER',
 ];
 
 function priorityRank(bucket) {
@@ -564,6 +565,11 @@ const lastAnnouncedAt = new Map(); // bucket -> ms epoch
 let lastAnnouncedBucket = null;
 
 function passesFilter(alert) {
+  // P2P/Torrent (Joost's own qBittorrent use, 2026-07-21): expected
+  // traffic, not a threat -- never spoken, regardless of the severity
+  // filter setting. Still fully visible in the alert feed/counters, only
+  // the sound/voice is suppressed. See categorize.mjs for the matching.
+  if (alert.bucket === 'P2P') return false;
   if (settings.filterLevel === 'critical') return alert.filterLevel === 'critical';
   if (settings.filterLevel === 'high') return alert.filterLevel === 'critical' || alert.filterLevel === 'high';
   return true; // 'all'
@@ -732,7 +738,11 @@ async function poll() {
     const newOnes = data.alerts.slice().reverse(); // oldest of the new batch first
     for (const a of newOnes) {
       counts[a.bucket] = (counts[a.bucket] || 0) + 1;
-      addRow(a);
+      // P2P/Torrent (Joost's explicit instruction, 2026-07-21): expected
+      // traffic, keep it out of the scrolling melding-lijst entirely, not
+      // just silent -- the counter tile above still tracks the total so
+      // it stays auditable without cluttering the feed.
+      if (a.bucket !== 'P2P') addRow(a);
       lastSince = Math.max(lastSince, a.receivedAt);
       const level = priorityRank(a.bucket) <= 6 ? 'critical' : 'warning';
       markThreatIp(a.srcIp, level);
