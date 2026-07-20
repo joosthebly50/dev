@@ -4,6 +4,24 @@ All important project changes are documented here.
 
 ---
 
+# 2026-07-21 (cont'd 3)
+
+## Local Rule-Based Triage Engine + Per-Alert Investigate Buttons
+
+Added `local-agent.mjs` + `known-traffic.mjs`: a local, no-AI, always-on
+false-positive engine (signature knowledge base, known-daily-process
+correlation, timing correlation generalizing tonight's ET TOR
+investigation), plus a small dismissal-frequency learning loop that
+surfaces repeat correlations as suggested permanent rules rather than
+auto-escalating silently. Two new buttons per alert row: 🔍 (local,
+instant) and 🤖 (queues for the periodic Claude Code check, which now
+checks that queue first each cycle). New endpoints:
+`POST /api/alerts/investigate-local`, `POST /api/alerts/investigate-ai`,
+`GET /api/alerts/pending-ai` (+ `/ack`), `GET
+/api/alerts/suggested-rules`. Full reasoning in
+`docs/decisions/architecture_decisions.md`, "False-Positive Triage
+Agent".
+
 # 2026-07-21 (cont'd 2)
 
 ## False-Positive Triage Agent (Alarmdashboard)

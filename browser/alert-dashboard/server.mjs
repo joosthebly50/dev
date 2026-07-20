@@ -24,6 +24,7 @@ import { getActiveConnections } from './connections.mjs';
 import { AUTHORIZED_SCOPES } from './scan-scopes.mjs';
 import { opnsenseAddBlock, opnsenseRemoveBlock, opnsenseListBlocked } from './opnsense-block.mjs';
 import { pollWanTrafficOnce, getWanTrafficState } from './opnsense-traffic.mjs';
+import { investigateAlert, getSuggestedRules } from './local-agent.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -159,6 +160,31 @@ const seenKeys = new Set();
 // "remove false positives" should never mean "make them unrecoverable".
 let dismissedLog = []; // { id, signature, srcIp, dstIp, reason, dismissedAt }
 const MAX_DISMISSED_LOG = 500;
+
+// Shared by /api/alerts/dismiss (external caller supplies ids+reason) and
+// /api/alerts/investigate-local (the local rule-based agent supplies its
+// own verdict+reason for a single alert) -- one removal/audit code path,
+// not two that could drift apart.
+function dismissAlertsByIds(ids, reason, source) {
+  const idSet = new Set(ids);
+  const dismissed = alerts.filter((a) => idSet.has(a.id));
+  alerts = alerts.filter((a) => !idSet.has(a.id));
+  const now = Date.now();
+  for (const a of dismissed) {
+    dismissedLog.unshift({
+      id: a.id, signature: a.signature, srcIp: a.srcIp, dstIp: a.dstIp,
+      bucket: a.bucket, reason, source: source || 'manual', dismissedAt: now,
+    });
+  }
+  if (dismissedLog.length > MAX_DISMISSED_LOG) dismissedLog = dismissedLog.slice(0, MAX_DISMISSED_LOG);
+  return dismissed;
+}
+
+// Queue for the "🤖 AI onderzoeken" button -- the periodic Claude Code
+// cron job checks this first each cycle so a button click gets faster
+// turnaround than waiting for the general ~23-minute sweep. Session-only,
+// same lifetime as the dashboard server itself.
+let pendingAiInvestigations = []; // full alert snapshots, newest last
 let lastCheckedISO = new Date(Date.now() - LOOKBACK_ON_START_MS).toISOString();
 let pollErrors = 0;
 let lastPollOk = null;
@@ -673,20 +699,100 @@ const server = http.createServer(async (req, res) => {
         res.end(JSON.stringify({ error: 'ids[] and reason are required' }));
         return;
       }
-      const idSet = new Set(ids);
-      const dismissed = alerts.filter((a) => idSet.has(a.id));
-      alerts = alerts.filter((a) => !idSet.has(a.id));
-      const now = Date.now();
-      for (const a of dismissed) {
-        dismissedLog.unshift({
-          id: a.id, signature: a.signature, srcIp: a.srcIp, dstIp: a.dstIp,
-          bucket: a.bucket, reason, dismissedAt: now,
-        });
-      }
-      if (dismissedLog.length > MAX_DISMISSED_LOG) dismissedLog = dismissedLog.slice(0, MAX_DISMISSED_LOG);
+      const dismissed = dismissAlertsByIds(ids, reason, 'manual-or-ai');
       console.log(`[dismiss] ${dismissed.length} alert(s) als false positive gemarkeerd: ${reason}`);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ dismissed: dismissed.length, ids: dismissed.map((a) => a.id) }));
+    });
+    return;
+  }
+
+  // "🔍 Lokaal onderzoeken" button -- synchronous, no AI, runs
+  // local-agent.mjs against a single alert and returns the verdict.
+  // Dismisses immediately if the verdict is confident, same audit trail
+  // as the manual dismiss endpoint.
+  if (url.pathname === '/api/alerts/investigate-local' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', async () => {
+      let parsed;
+      try { parsed = JSON.parse(body); } catch { parsed = null; }
+      const id = parsed?.id;
+      const alert = alerts.find((a) => a.id === id);
+      if (!alert) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'alert not found (already dismissed or expired from memory?)' }));
+        return;
+      }
+      try {
+        const result = await investigateAlert(alert, { recentAlerts: alerts });
+        if (result.verdict === 'dismiss') {
+          dismissAlertsByIds([id], result.reason, 'local-agent');
+          console.log(`[local-agent] dismissed: ${alert.signature} -- ${result.reason}`);
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: String(e.message || e) }));
+      }
+    });
+    return;
+  }
+
+  // Local agent's learned-but-not-yet-promoted correlation patterns --
+  // surfaced in Settings so Joost can decide whether to turn a repeated
+  // correlation into a permanent known-traffic.mjs/categorize.mjs rule.
+  if (url.pathname === '/api/alerts/suggested-rules') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ suggestions: getSuggestedRules() }));
+    return;
+  }
+
+  // "🤖 AI onderzoeken" button -- queues the alert for the next periodic
+  // Claude Code triage pass (checked first each cycle, ahead of the
+  // general sweep) rather than trying to invoke it synchronously.
+  if (url.pathname === '/api/alerts/investigate-ai' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', () => {
+      let parsed;
+      try { parsed = JSON.parse(body); } catch { parsed = null; }
+      const id = parsed?.id;
+      const alert = alerts.find((a) => a.id === id);
+      if (!alert) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'alert not found' }));
+        return;
+      }
+      if (!pendingAiInvestigations.some((a) => a.id === id)) pendingAiInvestigations.push(alert);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ queued: true, queueLength: pendingAiInvestigations.length }));
+    });
+    return;
+  }
+
+  // Read the AI-investigation queue -- called by the periodic Claude Code
+  // check, not the dashboard UI.
+  if (url.pathname === '/api/alerts/pending-ai' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ pending: pendingAiInvestigations }));
+    return;
+  }
+
+  // Acknowledge processed queue entries -- separate from GET so a crash
+  // mid-processing doesn't silently drop a request (the entry stays
+  // queued until explicitly ack'd).
+  if (url.pathname === '/api/alerts/pending-ai/ack' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', () => {
+      let parsed;
+      try { parsed = JSON.parse(body); } catch { parsed = null; }
+      const ids = new Set(Array.isArray(parsed?.ids) ? parsed.ids : []);
+      pendingAiInvestigations = pendingAiInvestigations.filter((a) => !ids.has(a.id));
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, remaining: pendingAiInvestigations.length }));
     });
     return;
   }

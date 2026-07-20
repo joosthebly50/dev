@@ -206,12 +206,15 @@
     border-radius: 8px; padding: 0.55rem 0.9rem; font-size: 0.85rem;
     animation: fadein 0.3s ease-out;
   }
-  .row .block-src {
+  .row .row-actions { display: flex; gap: 0.35rem; }
+  .row .block-src, .row .investigate-btn {
     background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
     border-radius: 4px; width: 24px; height: 24px; padding: 0; cursor: pointer; font-size: 0.8rem;
     line-height: 1; display: flex; align-items: center; justify-content: center;
   }
   .row .block-src:hover { border-color: var(--exploit); }
+  .row .investigate-btn:hover { border-color: #3a7fc1; }
+  .row .investigate-btn:disabled { opacity: 0.5; cursor: default; }
   @keyframes fadein { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
   .row .bar { width: 6px; align-self: stretch; border-radius: 4px; }
   .row .sev {
@@ -721,7 +724,11 @@ function addRow(a) {
       <div class="net-host">${escapeHtml(hostLabel(a.srcIp))} <span class="arrow">→</span> ${escapeHtml(hostLabel(a.dstIp))}</div>
       <div class="net-ip mono">${a.srcIp}:${a.srcPort} → ${a.dstIp}:${a.dstPort}</div>
     </div>
-    <button class="block-src" data-action="block" data-ip="${escapeHtml(a.srcIp)}" title="Bron-IP blokkeren via OPNsense (${escapeHtml(a.srcIp)})">🛑</button>
+    <div class="row-actions">
+      <button class="investigate-btn" data-action="investigate-local" data-id="${escapeHtml(a.id)}" title="Lokaal onderzoeken (regelgebaseerd, direct antwoord)">🔍</button>
+      <button class="investigate-btn" data-action="investigate-ai" data-id="${escapeHtml(a.id)}" title="AI onderzoeken (Claude Code, via de periodieke check)">🤖</button>
+      <button class="block-src" data-action="block" data-ip="${escapeHtml(a.srcIp)}" title="Bron-IP blokkeren via OPNsense (${escapeHtml(a.srcIp)})">🛑</button>
+    </div>
   `;
   feed.prepend(row);
   while (feed.children.length > 300) feed.removeChild(feed.lastChild);
@@ -1192,10 +1199,71 @@ document.getElementById('connList').addEventListener('click', (e) => {
   runLookup(btn.dataset.action, btn.dataset.ip);
 });
 document.getElementById('feed').addEventListener('click', (e) => {
-  const btn = e.target.closest('button[data-action="block"]');
-  if (!btn) return;
-  runLookup('block', btn.dataset.ip);
+  const blockBtn = e.target.closest('button[data-action="block"]');
+  if (blockBtn) { runLookup('block', blockBtn.dataset.ip); return; }
+  const localBtn = e.target.closest('button[data-action="investigate-local"]');
+  if (localBtn) { runInvestigateLocal(localBtn); return; }
+  const aiBtn = e.target.closest('button[data-action="investigate-ai"]');
+  if (aiBtn) { runInvestigateAi(aiBtn); return; }
 });
+
+// --- Per-alert investigate buttons (2026-07-21) ---------------------------
+// 🔍 = local-agent.mjs, synchronous, no AI, returns immediately.
+// 🤖 = queues for the periodic Claude Code triage check.
+async function runInvestigateLocal(btn) {
+  const id = btn.dataset.id;
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = '…';
+  try {
+    const res = await fetch('/api/alerts/investigate-local', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    const result = await res.json();
+    if (result.verdict === 'dismiss') {
+      const row = document.querySelector('.row[data-id="' + CSS.escape(id) + '"]');
+      if (row) {
+        const bucket = row.dataset.bucket;
+        if (counts[bucket] > 0) counts[bucket]--;
+        renderCounters();
+        row.remove();
+      }
+      return; // row is gone, no need to restore the button
+    }
+    openLookupModal('Lokaal onderzoek');
+    const verdictLabel = { uncertain: 'Onzeker', keep: 'Blijft staan' }[result.verdict] || result.verdict;
+    setLookupBody('<p><b>' + escapeHtml2(verdictLabel) + '</b></p><p>' + escapeHtml2(result.reason) + '</p>');
+  } catch (e) {
+    openLookupModal('Lokaal onderzoek');
+    setLookupBody('<p class="lwarn">Mislukt: ' + escapeHtml2(e.message) + '</p>');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+async function runInvestigateAi(btn) {
+  const id = btn.dataset.id;
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = '…';
+  try {
+    const res = await fetch('/api/alerts/investigate-ai', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    const result = await res.json();
+    openLookupModal('AI-onderzoek aangevraagd');
+    setLookupBody('<p>In de wachtrij gezet (' + result.queueLength + ' openstaand). '
+      + 'Wordt bij de eerstvolgende periodieke check als eerste opgepakt.</p>');
+  } catch (e) {
+    openLookupModal('AI-onderzoek aangevraagd');
+    setLookupBody('<p class="lwarn">Mislukt: ' + escapeHtml2(e.message) + '</p>');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
 
 // --- Ban list modal -------------------------------------------------------
 function formatRemaining(expiresAt) {

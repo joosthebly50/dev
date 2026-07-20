@@ -11,3 +11,8 @@ browser/profile-opnsense/
 browser/profile-kpn/
 browser/artifacts/
 browser/node_modules/
+
+# Local triage agent's learned correlation stats (local-agent.mjs) --
+# runtime state, not configuration; known-traffic.mjs is the actual
+# human-reviewed source of truth.
+browser/alert-dashboard/dismissal-stats.json
