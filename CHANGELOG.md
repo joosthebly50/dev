@@ -35,6 +35,23 @@ Large single-session expansion of the Alarmdashboard. Full detail:
 - **Poll interval lowered from 20s to 5s** (~24s -> ~9s worst-case
   alert-detection latency).
 
+## OPNsense-as-Primary-Router Migration: Phase 0 + Phase 1
+
+First two phases of Joost's longer-term plan to eventually make OPNsense
+firewall his whole network (not just the isolated lab), with an explicit
+requirement that a tested rollback exist before any real change. Full
+detail: `docs/decisions/architecture_decisions.md` ("Build the Rollback
+Path Before Any OPNsense-as-Primary-Router Migration Step").
+
+Phase 0: confirmed a second physical NIC (`enp5s0`, previously unused) is
+now cabled to the KPN router and gets a real DHCP lease from it. Phase 1:
+built and tested `scripts/network-fallback-to-kpn.sh`, a one-action
+"panic button" (desktop launcher + a new dashboard button/endpoint) that
+forces this host's internet back onto the direct KPN NIC, independent of
+whatever routing a later migration phase adds. Found and fixed a real
+bug while testing: the route table briefly shows a misleadingly high
+metric right after reactivating the connection, before DHCP settles.
+
 ---
 
 # 2026-07-15

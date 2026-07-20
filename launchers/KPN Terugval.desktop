@@ -1,0 +1,12 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=KPN Terugval
+Comment=Paniekknop voor de OPNsense-als-hoofdrouter-migratie: dwingt internet direct via de KPN-router af (enp6s0), ongeacht latere OPNsense-routing
+Exec=konsole -e /var/home/Joost/Homelab/scripts/network-fallback-to-kpn.sh
+Icon=network-wired
+Terminal=false
+Categories=System;
+StartupNotify=true
+Keywords=Homelab;Netwerk;KPN;Fallback;OPNsense;Terugval;

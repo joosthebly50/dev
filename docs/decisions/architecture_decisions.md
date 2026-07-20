@@ -307,6 +307,28 @@ Set by Joost 2026-07-15, right after the first Tier 2 exploit (the vsftpd 2.3.4 
 
 ---
 
+# Decision: Build the Rollback Path Before Any OPNsense-as-Primary-Router Migration Step
+
+## Choice
+
+Before making any change that lets OPNsense route Joost's real internet traffic (not just the isolated lab), a tested, one-action rollback to the current direct-KPN setup must exist first — built and verified in a phase of its own (Phase 1), before Phase 2 (giving OPNsense a real WAN) even starts.
+
+## Reason
+
+Set by Joost 2026-07-20, when first describing the eventual goal: move OPNsense to firewall his whole network, but *"pas als alles echt gebouwd en stabiel is zodat jij het in 1 keer goed op kan zetten zonder internet te verliezen ook wil ik als back-up een optie om ook altijd internet te hebben als de firewall een probleem heeft."* Unlike the isolated lab (192.168.50.0/24), a mistake here costs the whole household's internet, not just a VM. The rollback needing to be pre-built and pre-tested — not improvised during an actual outage — is the same reproducibility discipline as the Tier 2/3 snapshot rule above, applied to network infrastructure instead of VMs.
+
+## What's in place so far (2026-07-20, Phase 0 + Phase 1 of the migration plan)
+
+- **Phase 0 (discovery, done)**: `enp5s0` (a second physical NIC on the Bazzite host, previously unused/no-carrier) is now cabled to the KPN router and gets a real DHCP lease from it (`192.168.2.15/24`, same network as the existing `enp6s0` at `192.168.2.6`) — confirmed reachable. Bridge-mode support on the KPN router is unknown; the plan proceeds assuming double-NAT (KPN router + OPNsense behind it), not blocking on this.
+- **Phase 1 (rollback path, done)**: `scripts/network-fallback-to-kpn.sh` forces this host's default route back onto `enp6s0` (pins `ipv4.route-metric` to a fixed low value via `nmcli`, well below any future OPNsense-route's metric, then re-activates the connection and verifies with a real HTTP request) — reachable via a desktop launcher (`KPN Terugval`) and a dashboard button (`🆘 KPN-terugval`, `POST /api/network-fallback`), both requiring explicit confirmation. Touches only this host's own NetworkManager config; never touches OPNsense or the lab. Found and fixed one real bug while testing: right after `nmcli connection up`, the route table briefly shows a much higher (wrong-looking) metric until DHCP settles — a `sleep 3` before printing the route table avoids the panic button ever showing a falsely alarming intermediate state.
+- **Not yet done**: Phase 2 (give OPNsense a real WAN on `enp5s0`, replacing its current libvirt-NAT-only WAN), Phase 3 (burn-in test in parallel with the existing direct path), Phase 4 (actual cutover of this host's own traffic).
+
+## How to apply
+
+Any future step in this migration must keep the rollback script's assumptions valid — e.g., if `enp6s0`'s NetworkManager connection profile is ever renamed/recreated, `KPN_CONNECTION` in `scripts/network-fallback-to-kpn.sh` needs updating to match, and the fallback must be re-tested before the next migration phase proceeds.
+
+---
+
 # Overall Architecture Goal
 
 The SOC Homelab is designed to simulate a small enterprise environment.

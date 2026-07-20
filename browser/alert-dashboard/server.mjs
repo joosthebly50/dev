@@ -579,6 +579,28 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (url.pathname === '/api/network-fallback' && req.method === 'POST') {
+    // "Panic button" for the OPNsense-as-primary-router migration plan
+    // (see docs/decisions/architecture_decisions.md and
+    // scripts/network-fallback-to-kpn.sh) -- forces this host's default
+    // route back onto the direct KPN NIC (enp6s0), independent of
+    // whatever OPNsense-routing config a later migration phase adds.
+    // Purely local to this host; touches nothing on OPNsense or the lab.
+    console.log('[network-fallback] KPN-terugval aangevraagd vanuit dashboard');
+    try {
+      const { stdout } = await execFileP(
+        path.join(DIR, '..', '..', 'scripts', 'network-fallback-to-kpn.sh'),
+        [], { timeout: 20000 }
+      );
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, text: stdout }));
+    } catch (e) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, text: (e.stdout || '') + '\n' + (e.stderr || e.message) }));
+    }
+    return;
+  }
+
   if (url.pathname === '/api/alerts/clear' && req.method === 'POST') {
     const n = alerts.length;
     alerts = [];

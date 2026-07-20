@@ -260,6 +260,7 @@
       <button id="mute">🔊 Geluid aan</button>
       <button id="clearBtn">🗑️ Wis meldingen</button>
       <button id="banListBtn">🚫 Banlijst</button>
+      <button id="networkFallbackBtn" title="Forceer internet direct via de KPN-router (enp6s0), los van OPNsense">🆘 KPN-terugval</button>
       <button id="settingsBtn">⚙️ Instellingen</button>
     </div>
   </header>
@@ -1127,6 +1128,29 @@ async function openBanList() {
   } catch (e) { setLookupBody('<p class="lwarn">Laden mislukt: ' + escapeHtml2(e.message) + '</p>'); }
 }
 document.getElementById('banListBtn').addEventListener('click', openBanList);
+
+// KPN-terugval -- "paniekknop" voor het OPNsense-als-hoofdrouter-migratie-
+// plan (zie docs/decisions/architecture_decisions.md en
+// scripts/network-fallback-to-kpn.sh). Puur lokaal aan deze host, raakt
+// OPNsense/het lab niet aan.
+document.getElementById('networkFallbackBtn').addEventListener('click', () => {
+  openLookupModal('KPN-terugval');
+  setLookupBody(
+    '<p class="lwarn">⚠ Weet je het zeker?</p>' +
+    '<p>Dit forceert het internet van deze host direct via de KPN-router (enp6s0), ' +
+    'los van eventuele OPNsense-routing. Alleen nodig als de OPNsense-migratie een probleem geeft.</p>' +
+    '<div class="duration-choice"><button id="fallbackConfirm">Ja, forceer KPN-terugval</button><button id="fallbackCancel">Annuleren</button></div>'
+  );
+  document.getElementById('fallbackCancel').addEventListener('click', closeLookupModal);
+  document.getElementById('fallbackConfirm').addEventListener('click', async () => {
+    setLookupBody('<p class="lk">Bezig...</p>');
+    try {
+      const res = await fetch('/api/network-fallback', { method: 'POST' });
+      const r = await res.json();
+      setLookupBody((r.ok ? '<p>✅ Terugval uitgevoerd.</p>' : '<p class="lwarn">⚠ Mogelijk mislukt, zie output.</p>') + '<pre>' + escapeHtml2(r.text || '') + '</pre>');
+    } catch (e) { setLookupBody('<p class="lwarn">Terugval mislukt: ' + escapeHtml2(e.message) + '</p>'); }
+  });
+});
 async function pollConnections() {
   try {
     const { connections } = await (await fetch('/api/connections')).json();
