@@ -81,6 +81,23 @@
   @keyframes opnwanoffline { 0%, 100% { background: rgba(139,151,163,0.1); } 50% { background: rgba(139,151,163,0.22); } }
   .health-metric canvas { display: block; height: 14px; width: 42px; margin-left: 0.15rem; }
 
+  /* VM status strip -- one chip per libvirt domain, red/green dot for
+     running vs shut off (Joost's request 2026-07-21). Polled separately
+     from the health bar since `virsh list` is its own cheap shell-out,
+     not part of health.mjs's /proc reads. */
+  .vm-bar {
+    display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+    padding: 0.45rem 1.4rem; background: rgba(0,0,0,0.35); border-bottom: 1px solid var(--border);
+    font-size: 0.82rem;
+  }
+  .vm-bar .vm-label { color: var(--muted); font-weight: 700; font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; margin-right: 0.2rem; }
+  .vm-chip { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.6rem; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); }
+  .vm-chip .vm-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .vm-chip.on .vm-dot { background: var(--ok); box-shadow: 0 0 5px var(--ok); }
+  .vm-chip.off .vm-dot { background: var(--exploit); }
+  .vm-chip .vm-name { color: var(--text); }
+  .vm-chip.off .vm-name { color: var(--muted); }
+
   #settingsPanel {
     position: fixed; top: 5.7rem; right: 1.4rem; z-index: 60;
     background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
@@ -303,6 +320,10 @@
       <span class="label">OPN-WAN</span> <span class="val na" id="hOpnWan">–</span><span class="unit">Mbps</span>
       <canvas id="gOpnWan" width="42" height="14"></canvas>
     </span>
+  </div>
+
+  <div class="vm-bar" id="vmBar">
+    <span class="vm-label">VM's</span>
   </div>
 
   <div id="settingsPanel">
@@ -564,16 +585,35 @@ function playBeepFallback(bucket) {
 // neural TTS), one clip per announced category (not per alert). Queued
 // with a 2s gap between clips (Joost's request 2026-07-15) so two
 // announcements decided close together never talk over each other.
-const VOICE_GAP_MS = 2000;
+const VOICE_GAP_MS = 5000;
+// Hard cap on how long one clip is allowed to hold the queue -- if
+// onended/onerror never fire (seen 2026-07-21: bursts of alerts during
+// scan testing produced overlapping/garbled audio, most likely a stalled
+// clip never resolving while newer ones kept queuing behind it), this
+// forces the queue to advance instead of piling up silently.
+const VOICE_MAX_MS = 12000;
 let voiceQueue = Promise.resolve();
+let currentAudio = null; // guards against two clips ever sounding at once
 function playClip(audioUrl, bucket) {
   voiceQueue = voiceQueue.then(() => new Promise((resolve) => {
+    // Always stop whatever's still playing before starting the next one,
+    // regardless of how it got left running.
+    if (currentAudio) { try { currentAudio.pause(); } catch (e) {} currentAudio = null; }
     if (muted || !settings.voiceEnabled) { resolve(); return; }
     if (!audioUrl) { playBeepFallback(bucket); setTimeout(resolve, VOICE_GAP_MS); return; }
     const audio = new Audio(audioUrl);
-    audio.onended = () => setTimeout(resolve, VOICE_GAP_MS);
-    audio.onerror = () => { playBeepFallback(bucket); setTimeout(resolve, VOICE_GAP_MS); };
-    audio.play().catch(() => { playBeepFallback(bucket); setTimeout(resolve, VOICE_GAP_MS); });
+    currentAudio = audio;
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      if (currentAudio === audio) currentAudio = null;
+      setTimeout(resolve, VOICE_GAP_MS);
+    };
+    const watchdog = setTimeout(finish, VOICE_MAX_MS);
+    audio.onended = () => { clearTimeout(watchdog); finish(); };
+    audio.onerror = () => { clearTimeout(watchdog); playBeepFallback(bucket); finish(); };
+    audio.play().catch(() => { clearTimeout(watchdog); playBeepFallback(bucket); finish(); });
   }));
 }
 
@@ -620,44 +660,48 @@ async function decideAndAnnounce(batch) {
   const eligible = batch.filter(passesFilter);
   if (!eligible.length) return;
 
-  // Highest-priority category present in this batch.
-  let best = eligible[0];
-  for (const a of eligible) {
-    if (priorityRank(a.bucket) < priorityRank(best.bucket)) best = a;
-  }
-  const bucket = best.bucket;
+  // Every distinct category present in this batch gets announced, most
+  // severe first (Joost's request 2026-07-21: he was missing categories
+  // when only the single highest-priority one spoke per batch). playClip's
+  // queue (with its 5s gap) keeps these from ever overlapping each other.
+  const bucketsPresent = [...new Set(eligible.map((a) => a.bucket))]
+    .sort((a, b) => priorityRank(a) - priorityRank(b));
+
   const now = Date.now();
   const cooldownMs = settings.cooldownSec * 1000;
-  const isNew = !everAnnounced.has(bucket);
-  const isEscalation = lastAnnouncedBucket && priorityRank(bucket) < priorityRank(lastAnnouncedBucket);
-  const cooldownExpired = now - (lastAnnouncedAt.get(bucket) || 0) >= cooldownMs;
 
-  if (!(isNew || isEscalation || cooldownExpired)) return;
+  for (const bucket of bucketsPresent) {
+    const isNew = !everAnnounced.has(bucket);
+    const isEscalation = lastAnnouncedBucket && priorityRank(bucket) < priorityRank(lastAnnouncedBucket);
+    const cooldownExpired = now - (lastAnnouncedAt.get(bucket) || 0) >= cooldownMs;
+    if (!(isNew || isEscalation || cooldownExpired)) continue;
 
-  everAnnounced.add(bucket);
-  lastAnnouncedAt.set(bucket, now);
-  lastAnnouncedBucket = bucket;
+    everAnnounced.add(bucket);
+    lastAnnouncedAt.set(bucket, now);
+    lastAnnouncedBucket = bucket;
 
-  // Voice 2.0 (2026-07-15): several alerts of the same category landing
-  // in one batch get the calmer grouped phrasing ("Multiple recon events
-  // detected.") instead of repeating a full from/against sentence for
-  // just one of them -- less noisy during a burst (e.g. a port scan).
-  const sameBucketCount = eligible.filter((a) => a.bucket === bucket).length;
-  const multiple = sameBucketCount > 1;
-  const verbose = !multiple && best.filterLevel === 'critical';
-  let audioUrl = null;
-  try {
-    const res = await fetch('/api/tts/generate', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bucket, srcIp: best.srcIp, dstIp: best.dstIp, verbose, multiple, voice: settings.voice, rate: settings.rate }),
-    });
-    ({ audioUrl } = await res.json());
-  } catch (e) { /* falls back to beep in playClip */ }
+    const bucketAlerts = eligible.filter((a) => a.bucket === bucket);
+    const best = bucketAlerts[0];
+    // Voice 2.0 (2026-07-15): several alerts of the same category landing
+    // in one batch get the calmer grouped phrasing ("Multiple recon events
+    // detected.") instead of repeating a full from/against sentence for
+    // just one of them -- less noisy during a burst (e.g. a port scan).
+    const multiple = bucketAlerts.length > 1;
+    const verbose = !multiple && best.filterLevel === 'critical';
+    let audioUrl = null;
+    try {
+      const res = await fetch('/api/tts/generate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bucket, srcIp: best.srcIp, dstIp: best.dstIp, verbose, multiple, voice: settings.voice, rate: settings.rate }),
+      });
+      ({ audioUrl } = await res.json());
+    } catch (e) { /* falls back to beep in playClip */ }
 
-  playClip(audioUrl, bucket);
-  showBanner(best);
-  flashCounter(bucket);
-  flashRows(bucket);
+    playClip(audioUrl, bucket);
+    showBanner(best);
+    flashCounter(bucket);
+    flashRows(bucket);
+  }
 }
 
 function renderCounters() {
@@ -696,9 +740,10 @@ const HOST_NAMES = {
   '192.168.50.10': 'DC01',
   '192.168.50.20': 'WIN11-01',
   '192.168.50.30': 'Security Onion',
-  '192.168.50.40': 'ubuntu-server-01',
   '192.168.50.50': 'Kali',
   '192.168.50.70': 'Metasploitable2',
+  // Real IP is .100, not .40 -- corrected 2026-07-21 (see NETWORK.md).
+  '192.168.50.100': 'ubuntu-server-01',
   '192.168.50.254': 'Bazzite-host',
 };
 function hostLabel(ip) { return HOST_NAMES[ip] || ip; }
@@ -986,6 +1031,18 @@ async function pollOpnWan() {
     opnWanWasSpiking = wan.spike;
     drawSparkline('gOpnWan', opnWanHistory, '#c99a1f');
   } catch (e) { /* leave last-known values on a transient fetch failure */ }
+}
+async function pollVms() {
+  try {
+    const { vms } = await (await fetch('/api/vms')).json();
+    if (!Array.isArray(vms)) return;
+    const bar = document.getElementById('vmBar');
+    bar.innerHTML = '<span class="vm-label">VM\'s</span>' + vms.map((vm) => `
+      <span class="vm-chip ${vm.running ? 'on' : 'off'}" title="${escapeHtml(vm.state)}">
+        <span class="vm-dot"></span><span class="vm-name">${escapeHtml(vm.label)}</span>
+      </span>
+    `).join('');
+  } catch (e) { /* leave last-known chips on a transient fetch failure */ }
 }
 async function announceOpnWanSpike(wan) {
   showBanner({ bucket: 'DOS', signature: `Verkeerspiek op OPNsense's WAN (lab): ${wan.inMbps.toFixed(1)} Mbps inkomend (baseline ${wan.baselineInMbps.toFixed(1)} Mbps)` });
@@ -1417,6 +1474,8 @@ pollHealth();
 setInterval(pollHealth, 1000);
 pollOpnWan();
 setInterval(pollOpnWan, 10000);
+pollVms();
+setInterval(pollVms, 10000);
 pollConnections();
 setInterval(pollConnections, 1000);
 </script>

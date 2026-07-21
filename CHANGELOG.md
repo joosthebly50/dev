@@ -4,6 +4,58 @@ All important project changes are documented here.
 
 ---
 
+# 2026-07-21 (cont'd 5)
+
+## Alarmdashboard: Four Stacked Pipeline Bugs Found and Fixed
+
+Joost reported "no alerts, and OPN-WAN says down" after a round of live nmap
+scans against `Target-Metasploitable2` (started for the occasion; left
+running afterward). Worked top-down from Suricata outward instead of
+guessing:
+
+- **Poll loop was dead.** `server.mjs`'s log showed `[poll error]
+  page.goto: Target page, context or browser has been closed` repeating
+  continuously -- 0 alerts ingested for 5+ hours despite Suricata logging
+  fine (confirmed directly via `eve.json` on Security Onion, bypassing the
+  dashboard: a 193-alert nmap scan against Metasploitable2 was fully
+  logged, none of it reached the dashboard). Fix: restart `node
+  server.mjs`. Same recurring pattern as the earlier-documented
+  "stopped after 'Wis meldingen'" issue.
+- **"OPN-WAN DOWN" was a false reading.** The real WAN interface
+  (`vtnet0` on OPNsense) was fully up, verified directly via SSH
+  (`ifconfig`, ping to gateway and 1.1.1.1). Root cause: the dedicated
+  OPNsense browser daemon (`launch-opnsense-daemon.mjs`, CDP port 9333,
+  used by `opnsense-traffic.mjs` to read
+  `/api/diagnostics/traffic/interface`) wasn't running, and after restart
+  its saved login session (persistent profile `browser/profile-opnsense`)
+  had expired. Fixed the daemon; Joost logged back in manually (credential
+  entry is never done by the assistant, per `AI_ACCESS_POLICY.md`).
+- **P2P/BitTorrent noise from the host itself (`192.168.50.254`) was
+  crowding out real alerts.** The Hunt scrape query had no category
+  filter, and BitTorrent-alert volume was high enough to fill the entire
+  500-event poll window every cycle -- real scan alerts existed in
+  Suricata's own log but never survived the fetch. This is a different,
+  deeper issue than the existing client-side "hide P2P from the visible
+  feed" filter (`categorize.mjs` / `dashboard.html`), which only hides
+  already-fetched rows. Fixed by excluding it at the source query in
+  `server.mjs`'s `pollOnce()`: added `AND NOT
+  rule.category:"Potential Corporate Privacy Violation"`.
+- **Voice announcements overlapped/garbled during alert bursts.** Added
+  an explicit stop-before-play guard (`currentAudio`) and a 12s watchdog
+  timeout to `playClip()` in `dashboard.html`, on top of the existing
+  `voiceQueue` promise chain, and raised `VOICE_GAP_MS` from 2000 to 5000
+  at Joost's request. Also changed `decideAndAnnounce()` to speak every
+  distinct category present in a poll batch (queued, most-severe-first)
+  instead of only the single highest-priority one -- confirmed working
+  ("ja beter") after a full dashboard-window relaunch (`chrome --app`
+  windows needed `setsid nohup ... &` to survive between tool calls in
+  this session; plain `nohup ... & disown` did not).
+
+`Target-Metasploitable2` left running (was off; started to generate test
+traffic for this investigation and a fresh dashboard screenshot).
+
+---
+
 # 2026-07-21 (cont'd 4)
 
 ## Automatic At-Ingestion False-Positive Triage

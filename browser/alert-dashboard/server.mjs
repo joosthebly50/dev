@@ -26,6 +26,7 @@ import { opnsenseAddBlock, opnsenseRemoveBlock, opnsenseListBlocked } from './op
 import { pollWanTrafficOnce, getWanTrafficState } from './opnsense-traffic.mjs';
 import { investigateAlert, getSuggestedRules } from './local-agent.mjs';
 import { NEVER_AUTO_DISMISS_BUCKETS } from './known-traffic.mjs';
+import { getVmStatus } from './vms.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -63,9 +64,14 @@ const HOST_NAMES = {
   '192.168.50.10': 'D C 0 1',
   '192.168.50.20': 'Windows 11 workstation',
   '192.168.50.30': 'Security Onion',
-  '192.168.50.40': 'Ubuntu server',
   '192.168.50.50': 'Kali',
   '192.168.50.70': 'Metasploitable 2',
+  // Real IP is .100, not .40 -- corrected 2026-07-21 (see NETWORK.md).
+  '192.168.50.100': 'Ubuntu server',
+  // The Bazzite host itself, by far the most common src/dst in practice
+  // (its own qBittorrent/Discord/browser traffic) -- was missing here
+  // entirely, so it kept getting read out as a raw IP.
+  '192.168.50.254': 'Bazzite',
 };
 function hostLabel(ip) {
   return HOST_NAMES[ip] || ip;
@@ -300,7 +306,13 @@ function isoZ(d) {
 
 async function pollOnce(page) {
   const nowISO = new Date().toISOString();
-  const query = `event.module:"suricata" AND @timestamp:[${lastCheckedISO} TO ${nowISO}]`;
+  // P2P/BitTorrent (Joost's own qBittorrent use) excluded at the source,
+  // not just client-side in dashboard.html/categorize.mjs -- its volume
+  // was high enough to fill the 500-event window and crowd out real
+  // alerts (found 2026-07-21: a 193-alert nmap scan against
+  // Metasploitable2 never reached the dashboard because P2P alone filled
+  // every poll's result set).
+  const query = `event.module:"suricata" AND NOT rule.category:"Potential Corporate Privacy Violation" AND @timestamp:[${lastCheckedISO} TO ${nowISO}]`;
   const url = `${BASE}/#/hunt?q=${encodeURIComponent(query)}&z=UTC&el=500&gl=500&rt=24&rtu=hours`;
   await page.goto(url, { waitUntil: 'networkidle', timeout: 20000 });
   await page.waitForTimeout(3500);
@@ -456,6 +468,13 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/api/opnsense-wan') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(getWanTrafficState()));
+    return;
+  }
+
+  if (url.pathname === '/api/vms') {
+    const vms = await getVmStatus().catch((e) => ({ error: e.message }));
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ vms }));
     return;
   }
 
