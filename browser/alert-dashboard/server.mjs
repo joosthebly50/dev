@@ -108,7 +108,25 @@ const KNOWN_VOICES = new Set([
   'en_GB-alan-medium',
 ]);
 
-async function synthesizeSpokenClip({ bucket, srcIp, dstIp, verbose, multiple, voice, rate, text }) {
+// Short, speakable overrides for specific signatures that land in the
+// OTHER/Overig catch-all bucket -- "Unknown attack" is unhelpfully vague
+// for a signature that's actually well understood, just not one of the
+// dedicated categories. Deliberately short paraphrases, not the raw
+// signature text (see tts/synth.py's note on why: a full signature +
+// digit-by-digit IP took 12-15s to speak). Extend this as new recurring
+// OTHER-bucket signatures come up (Joost's request 2026-07-21, re: "ET
+// TOR Known Tor Relay/Router (Not Exit) Node Traffic").
+const OTHER_VOICE_OVERRIDES = [
+  { test: /\btor\b.*relay.*router/i, label: 'Tor relay router, not an exit node' },
+  { test: /\btor\b/i, label: 'Tor traffic' },
+];
+function otherBucketVoiceLabel(signature, fallback) {
+  if (!signature) return fallback;
+  const hit = OTHER_VOICE_OVERRIDES.find((o) => o.test.test(signature));
+  return hit ? hit.label : fallback;
+}
+
+async function synthesizeSpokenClip({ bucket, srcIp, dstIp, verbose, multiple, voice, rate, text, signature }) {
   const safeVoice = KNOWN_VOICES.has(voice) ? voice : 'en_US-amy-medium';
   const safeRate = Number.isFinite(rate) && rate >= 0.5 && rate <= 2.0 ? rate : 1.0;
 
@@ -129,7 +147,8 @@ async function synthesizeSpokenClip({ bucket, srcIp, dstIp, verbose, multiple, v
     return `/api/tts/${filename}`;
   }
 
-  const categoryLabel = (CATEGORIES[bucket] || CATEGORIES.OTHER).voiceLabel;
+  const baseLabel = (CATEGORIES[bucket] || CATEGORIES.OTHER).voiceLabel;
+  const categoryLabel = bucket === 'OTHER' ? otherBucketVoiceLabel(signature, baseLabel) : baseLabel;
   // Voice 2.0 (2026-07-15): both source and target are spoken as hostnames
   // in every mode now, not just verbose/Critical -- "Recon detected from
   // Kali against Metasploitable 2." Falls back to the raw IP if it's
@@ -137,7 +156,7 @@ async function synthesizeSpokenClip({ bucket, srcIp, dstIp, verbose, multiple, v
   const targetLabel = hostLabel(dstIp);
   const sourceLabel = hostLabel(srcIp);
   const mode = multiple ? 'm' : verbose ? 'v' : 's';
-  const key = `${bucket}|${sourceLabel}|${targetLabel}|${mode}|${safeVoice}|${safeRate}`;
+  const key = `${bucket}|${categoryLabel}|${sourceLabel}|${targetLabel}|${mode}|${safeVoice}|${safeRate}`;
   const hash = crypto.createHash('sha1').update(key).digest('hex').slice(0, 16);
   const filename = `${hash}.wav`;
   const outPath = path.join(TTS_CACHE_DIR, filename);
@@ -433,8 +452,8 @@ const server = http.createServer(async (req, res) => {
 
   if (url.pathname === '/api/tts/generate' && req.method === 'POST') {
     try {
-      const { bucket, srcIp, dstIp, verbose, multiple, voice, rate, text } = await readJsonBody(req);
-      const audioUrl = await synthesizeSpokenClip({ bucket, srcIp, dstIp, verbose: !!verbose, multiple: !!multiple, voice, rate: Number(rate), text });
+      const { bucket, srcIp, dstIp, verbose, multiple, voice, rate, text, signature } = await readJsonBody(req);
+      const audioUrl = await synthesizeSpokenClip({ bucket, srcIp, dstIp, verbose: !!verbose, multiple: !!multiple, voice, rate: Number(rate), text, signature });
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ audioUrl }));
     } catch (e) {

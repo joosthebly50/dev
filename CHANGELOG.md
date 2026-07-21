@@ -4,6 +4,33 @@ All important project changes are documented here.
 
 ---
 
+# 2026-07-21 (cont'd 6)
+
+## Alarmdashboard: VM Status Panel, Corrected Voice Host Names, TOR Voice Label
+
+Three smaller follow-ups after the pipeline-bug session below:
+
+- Added a VM status strip (`vms.mjs`) to the dashboard: one chip per
+  libvirt domain (`virsh list --all`), red/green dot for shut-off vs
+  running, polled every 10s. Handles the ` ATTACK-Kali` leading-space
+  quirk correctly (verified).
+- Fixed the spoken host-name table (`server.mjs`'s `HOST_NAMES`, and
+  its `dashboard.html` counterpart): it was missing an entry for
+  `192.168.50.254` (the Bazzite host itself, by far the most common
+  src/dst in practice) -- alerts involving it were read out as a raw
+  IP. Now speaks "Bazzite". Also corrected the stale `.40` entry for
+  `ubuntu-server-01` to its real IP, `.100`.
+- Alerts in the OTHER/"Overig" catch-all bucket were announced with a
+  generic "Unknown attack" regardless of what they actually were.
+  Added a short-label override list (`OTHER_VOICE_OVERRIDES` in
+  `server.mjs`) for recognized-but-uncategorized signatures -- ET TOR
+  relay/router alerts now say "Tor relay router, not an exit node"
+  instead. Deliberately still a short paraphrase, not the raw
+  signature text (see `tts/synth.py`'s existing note on why a full
+  signature + a spelled-out IP takes 12-15s to speak).
+
+---
+
 # 2026-07-21 (cont'd 5)
 
 ## Alarmdashboard: Four Stacked Pipeline Bugs Found and Fixed

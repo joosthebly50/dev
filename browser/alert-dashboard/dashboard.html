@@ -692,7 +692,7 @@ async function decideAndAnnounce(batch) {
     try {
       const res = await fetch('/api/tts/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bucket, srcIp: best.srcIp, dstIp: best.dstIp, verbose, multiple, voice: settings.voice, rate: settings.rate }),
+        body: JSON.stringify({ bucket, srcIp: best.srcIp, dstIp: best.dstIp, verbose, multiple, voice: settings.voice, rate: settings.rate, signature: best.signature }),
       });
       ({ audioUrl } = await res.json());
     } catch (e) { /* falls back to beep in playClip */ }
