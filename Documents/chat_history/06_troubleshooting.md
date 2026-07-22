@@ -256,6 +256,91 @@ Bazzite provides a strong gaming-focused Linux base, but additional configuratio
 
 ---
 
+# Cases Added After 2026-07-11 (missing from this archive until now)
+
+This file was written 2026-07-11 and stopped tracking specific cases
+after that — six more troubleshooting write-ups exist in
+`Documents/troubleshooting/` (numbered 06, 08-12; note 07 was never
+used/assigned) that were never summarized here. Condensed below; full
+detail and evidence in the numbered files themselves.
+
+## DC01 Fleet Health and Sysmon Telemetry (`06_dc01_fleet_health_and_sysmon.md`, 2026-07-13)
+
+Problem: DC01 showed unhealthy/stuck in Fleet. Two separate root
+causes found: (1) missing Security Onion firewall hostgroup membership
+— DC01 could reach port 443 but not 8220 (Fleet checkin) or 5055
+(data ingest) or 3765 (Elastic Defend/`endgame`); hostgroup membership
+doesn't transfer between ports/hostgroups. (2) a ~9 hour clock skew on
+DC01 caused Fleet components to hang in `STARTING` after every reboot;
+traced to `vmictimesync`. Lesson: a "healthy last session, broken after
+reboot" pattern is a strong hint to check host/guest time sync, not
+just connectivity.
+
+## Bazzite Host Elastic Agent (`08_bazzite_host_elastic_agent.md`, 2026-07-14)
+
+Problem: getting the physical Bazzite host itself (not a VM) onto
+Fleet, log/metrics-only (no Elastic Defend by design). Root cause of
+an apparent ingestion failure: the `journald-so-manager_logstash`
+component was actually failing to reach Security Onion on port 5055 —
+same firewall-hostgroup class of problem as the DC01 case above. A
+separate false alarm during verification (a Kibana/Hunt query that
+seemed to show no events) turned out to be a query-syntax problem, not
+a real gap — broader queries are the more reliable verification
+pattern going forward.
+
+## WIN11-01 SSH Access (`09_win11-01_ssh_access.md`, 2026-07-14)
+
+Not really a "problem" case — a capability gap. WIN11-01 was the only
+lab system with no remote-admin path (only RPC port 135 open; SMB/RDP/
+WinRM all blocked). Joost himself enabled OpenSSH Server via the VM
+console (the AI assistant has no console access, and firewall/security
+changes are Joost's call per `AI_ACCESS_POLICY.md`) — then SSH access
+was independently verified from the host before any config/docs update,
+per the project's standing "never trust a claim without checking it"
+rule.
+
+## WIN11-01 Sysmon + Elastic Agent Rollout (`10_win11-01_sysmon_elastic_agent.md`, 2026-07-14)
+
+Problem during rollout: a PowerShell file download over the new SSH
+path was extremely slow (~40 minutes for a normal-sized installer).
+Root cause: `Invoke-WebRequest`'s default progress-bar rendering is
+known to drastically slow transfers in non-interactive/remote
+sessions. Fix: `$ProgressPreference = 'SilentlyContinue'` before the
+call — same download then completed in ~36 seconds. Useful general
+PowerShell-over-SSH lesson, not specific to this VM.
+
+## ubuntu-server-01 Elastic Agent Rollout (`11_ubuntu-server-01_elastic_agent_rollout.md`, 2026-07-14)
+
+Two separate problems: (1) install failed from running out of space —
+`/tmp` on this host is a small (1.7 GB) RAM-backed tmpfs, nowhere near
+enough for the ~1.36 GB archive+unpack footprint; fixed by using
+`/var/tmp` (same filesystem as `/`, 6.7 GB free) instead. (2) Once
+installed, the agent wasn't reachable in Fleet — root cause, directly
+confirmed via logs (not just inferred): `192.168.50.40` had simply
+never been added to any Security Onion firewall hostgroup at all
+(unlike WIN11-01 earlier the same day, where the hostgroups turned out
+to already be present).
+
+## ubuntu-server-01 DHCP Reservation Not Honored After Reboot (`12_ubuntu-server-01_dhcp_reservation_fix.md`, 2026-07-14/15, ✅ CLOSED)
+
+Problem: this one host intermittently came back up on the dynamic pool
+(`192.168.50.100`) instead of its reserved `192.168.50.40` after
+reboot, breaking the `ssh ubuntu-server` alias — every other reserved
+host always honored its reservation. Root cause: this Ubuntu image
+does two separate DHCP negotiations per boot (an early dracut-initramfs
+one, then the real netplan one); the dracut config sent the plain MAC
+as the DHCPv4 client identifier, but the netplan-generated config
+didn't, falling back to a different systemd-networkd default
+identifier that didn't match what OPNsense's Kea reservation was keyed
+on. Fix: `dhcp-identifier: mac` in netplan. Validated stable across
+three independent cold-boot cycles before closing. This became a
+general rule — see `Documents/decisions/architecture_decisions.md`,
+"`dhcp-identifier: mac` Required for Any Dracut-Based Linux Endpoint
+with a DHCP Reservation" — applies to any future Linux endpoint added
+to the lab, not just this one.
+
+---
+
 # General Troubleshooting Workflow
 
 The project follows this method:
@@ -293,7 +378,10 @@ Always:
 
 # Current Status
 
-The troubleshooting archive is used as a knowledge base for future maintenance and AI assistance.
+The troubleshooting archive is used as a knowledge base for future
+maintenance and AI assistance. For the full, individually detailed
+case files (not just this summary archive), see
+`Documents/troubleshooting/01` through `12`.
 
 Future troubleshooting entries should include:
 
@@ -303,3 +391,10 @@ Future troubleshooting entries should include:
 - Root cause
 - Solution
 - Lessons learned
+
+A recurring pattern worth naming explicitly, seen across several of
+the 2026-07-14 cases above: **a missing Security Onion firewall
+hostgroup membership** is a common root cause whenever a new endpoint
+can reach Security Onion's web UI (port 443) but not Fleet/data-ingest
+ports (8220/5055/3765) — check hostgroup membership specifically
+before assuming a deeper problem.

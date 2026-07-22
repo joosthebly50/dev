@@ -54,17 +54,26 @@ Version control for:
 
 # Repository Structure
 
-Current project structure:
+Current project structure (verified against actual git-tracked
+top-level entries — `backups/` and `evidence/` below are real local
+directories but are gitignored, so nothing in them is ever committed):
 
 Homelab/
 
-├── Documents/
+├── Documents/       — all documentation (merged from a separate
+│                      `docs/` folder into this one on 2026-07-22;
+│                      any reference elsewhere to `docs/...` is stale)
+├── browser/         — Playwright browser automation (SOC operator,
+│                      alert-dashboard, audit tooling) — not in this
+│                      file's original structure list, added later
+├── launchers/        — desktop `.desktop` launcher files — also not
+│                      in the original list
 ├── configs/
 ├── scripts/
-├── backups/
-├── evidence/
-├── Secure/
-└── Documentation files
+├── backups/ (gitignored, local only)
+├── evidence/ (gitignored, local only)
+├── Secure/ (gitignored, local only)
+└── Documentation files (README.md, CLAUDE.md, PROJECT_RULES.md, etc. at root)
 
 
 # Git Workflow
@@ -133,7 +142,11 @@ Shows the timeline of project changes.
 
 # Documentation Commits
 
-Important commits created:
+This list only ever covered the very first batch (2026-07-11). The
+repository has since grown to 90+ commits — this file is not the
+place to track them individually; see `CHANGELOG.md` for the running
+log and `Documents/PROJECT_STATUS.md` / `Documents/daily/` for
+narrative history. Original first-batch list, kept for reference:
 
 - Initial SOC homelab baseline
 - Create SOC homelab documentation framework
@@ -189,18 +202,31 @@ Important lessons:
 
 # Future Improvements
 
-Planned:
+Status update:
 
-- More detailed commit messages
-- Configuration backups
-- Automated documentation checks
-- Better integration between Git and AI tools
-- Regular project snapshots
+- ✅ Better integration between Git and AI tools — Claude Code now
+  works directly in this repo (commits, pushes, refactors), governed
+  by `CLAUDE.md`/`AI_ACCESS_POLICY.md`.
+- ✅ Regular project snapshots — daily reports in `Documents/daily/`
+  since 2026-07-13, most with matching PDFs in
+  `Documents/dagrapporten-pdf/`.
+- ⚠️ More detailed commit messages — inconsistent: recent Claude-authored
+  commits tend to have detailed bodies (why, not just what); the
+  original 2026-07-11 batch above has one-line messages only.
+- ❌ Configuration backups — only ad hoc so far (e.g.
+  `Documents/decisions/backups/opnsense-fw-libvirt-xml-2026-07-20-pre-wan-change.xml`
+  before one specific risky change), not a general practice.
+- ❌ Automated documentation checks — no CI/lint step exists yet.
 
 
 # Current Status
 
-Git is now the foundation of the SOC Homelab documentation workflow.
+Git is the foundation of the SOC Homelab documentation workflow, now
+also the primary way Joost and Claude Code collaborate on the project
+directly (not just documentation about it). Since 2026-07-21 the
+repository (`joosthebly50/dev`) is public, for portfolio purposes —
+job-application material is deliberately kept out of it (see
+`Documents/SOC_HOMELAB_MASTER_DOCUMENTATION.md`, "Documents/ folder policy").
 
 The repository provides:
 
