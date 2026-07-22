@@ -3,11 +3,17 @@
 Dit bestand beschrijft het vaste format dat voor elke dag wordt gebruikt.
 Het doel: elke dag dezelfde structuur, zodat je nooit hoeft te zoeken waar iets staat.
 
-Elke dag krijgt een eigen map: `docs/daily/JJJJ-MM-DD/`, met daarin altijd
-precies twee bestanden:
+Elke dag krijgt een eigen map: `Documents/daily/JJJJ-MM-DD/`, met daarin
+altijd twee bestanden, plus optioneel een derde:
 
 - `rapport.md` — wat er is gebeurd, in gewone taal
 - `commandos.md` — de exacte commando's die zijn gebruikt
+- `dagrapport.pdf` — (optioneel) PDF-render van `rapport.md`, via
+  `node browser/render-doc-pdf.mjs <rapport.md> <dagrapport.pdf>`
+  (absolute paden, `file://` breekt anders). Tot 2026-07-22 stonden
+  deze PDF's apart in `Documents/dagrapporten-pdf/` — samengevoegd in
+  de dagmap zelf, om niet weer twee parallelle "dagrapporten"-mappen
+  te krijgen.
 
 ---
 

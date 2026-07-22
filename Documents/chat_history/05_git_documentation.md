@@ -208,8 +208,10 @@ Status update:
   works directly in this repo (commits, pushes, refactors), governed
   by `CLAUDE.md`/`AI_ACCESS_POLICY.md`.
 - ✅ Regular project snapshots — daily reports in `Documents/daily/`
-  since 2026-07-13, most with matching PDFs in
-  `Documents/dagrapporten-pdf/`.
+  since 2026-07-13, most with a matching `dagrapport.pdf` in the same
+  dated folder (merged in from a separate `Documents/dagrapporten-pdf/`
+  folder on 2026-07-22, same reasoning as the `docs/`/`Documents/` merge
+  the same day).
 - ⚠️ More detailed commit messages — inconsistent: recent Claude-authored
   commits tend to have detailed bodies (why, not just what); the
   original 2026-07-11 batch above has one-line messages only.
