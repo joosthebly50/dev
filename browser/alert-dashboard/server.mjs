@@ -57,7 +57,7 @@ const TTS_SCRIPT = path.join(DIR, 'tts', 'synth.py');
 const TTS_CACHE_DIR = path.join(os.homedir(), '.cache', 'soc-alarm-dashboard', 'tts-cache');
 fs.mkdirSync(TTS_CACHE_DIR, { recursive: true });
 
-// Lab asset inventory (docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md §9) -- IP
+// Lab asset inventory (Documents/SOC_HOMELAB_MASTER_DOCUMENTATION.md §9) -- IP
 // to friendly system name, for spoken announcements only.
 const HOST_NAMES = {
   '192.168.50.1': 'OPNsense firewall',
@@ -177,7 +177,7 @@ const seenKeys = new Set();
 
 // --- False-positive dismissal (2026-07-21) -----------------------------
 // Fed by a periodic Claude Code check (not a standalone always-on agent,
-// see docs/decisions/architecture_decisions.md "False-Positive Triage
+// see Documents/decisions/architecture_decisions.md "False-Positive Triage
 // Agent") that investigates ambiguous alerts (listening ports, timing
 // correlation with other alerts, etc. -- the same manual process used for
 // the "ET TOR" investigation, 2026-07-21) and dismisses confirmed benign
@@ -266,7 +266,7 @@ const GEOIP_CACHE_MS = 10 * 60_000;
 
 // --- Block-IP (OPNsense dashboard_blocklist alias) ----------------------
 // Joost created the alias + Floating block rule by hand in the OPNsense UI
-// (see docs/guides/alarm_dashboard.md) -- this code only ever adds/removes
+// (see Documents/guides/alarm_dashboard.md) -- this code only ever adds/removes
 // entries from that pre-existing alias via opnsense-block.mjs, never rules.
 //
 // Never blockable, regardless of who/what asks: the firewall itself, the
@@ -715,7 +715,7 @@ const server = http.createServer(async (req, res) => {
 
   if (url.pathname === '/api/network-fallback' && req.method === 'POST') {
     // "Panic button" for the OPNsense-as-primary-router migration plan
-    // (see docs/decisions/architecture_decisions.md and
+    // (see Documents/decisions/architecture_decisions.md and
     // scripts/network-fallback-to-kpn.sh) -- forces this host's default
     // route back onto the direct KPN NIC (enp6s0), independent of
     // whatever OPNsense-routing config a later migration phase adds.

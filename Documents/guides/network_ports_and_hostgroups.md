@@ -2,7 +2,7 @@
 
 Dit document is de volledige referentie voor "welk IP mag bij welke
 poort". Ontstaan tijdens het oplossen van de DC01-Fleet-storing op
-2026-07-13 (zie `docs/troubleshooting/06_dc01_fleet_health_and_sysmon.md`)
+2026-07-13 (zie `Documents/troubleshooting/06_dc01_fleet_health_and_sysmon.md`)
 — dat probleem bestond precies omdat deze informatie nergens overzichtelijk
 stond.
 
@@ -10,7 +10,7 @@ stond.
 
 ## IP-adressen (samenvatting)
 
-Voor het volledige overzicht met SSH-toegang: `docs/ASSET_INVENTORY.md`.
+Voor het volledige overzicht met SSH-toegang: `Documents/ASSET_INVENTORY.md`.
 
 | IP | Systeem |
 |---|---|
@@ -166,6 +166,6 @@ Test-NetConnection -ComputerName 192.168.50.30 -Port 8220
 
 ## Gerelateerde documentatie
 
-- `docs/troubleshooting/06_dc01_fleet_health_and_sysmon.md` — het
+- `Documents/troubleshooting/06_dc01_fleet_health_and_sysmon.md` — het
   volledige verhaal van hoe dit is ontdekt.
 - `NETWORK.md` — algemeen netwerkoverzicht met kaart.

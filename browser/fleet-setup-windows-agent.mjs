@@ -2,7 +2,7 @@
 // One-time step for the WIN11-01 rollout: fetch (never create) the
 // enrollment token for Security Onion's existing "endpoints-initial" Fleet
 // agent policy -- the same policy DC01 already uses (Windows Event Log +
-// Sysmon + Elastic Defend, see docs/troubleshooting/06_dc01_fleet_health_and_sysmon.md).
+// Sysmon + Elastic Defend, see Documents/troubleshooting/06_dc01_fleet_health_and_sysmon.md).
 //
 // Unlike fleet-setup-linux-agent.mjs, this script deliberately does NOT
 // create the agent policy or package policy if missing -- it must already

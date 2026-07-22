@@ -48,7 +48,7 @@ extra resource overhead on the one machine everything else depends on.
    existing `linux-endpoints-initial` policy/package-policy by name
    instead of duplicating), specifically so it can be re-run for future
    Linux endpoints (`ubuntu-server-01`, Kali — see
-   `docs/ROADMAP_ENDPOINT_MONITORING.md`) without creating duplicate
+   `Documents/ROADMAP_ENDPOINT_MONITORING.md`) without creating duplicate
    policies. Only enables the `journald` inputs for `system.auth` and
    `system.syslog`, and `system/metrics` — `logfile`/`winlog` inputs left
    disabled (no flat log files on this host, not Windows).
@@ -59,7 +59,7 @@ extra resource overhead on the one machine everything else depends on.
    URL + token.
 4. Security Onion side: the host's IP needed to be reachable through
    Security Onion's own internal firewall (see
-   `docs/guides/network_ports_and_hostgroups.md`) — the same
+   `Documents/guides/network_ports_and_hostgroups.md`) — the same
    `elastic_agent_endpoint` + `beats_endpoint` hostgroups DC01 needed,
    minus `endgame` (no Elastic Defend here, so no endpoint-output port
    needed).
@@ -140,7 +140,7 @@ the Bazzite host, nothing to do with shipping data to Security Onion) —
 **zero** output/connection errors on that component.
 
 **Working theory, not yet confirmed:** port 5055 is exactly the
-`beats_endpoint` hostgroup's port (see `docs/guides/network_ports_and_
+`beats_endpoint` hostgroup's port (see `Documents/guides/network_ports_and_
 hostgroups.md`) — the same hostgroup DC01 needed an explicit
 `so-firewall includehost beats_endpoint <ip>` for on 2026-07-13 before
 its own Fleet data would flow. If `192.168.50.254` was never added to
@@ -177,7 +177,7 @@ for the next step, not fixed yet.
 
 # Prevention / reuse
 
-For any future Linux endpoint (see `docs/ROADMAP_ENDPOINT_MONITORING.md`):
+For any future Linux endpoint (see `Documents/ROADMAP_ENDPOINT_MONITORING.md`):
 `browser/fleet-setup-linux-agent.mjs` already generalizes this — rerun
 it, then repeat steps 2–4 above with the target host's own IP.
 

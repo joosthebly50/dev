@@ -24,16 +24,16 @@ Network:
 
 # Goal
 
-Roll out the same Sysmon + Elastic Agent setup WIN11-01 needed as priority 1 of the endpoint-monitoring phase (`docs/ROADMAP_ENDPOINT_MONITORING.md`), reusing DC01's existing `endpoints-initial` Fleet policy (Windows Event Logs, Sysmon, Elastic Defend, osquery, metrics) rather than creating a new one. Unlike the Bazzite host's deliberately log/metrics-only scope, WIN11-01 gets the full policy including Elastic Defend — an explicit choice Joost confirmed, since WIN11-01 is a planned Tier 3 attack target ([§12](../SOC_HOMELAB_MASTER_DOCUMENTATION.md#12-attack-scope-agreed-red-team-test-plan)) where EDR telemetry is exactly what the later lateral-movement test needs to produce.
+Roll out the same Sysmon + Elastic Agent setup WIN11-01 needed as priority 1 of the endpoint-monitoring phase (`Documents/ROADMAP_ENDPOINT_MONITORING.md`), reusing DC01's existing `endpoints-initial` Fleet policy (Windows Event Logs, Sysmon, Elastic Defend, osquery, metrics) rather than creating a new one. Unlike the Bazzite host's deliberately log/metrics-only scope, WIN11-01 gets the full policy including Elastic Defend — an explicit choice Joost confirmed, since WIN11-01 is a planned Tier 3 attack target ([§12](../SOC_HOMELAB_MASTER_DOCUMENTATION.md#12-attack-scope-agreed-red-team-test-plan)) where EDR telemetry is exactly what the later lateral-movement test needs to produce.
 
-This rollout was done entirely over SSH (`win11-01` alias, key-based auth — see `docs/troubleshooting/09_win11-01_ssh_access.md`), scripted rather than typed manually into the VM console, made possible by that prior session's work.
+This rollout was done entirely over SSH (`win11-01` alias, key-based auth — see `Documents/troubleshooting/09_win11-01_ssh_access.md`), scripted rather than typed manually into the VM console, made possible by that prior session's work.
 
 ---
 
 # What was done
 
 1. **Sysmon 15.21 + SwiftOnSecurity config**, same recipe as DC01
-   (`docs/troubleshooting/06_dc01_fleet_health_and_sysmon.md`): downloaded
+   (`Documents/troubleshooting/06_dc01_fleet_health_and_sysmon.md`): downloaded
    `Sysmon.zip` and the SwiftOnSecurity
    `sysmonconfig-export.xml`, installed via
    `Sysmon64.exe -accepteula -i sysmonconfig.xml`, all run over
@@ -89,7 +89,7 @@ server-side view lagging the agent's own local state) persisted for
 about 12 minutes before Fleet's view caught up.
 
 **This matches, and does not exceed, the same category of delay already
-documented for DC01** (`docs/troubleshooting/06_dc01_fleet_health_and_sysmon.md`:
+documented for DC01** (`Documents/troubleshooting/06_dc01_fleet_health_and_sysmon.md`:
 "components took longer to re-stabilize... ~5 min vs ~2 min" after a
 service restart). A first-time enrollment plausibly takes longer than a
 restart: the agent's own log for this install shows Elastic Defend
@@ -115,7 +115,7 @@ wsasend: An existing connection was forcibly closed by the remote host."
 
 on the `winlog-so-manager_logstash` and `filestream-monitoring`
 components. Port 5055 is the `beats_endpoint` hostgroup's port
-(`docs/guides/network_ports_and_hostgroups.md`) — the same port/
+(`Documents/guides/network_ports_and_hostgroups.md`) — the same port/
 hostgroup DC01 needed an explicit `so-firewall includehost` for on
 2026-07-13 before its own Fleet data would flow. Given that precedent,
 this looked like a plausible, concrete lead, and a real infrastructure
@@ -159,7 +159,7 @@ does not indicate a fault on either system.**
 - It does **not** prove there were no TCP `RST` packets involved — no
   new packet capture was taken during this WIN11-01 investigation (the
   earlier packet capture referenced in
-  `docs/troubleshooting/08_bazzite_host_elastic_agent.md` was for the
+  `Documents/troubleshooting/08_bazzite_host_elastic_agent.md` was for the
   Bazzite host on a different occasion, and is not restated as evidence
   here).
 - It **does** show, by direct same-moment comparison against a
@@ -198,7 +198,7 @@ including `winlog-windows.sysmon_operational`, all `HEALTHY`.
 Security Onion confirms `0.0.0.0:5055` in `LISTEN` state. The owning
 process/container name was not independently confirmed this session
 (no root/docker access available); per existing documentation
-(`docs/guides/network_ports_and_hostgroups.md`), this port belongs to
+(`Documents/guides/network_ports_and_hostgroups.md`), this port belongs to
 Logstash's beats input.
 
 **Hunt, queried directly (read-only, via Security Onion's Hunt UI):**

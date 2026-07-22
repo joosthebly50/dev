@@ -20,15 +20,15 @@ SOC-SecurityOnion (Fleet Server, 192.168.50.30)
 
 # Goal
 
-Priority 2 of the endpoint-monitoring phase (`docs/ROADMAP_ENDPOINT_MONITORING.md`): roll out Elastic Agent to ubuntu-server-01, reusing the Bazzite host's log/metrics-only `linux-endpoints-initial` Fleet policy (journald `system.auth`/`system.syslog` + `system/metrics`, no Elastic Defend — same scope decision as the Bazzite host, since this system's value is host-level telemetry during Tier 1/2 exploitation exercises, not EDR).
+Priority 2 of the endpoint-monitoring phase (`Documents/ROADMAP_ENDPOINT_MONITORING.md`): roll out Elastic Agent to ubuntu-server-01, reusing the Bazzite host's log/metrics-only `linux-endpoints-initial` Fleet policy (journald `system.auth`/`system.syslog` + `system/metrics`, no Elastic Defend — same scope decision as the Bazzite host, since this system's value is host-level telemetry during Tier 1/2 exploitation exercises, not EDR).
 
 ---
 
 # Prerequisite: SSH key-auth
 
-Joost set up key-based SSH auth for ubuntu-server-01 himself (`ssh-copy-id`-equivalent), the same way as WIN11-01 (`docs/troubleshooting/09_win11-01_ssh_access.md`). Independently verified: `ssh -o BatchMode=yes -o PasswordAuthentication=no ubuntu-server whoami` succeeds with no password.
+Joost set up key-based SSH auth for ubuntu-server-01 himself (`ssh-copy-id`-equivalent), the same way as WIN11-01 (`Documents/troubleshooting/09_win11-01_ssh_access.md`). Independently verified: `ssh -o BatchMode=yes -o PasswordAuthentication=no ubuntu-server whoami` succeeds with no password.
 
-**Correction found during this verification:** the actual SSH user is **`sysadmin`**, not `ubuntu` as every existing doc (`SERVERS.md`, `NETWORK.md`, `docs/ASSET_INVENTORY.md`, master doc) previously stated with a "key-auth not set up" caveat. `~/.ssh/config`'s `ubuntu-server` entry now reads `User sysadmin`. All docs updated accordingly (see the doc-correction commit for this rollout).
+**Correction found during this verification:** the actual SSH user is **`sysadmin`**, not `ubuntu` as every existing doc (`SERVERS.md`, `NETWORK.md`, `Documents/ASSET_INVENTORY.md`, master doc) previously stated with a "key-auth not set up" caveat. `~/.ssh/config`'s `ubuntu-server` entry now reads `User sysadmin`. All docs updated accordingly (see the doc-correction commit for this rollout).
 
 ---
 
@@ -113,5 +113,5 @@ This looked exactly like a real ingest failure and was reported as such. **It wa
 # What was deliberately NOT done
 
 - **Elasticsearch documents containing the exposed tokens were not deleted** — see Issue 2 above.
-- **No client-id/Client Identifier changes were made as part of this rollout** — that turned out to be a separate, later issue (DHCP reservation not being honored after reboot), see `docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`.
-- **Kali is not yet enrolled** — deliberately deferred per Joost's decision: a Red Team attack platform's full endpoint monitoring would capture attack tools/commands/test behavior, which has real value for Purple Team exercises but needs a deliberate scope/privacy decision first, not a default rollout. Tracked as an open item in `docs/ROADMAP_ENDPOINT_MONITORING.md`.
+- **No client-id/Client Identifier changes were made as part of this rollout** — that turned out to be a separate, later issue (DHCP reservation not being honored after reboot), see `Documents/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`.
+- **Kali is not yet enrolled** — deliberately deferred per Joost's decision: a Red Team attack platform's full endpoint monitoring would capture attack tools/commands/test behavior, which has real value for Purple Team exercises but needs a deliberate scope/privacy decision first, not a default rollout. Tracked as an open item in `Documents/ROADMAP_ENDPOINT_MONITORING.md`.

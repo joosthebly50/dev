@@ -93,7 +93,7 @@ Before answering questions about this project, read the relevant documentation.
 
 Main index:
 
-docs/INDEX.md
+Documents/INDEX.md
 
 ---
 
@@ -104,14 +104,14 @@ For project understanding:
 1. README.md
 2. PROJECT_RULES.md
 3. AI_ACCESS_POLICY.md
-4. docs/INDEX.md
+4. Documents/INDEX.md
 
 Then read the relevant sections:
 
-- docs/decisions/
-- docs/guides/
-- docs/troubleshooting/
-- docs/chat_history/
+- Documents/decisions/
+- Documents/guides/
+- Documents/troubleshooting/
+- Documents/chat_history/
 
 ---
 

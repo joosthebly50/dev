@@ -82,10 +82,10 @@ The official project knowledge source is:
 
 - README.md
 - PROJECT_RULES.md
-- docs/INDEX.md
-- docs/guides/
-- docs/troubleshooting/
-- docs/decisions/
+- Documents/INDEX.md
+- Documents/guides/
+- Documents/troubleshooting/
+- Documents/decisions/
 
 
 AI assistants must use existing documentation before making assumptions.

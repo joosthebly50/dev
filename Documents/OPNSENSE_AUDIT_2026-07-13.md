@@ -20,7 +20,7 @@ Deze audit heeft **zelf een fout gecorrigeerd die ik eerder op 2026-07-13 maakte
 
 **Conclusie: `.40` is het juiste, blijvende adres.** Vermoedelijke verklaring destijds: de VM had op het moment van de eerste check tijdelijk een adres uit de dynamische DHCP-pool (`.100`–`.200`, en `.100` is toevallig het eerste adres van die pool) — bijvoorbeeld doordat hij opstartte vóórdat zijn reservation actief/toegepast was, of een trage lease-renewal. Alle documentatie en de SSH-config zijn opnieuw gecorrigeerd, terug naar `.40`.
 
-> **Update 2026-07-14 — definitief root-cause bewezen, "vermoedelijk" hierboven vervangen:** dit was geen timing-toevalligheid. Elke boot van deze VM doet twee losse DHCP-onderhandelingen (een vroege dracut-fallback, dan de echte netplan-config), en zonder `dhcp-identifier: mac` gebruikte de tweede onderhandeling een RFC4361 IAID/DUID-identifier in plaats van het kale MAC-adres waar de reservation op is gekeyed — bevestigd rechtstreeks in Kea's eigen log. Fix: één regel in netplan, gevalideerd met een volledige reboot. Volledig verhaal: `docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`; nieuwe standaardregel voor toekomstige Linux-endpoints: `docs/decisions/architecture_decisions.md`.
+> **Update 2026-07-14 — definitief root-cause bewezen, "vermoedelijk" hierboven vervangen:** dit was geen timing-toevalligheid. Elke boot van deze VM doet twee losse DHCP-onderhandelingen (een vroege dracut-fallback, dan de echte netplan-config), en zonder `dhcp-identifier: mac` gebruikte de tweede onderhandeling een RFC4361 IAID/DUID-identifier in plaats van het kale MAC-adres waar de reservation op is gekeyed — bevestigd rechtstreeks in Kea's eigen log. Fix: één regel in netplan, gevalideerd met een volledige reboot. Volledig verhaal: `Documents/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`; nieuwe standaardregel voor toekomstige Linux-endpoints: `Documents/decisions/architecture_decisions.md`.
 
 **Les hieruit:** bij een systeem met een DHCP-reservation is een live ARP/netwerk-snapshot **niet** de autoritatieve bron voor "wat het IP hoort te zijn" — dat is de reservation-configuratie zelf. Een snapshot kan een tijdelijke afwijking laten zien. Voortaan: bij twijfel over een IP, eerst de DHCP-server-configuratie raadplegen, niet alleen een live scan.
 
@@ -174,10 +174,10 @@ Nog niet doorgevoerd in de brondocumenten — dit is het voorstel, ter beoordeli
 2. **De reservation-tabel (§4) als hét canonieke IP-plan documenteren**, met een expliciete waarschuwing dat een live ARP/scan-snapshot dit niet mag overrulen (zie de ubuntu-server-01-les).
 3. **`KALI`-alias (.157, verouderd)** als concreet opruimpunt noteren — voorstel: Joost werkt deze zelf bij in de OPNsense-UI (of geeft mij expliciet toestemming om dat te doen als infrastructuurwijziging, met de normale wijzigingsprocedure: uitleggen → risico → confirm → uitvoeren → documenteren).
 4. **MGMT-Debian** vermelden als legacy/inactieve VM die nog wel in de DHCP-config staat, om toekomstige verwarring te voorkomen.
-5. **Nieuwe sectie "OPNsense operationele aandachtspunten"** toevoegen aan `docs/PROJECT_STATUS.md`/masterdoc §11: geen update-check uitgevoerd sinds installatie, lege configuratie-revisiegeschiedenis (geen ingebouwd rollback-vangnet), geen NetFlow/Monit ondanks beschikbaarheid.
+5. **Nieuwe sectie "OPNsense operationele aandachtspunten"** toevoegen aan `Documents/PROJECT_STATUS.md`/masterdoc §11: geen update-check uitgevoerd sinds installatie, lege configuratie-revisiegeschiedenis (geen ingebouwd rollback-vangnet), geen NetFlow/Monit ondanks beschikbaarheid.
 6. **Expliciet vastleggen dat er géén LAN-interne segmentatie is** op OPNsense-niveau (elke labsysteem kan elk ander labsysteem bereiken) — relevant voor de portfolio-verhaallijn over netwerksegmentatie.
-7. **Correctie doorvoeren**: "OPNsense SSH regressie" herschrijven naar "wachtwoord-only login, bevestigd bedoeld gedrag" (al deels gedaan in `docs/ASSET_INVENTORY.md`, nog te doen in de masterdoc).
-8. **Dit document opnemen** in `docs/INDEX.md` en de "Document index" van de masterdoc.
+7. **Correctie doorvoeren**: "OPNsense SSH regressie" herschrijven naar "wachtwoord-only login, bevestigd bedoeld gedrag" (al deels gedaan in `Documents/ASSET_INVENTORY.md`, nog te doen in de masterdoc).
+8. **Dit document opnemen** in `Documents/INDEX.md` en de "Document index" van de masterdoc.
 
 ## Openstaande punten (niet met deze audit op te lossen)
 

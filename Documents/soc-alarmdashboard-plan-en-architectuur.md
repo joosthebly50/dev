@@ -2,7 +2,7 @@
 
 Dit document is geschreven om te delen met een andere AI (ter review/discussie),
 niet als permanente projectdocumentatie — dat laatste staat in
-`docs/guides/alarm_dashboard.md` in de repo zelf, en dat blijft de bron van
+`Documents/guides/alarm_dashboard.md` in de repo zelf, en dat blijft de bron van
 waarheid als dit document ooit afwijkt.
 
 ---
@@ -202,7 +202,7 @@ Suricata-signatures), maar mapt naar diezelfde vaste 15-lijst — dat is het
 - **Elke gevonden bug wordt met de oorzaak gedocumenteerd, niet stilzwijgend
   gepatcht.** Bijvoorbeeld: waarom een bepaalde Suricata-classificatietekst
   onbetrouwbaar bleek als signaal, staat expliciet in zowel de code-
-  commentaren als in `docs/guides/alarm_dashboard.md` — zodat een
+  commentaren als in `Documents/guides/alarm_dashboard.md` — zodat een
   volgende wijziging niet dezelfde fout opnieuw maakt.
 - **Onzekerheid wordt nooit weggegokt.** Als een signature niet zeker in
   een categorie past, valt hij in "Overig" — een eerlijke "weet ik niet",
@@ -212,7 +212,7 @@ Suricata-signatures), maar mapt naar diezelfde vaste 15-lijst — dat is het
   alleen het besef dat het huidige ontwerp (het gedeelde alert-contract)
   dat later toelaat zonder herbouw. Bouwen voor een hypothetische
   toekomst voegt nu alleen complexiteit toe zonder waarde.
-- **Eén levend architectuurdocument** (`docs/guides/alarm_dashboard.md` in
+- **Eén levend architectuurdocument** (`Documents/guides/alarm_dashboard.md` in
   de repo) dat na élke wijziging wordt bijgewerkt — niet een losstaand
   ontwerpdocument dat na een week alweer achterhaald is.
 - **Risicovolle features blijven bewust apart.** "Block IP" (een knop die
@@ -224,5 +224,5 @@ Suricata-signatures), maar mapt naar diezelfde vaste 15-lijst — dat is het
 ---
 
 *Gegenereerd 2026-07-15 als leesbaar document voor extern overleg. Voor de
-actuele, technische stand van zaken: zie `docs/guides/alarm_dashboard.md`
+actuele, technische stand van zaken: zie `Documents/guides/alarm_dashboard.md`
 en de git-geschiedenis in de Homelab-repo.*

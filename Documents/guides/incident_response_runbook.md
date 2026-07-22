@@ -3,7 +3,7 @@
 Een stappenplan voor wat je doet als er een alert verschijnt in Security
 Onion — of dat nu een echte aanval is, een test, of iets uit dit lab
 zelf (zoals een Purple Team-oefening uit
-`docs/guides/detection_use_cases.md`).
+`Documents/guides/detection_use_cases.md`).
 
 Dit is geschreven als een vast stappenplan, in volgorde. Sla geen
 stappen over, ook niet als iets onschuldig lijkt — dat is precies het
@@ -35,9 +35,9 @@ source.ip:"<IP>" OR destination.ip:"<IP>"
 Vragen:
 
 - Is dit IP-adres een systeem dat in dit lab hoort te bestaan? (zie
-  `docs/ASSET_INVENTORY.md`)
+  `Documents/ASSET_INVENTORY.md`)
 - Was er op dat moment bewust een test/oefening bezig? (check
-  `docs/daily/` van die dag)
+  `Documents/daily/` van die dag)
 - Gebeurde er nog meer rond hetzelfde tijdstip?
 
 ## Stap 3 — Kijk naar de host zelf (indien het een bekend lab-systeem is)
@@ -50,7 +50,7 @@ ssh dc01
 
 Bekijk lokale logs, actieve processen, en (voor DC01 specifiek) de
 Sysmon-events rond het tijdstip — zie
-`docs/guides/detection_use_cases.md` voor welke Sysmon event-ID's
+`Documents/guides/detection_use_cases.md` voor welke Sysmon event-ID's
 waarvoor staan.
 
 **Grens:** onderzoeken (lezen, zoeken, vergelijken) mag altijd zelfstandig.
@@ -62,7 +62,7 @@ van plan bent.
 
 Ook als het uiteindelijk een test of vals alarm blijkt te zijn: schrijf
 het op. Gebruik het dagrapport van die dag
-(`docs/daily/JJJJ-MM-DD/rapport.md`) met in elk geval:
+(`Documents/daily/JJJJ-MM-DD/rapport.md`) met in elk geval:
 
 - Wat de alert was.
 - Wat je hebt gecontroleerd.
@@ -70,8 +70,8 @@ het op. Gebruik het dagrapport van die dag
 
 Als het een écht, nieuw probleem blijkt te zijn (geen aanval, maar een
 technische storing zoals de DC01-Fleet-case), maak er dan ook een apart
-document voor in `docs/troubleshooting/`, met hetzelfde soort bewijs als
-in `docs/troubleshooting/06_dc01_fleet_health_and_sysmon.md`: wat was
+document voor in `Documents/troubleshooting/`, met hetzelfde soort bewijs als
+in `Documents/troubleshooting/06_dc01_fleet_health_and_sysmon.md`: wat was
 het probleem, wat was de oorzaak, wat is de oplossing, hoe is het
 getest.
 
@@ -107,8 +107,8 @@ Fleet-pagina de naam met hoofdletters.
 
 ## Gerelateerde documentatie
 
-- `docs/guides/detection_use_cases.md` — welke aanvallen dit lab hoort
+- `Documents/guides/detection_use_cases.md` — welke aanvallen dit lab hoort
   te detecteren, en hoe je ze veilig test.
-- `docs/guides/security_onion_browser_access.md` — hoe de browser-
+- `Documents/guides/security_onion_browser_access.md` — hoe de browser-
   toegang tot Security Onion werkt.
-- `docs/ASSET_INVENTORY.md` — welke IP's/systemen bij dit lab horen.
+- `Documents/ASSET_INVENTORY.md` — welke IP's/systemen bij dit lab horen.

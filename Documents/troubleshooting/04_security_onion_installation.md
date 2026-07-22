@@ -233,4 +233,4 @@ Opslaan:
 Daarna:
 
 ```bash
-ls -lh docs/troubleshooting
+ls -lh Documents/troubleshooting

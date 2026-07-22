@@ -16,7 +16,7 @@ naar het scherm te hoeven kijken.
 
 Dit is **niet hetzelfde** als het langer geplande "vier niveaus
 (INFO/WARNING/HIGH/CRITICAL) met Discord/Telegram-doorsturing" uit
-`docs/PROJECT_STATUS.md`/de masterdoc §11 — dat blijft een apart, nog niet
+`Documents/PROJECT_STATUS.md`/de masterdoc §11 — dat blijft een apart, nog niet
 gebouwd punt. Dit dashboard categoriseert op **aanvalstype**, niet op
 severity-niveau, en stuurt nergens naartoe buiten de Bazzite-host zelf.
 
@@ -516,7 +516,7 @@ Eigen client-side `HOST_NAMES`-map in `dashboard.html`, bewust apart van
 server.mjs's `HOST_NAMES` — die laatste spelt namen fonetisch uit voor
 Piper ("D C 0 1"), dit is voor de zichtbare tabel dus gewoon "DC01".
 Beide moeten met de hand gesynchroniseerd blijven met het IP-plan uit
-`docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §9 (net als de bestaande
+`Documents/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §9 (net als de bestaande
 `CATEGORIES`-kopie, al gedocumenteerd als een bewuste afweging).
 
 Live bevestigd via screenshot: severity-badges kloppen (H voor de Nmap-
@@ -701,7 +701,7 @@ verbinden met een levende daemon).
 Nieuwe metric in de gezondheidsbalk, naast de bestaande `WAN` (die is
 voor Joost's KPN-verbinding op deze host). `OPN-WAN` bewaakt OPNsense's
 **eigen** WAN-interface (het lab, sinds Fase 2 van
-`docs/decisions/architecture_decisions.md`'s migratieplan een echte
+`Documents/decisions/architecture_decisions.md`'s migratieplan een echte
 verbinding via `enp5s0`) — via `opnsense-traffic.mjs`, die al eerder was
 gebouwd tijdens de DDoS-discussie maar tot nu toe ongebruikt bleef (toen
 had OPNsense nog geen echte WAN om te bewaken). Server pollt elke 10s
@@ -713,7 +713,7 @@ op de eerste overgang, niet elke poll.
 
 Tijdens het testen hiervan kwam een echt isolatie-gat aan het licht: zie
 "Real isolation gap found and fixed" in
-`docs/decisions/architecture_decisions.md` voor de volledige uitleg en
+`Documents/decisions/architecture_decisions.md` voor de volledige uitleg en
 fix (twee nieuwe Floating-firewallregels die labverkeer naar Joost's
 eigen thuisnetwerk blokkeren, met behoud van labverkeer-onderling en
 echte internettoegang).

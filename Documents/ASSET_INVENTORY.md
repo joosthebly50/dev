@@ -31,7 +31,7 @@ geverifieerd, ⚠️ = niet deze sessie geverifieerd / uit ouder document.
 | `DC01` | 192.168.50.10 | `dc01` | `Administrator` | Windows Server 2022, Active Directory Domain Controller (PDC Emulator), domein `pentest.lab` | ✅ |
 | `WIN11-01` | 192.168.50.20 | `win11-01` *(✅ toegevoegd 2026-07-14 — OpenSSH Server door Joost ingeschakeld via VM-console; poort 22 nu open, was dicht)* | `pentest\administrator` (✅ key-auth bevestigd werkend, later 2026-07-14 — non-interactieve publickey-only test slaagt zonder wachtwoord) | Windows 11 werkstation, domain-joined als `DESKTOP-EFKB8GQ` (nooit hernoemd, staat nog in default `Computers`-container i.p.v. `OU=Workstations`) | ✅ |
 | `SOC-SecurityOnion` | 192.168.50.30 | `security-onion` | `socadmin` | Security Onion 3.1.0 standalone (SIEM/IDS/Fleet) | ✅ |
-| `ubuntu-server-01` | 192.168.50.40 *(✅ reservation-drift root-cause opgelost 2026-07-14, zie `docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`)* | `ubuntu-server` | `sysadmin` (✅ key-auth bevestigd werkend, 2026-07-14) | Linux-server, draait actief OWASP Juice Shop (poort 3000) | ✅ |
+| `ubuntu-server-01` | 192.168.50.40 *(✅ reservation-drift root-cause opgelost 2026-07-14, zie `Documents/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`)* | `ubuntu-server` | `sysadmin` (✅ key-auth bevestigd werkend, 2026-07-14) | Linux-server, draait actief OWASP Juice Shop (poort 3000) | ✅ |
 | ` ATTACK-Kali` (let op leidende spatie in naam) | 192.168.50.50 | `kali` | `blue1` | Kali Linux, Red Team-werkstation | ✅ |
 | `Target-Metasploitable2` | 192.168.50.70 *(nu geverifieerd)* | *(geen)* | — | Metasploitable2, kwetsbaar oefendoel — poortenprofiel bevestigt stock-image | ✅ |
 
@@ -56,8 +56,8 @@ geverifieerd, ⚠️ = niet deze sessie geverifieerd / uit ouder document.
 | Sysmon (op DC01) | 15.21 (schema 4.91) | ✅, geïnstalleerd 2026-07-13 |
 | Sysmon-configuratie | SwiftOnSecurity, schema 4.50 | ✅ |
 | Windows Server (DC01) | Windows Server 2022 Standard Evaluation | ✅ |
-| Elastic Agent (op WIN11-01) | 9.3.3 | ✅, Healthy in Fleet, geïnstalleerd + geverifieerd 2026-07-14 (zie `docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`) |
-| Elastic Agent (op ubuntu-server-01) | 9.3.3 | ✅, Healthy in Fleet (`linux-endpoints-initial`-policy, log/metrics-only), geïnstalleerd + geverifieerd 2026-07-14 (zie `docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`) |
+| Elastic Agent (op WIN11-01) | 9.3.3 | ✅, Healthy in Fleet, geïnstalleerd + geverifieerd 2026-07-14 (zie `Documents/troubleshooting/10_win11-01_sysmon_elastic_agent.md`) |
+| Elastic Agent (op ubuntu-server-01) | 9.3.3 | ✅, Healthy in Fleet (`linux-endpoints-initial`-policy, log/metrics-only), geïnstalleerd + geverifieerd 2026-07-14 (zie `Documents/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`) |
 | Sysmon (op WIN11-01) | 15.21 (schema 4.91), SwiftOnSecurity-config | ✅, geïnstalleerd 2026-07-14 |
 | Windows 11 (WIN11-01) | Windows 11 Enterprise Evaluation | ✅ |
 
@@ -73,7 +73,7 @@ geverifieerd, ⚠️ = niet deze sessie geverifieerd / uit ouder document.
 | Homelab VM Manager | Opent virt-manager, verbonden met `qemu:///system` |
 | Security Onion Operator | Opent een browservenster met alle belangrijke Security Onion/Kibana/Fleet-pagina's als tabs |
 
-Volledige uitleg: `docs/guides/desktop_launchers.md`.
+Volledige uitleg: `Documents/guides/desktop_launchers.md`.
 
 ---
 
@@ -82,7 +82,7 @@ Volledige uitleg: `docs/guides/desktop_launchers.md`.
 | Methode | Gebruikt voor | Documentatie |
 |---|---|---|
 | SSH-sleutels (`~/.ssh/config`) | dc01, security-onion, kali — bevestigd passwordless werkend 2026-07-13. `opnsense` en `ubuntu-server` staan in de config maar loggen momenteel niet passwordless in (zie open punten). | — |
-| Browser-sessie (Playwright, apart profiel) | Security Onion webinterface, Kibana, Fleet | `docs/guides/security_onion_browser_access.md` |
+| Browser-sessie (Playwright, apart profiel) | Security Onion webinterface, Kibana, Fleet | `Documents/guides/security_onion_browser_access.md` |
 | `virsh -c qemu:///system` | Beheer van VM's (start/stop/status) vanaf de hypervisor zelf | — |
 
 ---
@@ -112,7 +112,7 @@ Custom groepen: `SOC-Analysts` (lid: soctest), `Helpdesk` (geen leden).
 Opgelost deze sessie (live geverifieerd, zie boven): IP van
 `Target-Metasploitable2` (.70), IP van `ubuntu-server-01` (.40,
 bevestigd — inclusief een tussentijdse zelf-correctie na een OPNsense-
-audit, zie `docs/OPNSENSE_AUDIT_2026-07-13.md`), rol van
+audit, zie `Documents/OPNSENSE_AUDIT_2026-07-13.md`), rol van
 `ubuntu-server-01` (Juice Shop) en van `WIN11-01` (domain-joined
 client, dichtgetimmerde firewall), hardware-specs van de host, de AD
 OU/groepsstructuur, en de volledige OPNsense-configuratie.
@@ -123,14 +123,14 @@ Nog open:
   geen regressie. De eerdere `Permission denied` kwam doordat de test met
   `ssh -o BatchMode=yes` draaide, wat wachtwoord-prompts blokkeert.
   OPNsense's eigen Secure Shell-instellingen (bevestigd via de
-  read-only webinterface-audit, `docs/OPNSENSE_AUDIT_2026-07-13.md`)
+  read-only webinterface-audit, `Documents/OPNSENSE_AUDIT_2026-07-13.md`)
   tonen wachtwoord-login als de bedoelde, normale toegangsmethode voor
   `root` — er is nooit key-auth ingesteld voor dit systeem, dat is geen
   fout.
 - ~~`ubuntu-server-01` SSH-key-login werkt niet~~ — **opgelost 2026-07-14**:
   key-auth is nu bevestigd werkend (gebruiker `sysadmin`, niet `ubuntu`
   zoals eerder gedocumenteerd). Zie
-  `docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`.
+  `Documents/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`.
 - Exacte DHCP-ranges en DNS-forwarders op OPNsense (afhankelijk van het
   SSH-probleem hierboven, of handmatige controle via de web-UI).
 - PCI-passthrough van de WiFi-kaart naar Kali (niet herbevestigd, alleen

@@ -2,7 +2,7 @@
 // onderzoeken" button's backend. No AI/API calls, no secrets, runs
 // synchronously against whatever's already on this host (ss, the
 // dashboard's own connection list, and the knowledge base in
-// known-traffic.mjs). See docs/decisions/architecture_decisions.md,
+// known-traffic.mjs). See Documents/decisions/architecture_decisions.md,
 // "False-Positive Triage Agent", for why this is local-only rather than
 // a standalone AI service.
 //

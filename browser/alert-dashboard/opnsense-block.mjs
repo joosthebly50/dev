@@ -4,7 +4,7 @@
 // thing: add/remove single addresses from that alias's live runtime table.
 // It never creates or edits firewall RULES, and never touches the alias's
 // own saved definition -- both were created once, manually, by Joost in
-// the OPNsense UI (see docs/guides/alarm_dashboard.md for the exact
+// the OPNsense UI (see Documents/guides/alarm_dashboard.md for the exact
 // steps). Keeping this module that narrow means the worst this code can
 // ever do to the firewall is add/remove an IP from a list Joost already
 // reviewed and approved the *rule* for.

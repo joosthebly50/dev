@@ -83,7 +83,7 @@ Security Onion has two NICs: `pentest-lab` (.30, Fleet/Kibana/SSH/web) and `moni
 
 **Known naming bug:** the VM name ` ATTACK-Kali` has a literal leading space in libvirt (broke name-matching scripts once — [§7](#7-troubleshooting-history)). New scripts should match on UUID instead.
 
-**IP authority:** `docs/ASSET_INVENTORY.md` and `NETWORK.md` (2026-07-13) are authoritative — older docs and the 2026-07-09 daily report contain now-superseded IPs for Security Onion, Kali, ubuntu-server-01, and Metasploitable2; not repeated here.
+**IP authority:** `Documents/ASSET_INVENTORY.md` and `NETWORK.md` (2026-07-13) are authoritative — older docs and the 2026-07-09 daily report contain now-superseded IPs for Security Onion, Kali, ubuntu-server-01, and Metasploitable2; not repeated here.
 
 ### Virtual networks (libvirt)
 
@@ -97,7 +97,7 @@ Security Onion has two NICs: `pentest-lab` (.30, Fleet/Kibana/SSH/web) and `moni
 
 **Bazzite Linux.** CPU: Intel Core i9-11900K (8c/1s) · GPU: NVIDIA RTX 3090 · RAM: 62 GiB · WiFi: Intel AX210 (Wi-Fi 6E) · Virtualization: KVM/QEMU/libvirt/virt-manager. All ✅ live-verified. WiFi (AX210) is VFIO-passed through to `ATTACK-Kali` for wireless-pentest work, reconfirmed 2026-07-21 — also confirmed it can't run AP mode on any OS regardless of assignment (hardware/firmware limit), so it's not a candidate for the deferred WiFi-behind-OPNsense project either. ⚠️ Host-level Docker not reconfirmed — Juice Shop's actual location is `ubuntu-server-01`, not the host.
 
-**Since 2026-07-20, this host's own internet traffic also routes through OPNsense** (not just the lab's) — the OPNsense-as-primary-router migration, all 4 phases complete. OPNsense's WAN is a macvtap interface on a second physical NIC (`enp5s0`), getting its own DHCP lease from the real KPN router (double-NAT — the KPN Box 14 doesn't support bridge/modem-only mode, confirmed 2026-07-21). A tested one-action rollback (`scripts/network-fallback-to-kpn.sh`, the "KPN-terugval" panic button, also exposed as a dashboard button) forces this host's traffic back onto the direct KPN connection (`enp6s0`) if OPNsense ever has a problem. Full detail: `docs/decisions/architecture_decisions.md`.
+**Since 2026-07-20, this host's own internet traffic also routes through OPNsense** (not just the lab's) — the OPNsense-as-primary-router migration, all 4 phases complete. OPNsense's WAN is a macvtap interface on a second physical NIC (`enp5s0`), getting its own DHCP lease from the real KPN router (double-NAT — the KPN Box 14 doesn't support bridge/modem-only mode, confirmed 2026-07-21). A tested one-action rollback (`scripts/network-fallback-to-kpn.sh`, the "KPN-terugval" panic button, also exposed as a dashboard button) forces this host's traffic back onto the direct KPN connection (`enp6s0`) if OPNsense ever has a problem. Full detail: `Documents/decisions/architecture_decisions.md`.
 
 ### Traffic mirroring (`soc-mirror.service`)
 
@@ -105,7 +105,7 @@ Event-driven (`scripts/soc-mirror.sh`, triggered by a libvirt qemu hook on every
 
 ### DNS and DHCP
 
-**DHCP:** Kea DHCPv4 on OPNsense, LAN interface only. Subnet `192.168.50.0/24`, dynamic pool `.100`–`.200`, 7 static reservations (one per lab VM by MAC — the canonical IP plan, see [§9](#9-asset-inventory)). Option 6 pushes `192.168.50.10` (DC01) as DNS server. Kea DHCPv6 exists but has no interface assigned (inactive). **DNS:** DC01 (AD DNS) authoritative for `pentest.lab`; OPNsense's Unbound forwards the `pentest.lab` domain specifically to `192.168.50.10` and has one host override (`dc01.pentest.lab` → `.10`), everything else resolved/forwarded normally. Confirmed 2026-07-13 via a full read-only OPNsense audit — full detail: `docs/OPNSENSE_AUDIT_2026-07-13.md`.
+**DHCP:** Kea DHCPv4 on OPNsense, LAN interface only. Subnet `192.168.50.0/24`, dynamic pool `.100`–`.200`, 7 static reservations (one per lab VM by MAC — the canonical IP plan, see [§9](#9-asset-inventory)). Option 6 pushes `192.168.50.10` (DC01) as DNS server. Kea DHCPv6 exists but has no interface assigned (inactive). **DNS:** DC01 (AD DNS) authoritative for `pentest.lab`; OPNsense's Unbound forwards the `pentest.lab` domain specifically to `192.168.50.10` and has one host override (`dc01.pentest.lab` → `.10`), everything else resolved/forwarded normally. Confirmed 2026-07-13 via a full read-only OPNsense audit — full detail: `Documents/OPNSENSE_AUDIT_2026-07-13.md`.
 
 ### Security principles
 
@@ -131,11 +131,11 @@ virsh shutdown VMNAME       # graceful; --destroy only if stuck
 ```
 ⚠️ QEMU guest agent isn't configured by default per VM — install/enable in-guest before relying on guest-management features.
 
-**Own Elastic Agent (2026-07-14):** the host itself (IP `192.168.50.254` on the `virbr10`/`pentest-lab` bridge — distinct from OPNsense's `.1`) runs a log/metrics-only Elastic Agent (journald `system.auth`/`system.syslog` + system/metrics, no Elastic Defend by design — this is the machine every VM depends on). Confirmed Healthy/Connected in Fleet, confirmed to survive a full host reboot with zero manual steps. Ingest-side verified end-to-end the same day: a deliberate packet capture (zero TCP resets) plus a targeted Elasticsearch/Hunt query for the exact test window confirmed all 3 test `sudo` events fully indexed with correct field-level detail. An earlier same-day finding that journald logs never arrived was itself wrong — a diagnostic-method problem (the Fleet data-streams API doesn't reliably surface this bursty dataset), not a real delivery failure. Full investigation and methodology notes: `docs/troubleshooting/08_bazzite_host_elastic_agent.md`. Quick health check across this host + all 7 lab VMs: `scripts/soc-health-check.sh`.
+**Own Elastic Agent (2026-07-14):** the host itself (IP `192.168.50.254` on the `virbr10`/`pentest-lab` bridge — distinct from OPNsense's `.1`) runs a log/metrics-only Elastic Agent (journald `system.auth`/`system.syslog` + system/metrics, no Elastic Defend by design — this is the machine every VM depends on). Confirmed Healthy/Connected in Fleet, confirmed to survive a full host reboot with zero manual steps. Ingest-side verified end-to-end the same day: a deliberate packet capture (zero TCP resets) plus a targeted Elasticsearch/Hunt query for the exact test window confirmed all 3 test `sudo` events fully indexed with correct field-level detail. An earlier same-day finding that journald logs never arrived was itself wrong — a diagnostic-method problem (the Fleet data-streams API doesn't reliably surface this bursty dataset), not a real delivery failure. Full investigation and methodology notes: `Documents/troubleshooting/08_bazzite_host_elastic_agent.md`. Quick health check across this host + all 7 lab VMs: `scripts/soc-health-check.sh`.
 
 ### 3.2 OPNsense (firewall/gateway)
 
-Central firewall/gateway for 192.168.50.0/24 — firewall, routing, DHCP, DNS forwarding. IP `.1`. SSH alias `opnsense`, user `root`, password-only login by design (no key auth configured — confirmed via the OPNsense audit, not a regression). OPNsense 26.1.11_6-amd64 / FreeBSD 14.3. No custom firewall rules beyond the LAN/WAN defaults (no inter-VM segmentation at this layer), no VPN configured, single local admin user. Full configuration audit: `docs/OPNSENSE_AUDIT_2026-07-13.md`.
+Central firewall/gateway for 192.168.50.0/24 — firewall, routing, DHCP, DNS forwarding. IP `.1`. SSH alias `opnsense`, user `root`, password-only login by design (no key auth configured — confirmed via the OPNsense audit, not a regression). OPNsense 26.1.11_6-amd64 / FreeBSD 14.3. No custom firewall rules beyond the LAN/WAN defaults (no inter-VM segmentation at this layer), no VPN configured, single local admin user. Full configuration audit: `Documents/OPNSENSE_AUDIT_2026-07-13.md`.
 
 ### 3.3 DC01 — Active Directory Domain Controller
 
@@ -160,13 +160,13 @@ DC=pentest,DC=lab
 
 ### 3.4 WIN11-01 — Windows 11 workstation
 
-IP `.20`, SSH alias `win11-01` (`pentest\administrator`, key auth confirmed working — see `docs/troubleshooting/09_win11-01_ssh_access.md`). Domain-joined as `DESKTOP-EFKB8GQ` (never renamed, still in default `Computers` container). As of 2026-07-13, only TCP 135 was reachable; SMB/RDP/WinRM/139 were blocked by Windows Firewall. As of 2026-07-14, port 22 (SSH) is also open — Joost enabled OpenSSH Server himself via the VM console, a deliberate change, not a regression. Other ports not re-verified this session, assumed unchanged. ⚠️ Intended training purpose still undecided beyond "becomes a target after cleanup" — [§12](#12-attack-scope-agreed-red-team-test-plan).
+IP `.20`, SSH alias `win11-01` (`pentest\administrator`, key auth confirmed working — see `Documents/troubleshooting/09_win11-01_ssh_access.md`). Domain-joined as `DESKTOP-EFKB8GQ` (never renamed, still in default `Computers` container). As of 2026-07-13, only TCP 135 was reachable; SMB/RDP/WinRM/139 were blocked by Windows Firewall. As of 2026-07-14, port 22 (SSH) is also open — Joost enabled OpenSSH Server himself via the VM console, a deliberate change, not a regression. Other ports not re-verified this session, assumed unchanged. ⚠️ Intended training purpose still undecided beyond "becomes a target after cleanup" — [§12](#12-attack-scope-agreed-red-team-test-plan).
 
-**Monitoring (2026-07-14):** Elastic Agent 9.3.3 + Sysmon 15.21 (SwiftOnSecurity config) enrolled in Fleet under the same `endpoints-initial` policy DC01 uses (Windows Event Logs, Sysmon, Elastic Defend, osquery, metrics). **Healthy** — reached that state after Fleet's server-side view lagged the agent's own local status for ~12 minutes post-enrollment, comparable to DC01's documented stabilization delay, not a stuck state. Confirmed in Hunt: ~6,351 total events, ~1,004 `windows.sysmon_operational` events, current activity. Full investigation, including a firewall hostgroup step that was tested and found to be a no-op (not the fix) and a `wsasend` connection-reset message shown to also occur on DC01's healthy agent (so not diagnostic of a fault): `docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`.
+**Monitoring (2026-07-14):** Elastic Agent 9.3.3 + Sysmon 15.21 (SwiftOnSecurity config) enrolled in Fleet under the same `endpoints-initial` policy DC01 uses (Windows Event Logs, Sysmon, Elastic Defend, osquery, metrics). **Healthy** — reached that state after Fleet's server-side view lagged the agent's own local status for ~12 minutes post-enrollment, comparable to DC01's documented stabilization delay, not a stuck state. Confirmed in Hunt: ~6,351 total events, ~1,004 `windows.sysmon_operational` events, current activity. Full investigation, including a firewall hostgroup step that was tested and found to be a no-op (not the fix) and a `wsasend` connection-reset message shown to also occur on DC01's healthy agent (so not diagnostic of a fault): `Documents/troubleshooting/10_win11-01_sysmon_elastic_agent.md`.
 
 ### 3.5 ubuntu-server-01 — Linux server, active Red Team target
 
-IP `.40` — confirmed via OPNsense's own Kea DHCP reservation database. Previously seen drifting to `.100` (dynamic pool) after a reboot; **root cause proven and fixed 2026-07-14** (`docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`) — this Ubuntu image runs two DHCP negotiations per boot (an early dracut-fallback one, then the real netplan one), and without `dhcp-identifier: mac` the second used a non-MAC client identifier that Kea's reservation didn't match. Fixed with one netplan line; validated across a full reboot. SSH alias `ubuntu-server`/`sysadmin` (not `ubuntu` as earlier documented); key auth confirmed working. Elastic Agent installed and Healthy in Fleet (log/metrics-only, same scope as the Bazzite host) — `docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`. Runs **OWASP Juice Shop live** on port 3000 (HTTP-confirmed, not a leftover — it's up right now).
+IP `.40` — confirmed via OPNsense's own Kea DHCP reservation database. Previously seen drifting to `.100` (dynamic pool) after a reboot; **root cause proven and fixed 2026-07-14** (`Documents/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`) — this Ubuntu image runs two DHCP negotiations per boot (an early dracut-fallback one, then the real netplan one), and without `dhcp-identifier: mac` the second used a non-MAC client identifier that Kea's reservation didn't match. Fixed with one netplan line; validated across a full reboot. SSH alias `ubuntu-server`/`sysadmin` (not `ubuntu` as earlier documented); key auth confirmed working. Elastic Agent installed and Healthy in Fleet (log/metrics-only, same scope as the Bazzite host) — `Documents/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`. Runs **OWASP Juice Shop live** on port 3000 (HTTP-confirmed, not a leftover — it's up right now).
 
 ### 3.6 Security Onion — SOC platform
 
@@ -199,7 +199,7 @@ VM `Target-Metasploitable2`. IP `.70`. Stock, unmodified port fingerprint confir
 
 ### AI rules (binding on any AI assistant working on this project)
 
-Merged from `AI_ACCESS_POLICY.md`, `PROJECT_RULES.md`, `CLAUDE.md`. Claude Code acts as **a junior SOC engineer and documentation assistant**, not an autonomous administrator — documentation is treated as more reliable than its own memory; source of truth: `README.md`, `PROJECT_RULES.md`, `AI_ACCESS_POLICY.md`, `docs/INDEX.md`, `docs/guides/`, `docs/troubleshooting/`, `docs/decisions/`.
+Merged from `AI_ACCESS_POLICY.md`, `PROJECT_RULES.md`, `CLAUDE.md`. Claude Code acts as **a junior SOC engineer and documentation assistant**, not an autonomous administrator — documentation is treated as more reliable than its own memory; source of truth: `README.md`, `PROJECT_RULES.md`, `AI_ACCESS_POLICY.md`, `Documents/INDEX.md`, `Documents/guides/`, `Documents/troubleshooting/`, `Documents/decisions/`.
 
 **Allowed:** read/analyze documentation and configs, explain commands, suggest improvements, write/maintain documentation, troubleshoot (research, diagnosis, proposing fixes). AI assists — it doesn't replace administrator decisions.
 
@@ -304,7 +304,7 @@ Bazzite has no `gnome-terminal` — all terminal launchers use Konsole specifica
 | `security-onion` | .30 | socadmin | Key auth works |
 | `kali` | .50 | blue1 | Key auth works |
 | `ubuntu-server` | .40 | sysadmin | Key auth confirmed working (2026-07-14) |
-| `win11-01` | .20 | `pentest\administrator` | Added 2026-07-14, key auth confirmed working (see `docs/troubleshooting/09_win11-01_ssh_access.md`) |
+| `win11-01` | .20 | `pentest\administrator` | Added 2026-07-14, key auth confirmed working (see `Documents/troubleshooting/09_win11-01_ssh_access.md`) |
 
 ### 5.6 Quick reference
 
@@ -359,16 +359,16 @@ for i in 1 2 3 4 5; do ssh -o ConnectTimeout=3 -o BatchMode=yes nope@192.168.50.
 Fixed procedure for any alert — real, test, or exercise:
 
 1. **Confirm** — Security Onion Alerts/Detections: which rule, source/destination, when (SO shows local time, +02:00 summer), how often.
-2. **Context** — Hunt: `source.ip:"<IP>" OR destination.ip:"<IP>"`. Known lab system ([§9](#9-asset-inventory))? Deliberate test running (`docs/daily/`)? Anything else at that time?
+2. **Context** — Hunt: `source.ip:"<IP>" OR destination.ip:"<IP>"`. Known lab system ([§9](#9-asset-inventory))? Deliberate test running (`Documents/daily/`)? Anything else at that time?
 3. **Host check** (if SSH-reachable) — logs/processes, Sysmon events around the timestamp. Investigating is always fine independently; changing/restarting/isolating needs a quick explanation first unless already agreed.
-4. **Record** — write up in `docs/daily/YYYY-MM-DD/rapport.md` regardless of outcome; genuine new technical problems also get a `docs/troubleshooting/` doc.
+4. **Record** — write up in `Documents/daily/YYYY-MM-DD/rapport.md` regardless of outcome; genuine new technical problems also get a `Documents/troubleshooting/` doc.
 5. **If real** — don't panic (lab is isolated); consider isolating via `virsh` (explain first); preserve evidence before cleanup; document as step 4.
 
 **Quick Hunt queries:** `host.name:"<lowercase-name>"` · `... AND event.module:"windows"` · `... AND event.dataset:"windows.sysmon_operational"` · `source.ip:"<ip>" OR destination.ip:"<ip>"`. ⚠️ Hostnames index lowercase (`dc01`), even though Fleet displays capitalized.
 
 ### 6.3 Detection validation plan
 
-**In progress — [§12](#12-attack-scope-agreed-red-team-test-plan) test session started 2026-07-15 (Phase 3 of the project roadmap).** Every ⚠️ in [§6.1](#61-what-this-soc-should-detect) gets tested here rather than in a separate pass: Tier 1 (recon) covers scans/sweeps/fingerprinting/DNS; Tier 2 (Metasploitable2/Juice Shop exploitation) covers brute force, exploit signatures, reverse shells, Meterpreter, SQLi/injection; Sysmon "other" event IDs get tested on DC01 or WIN11-01 once it's a target. Method: run technique → check Hunt → flip ⚠️ to ✅/❌ with the query and evidence used. Also planned: one full runbook dry-run (§6.2) against a real alert from that pass, logged in `docs/daily/`.
+**In progress — [§12](#12-attack-scope-agreed-red-team-test-plan) test session started 2026-07-15 (Phase 3 of the project roadmap).** Every ⚠️ in [§6.1](#61-what-this-soc-should-detect) gets tested here rather than in a separate pass: Tier 1 (recon) covers scans/sweeps/fingerprinting/DNS; Tier 2 (Metasploitable2/Juice Shop exploitation) covers brute force, exploit signatures, reverse shells, Meterpreter, SQLi/injection; Sysmon "other" event IDs get tested on DC01 or WIN11-01 once it's a target. Method: run technique → check Hunt → flip ⚠️ to ✅/❌ with the query and evidence used. Also planned: one full runbook dry-run (§6.2) against a real alert from that pass, logged in `Documents/daily/`.
 
 **Tier 1 progress:**
 
@@ -426,7 +426,7 @@ Fixed procedure for any alert — real, test, or exercise:
 
 ## 7. Troubleshooting history
 
-Real problems from building this lab. Full evidence/commands/rollback steps live in `docs/troubleshooting/0N_*.md` — this is the summary.
+Real problems from building this lab. Full evidence/commands/rollback steps live in `Documents/troubleshooting/0N_*.md` — this is the summary.
 
 | # | Problem | Root cause | Fix / lesson |
 |---|---|---|---|
@@ -437,7 +437,7 @@ Real problems from building this lab. Full evidence/commands/rollback steps live
 | 7.5 | DC01 AD setup | — | DNS is the foundation AD depends on. Snapshot before promoting to DC (hard to cleanly undo). |
 | 7.7 | `soc-mirror.sh` libvirtd deadlock | Synchronous `virsh` callback from inside a libvirt qemu hook could hang libvirtd | Detached the reconciler via `systemd-run --no-block --collect`. |
 | 7.8 | libvirt/OPNsense DHCP conflict (2026-07-09) | libvirt's own DHCP collided with OPNsense's; `virbr10` claimed OPNsense's own IP | Stripped libvirt's `<ip>`/`<dhcp>` from the network definition — OPNsense is sole DHCP/DNS/gateway authority. Host got a separate mgmt IP (.254) restored at boot. |
-| 7.9 | `virbr10` bridge-port loss during OPNsense cutover (2026-07-20) | `nmcli connection up virbr10` fully reactivates an NM bridge-type connection, which rebuilds it from NM's own port list — libvirt's dynamically-attached VM taps aren't in that list, so every VM (incl. OPNsense) silently lost its bridge port | Restart affected VMs so libvirt recreates the taps. **Hard rule going forward: never `nmcli connection up/down` on `virbr10` (or any NM connection that's also a libvirt-managed bridge) — use `modify` + `device reapply` instead**, which updates IP/route config live without rebuilding the bridge. See [§7.9 below](#79-virbr10-bridge-port-loss-during-opnsense-cutover-2026-07-20) and `docs/decisions/architecture_decisions.md`. |
+| 7.9 | `virbr10` bridge-port loss during OPNsense cutover (2026-07-20) | `nmcli connection up virbr10` fully reactivates an NM bridge-type connection, which rebuilds it from NM's own port list — libvirt's dynamically-attached VM taps aren't in that list, so every VM (incl. OPNsense) silently lost its bridge port | Restart affected VMs so libvirt recreates the taps. **Hard rule going forward: never `nmcli connection up/down` on `virbr10` (or any NM connection that's also a libvirt-managed bridge) — use `modify` + `device reapply` instead**, which updates IP/route config live without rebuilding the bridge. See [§7.9 below](#79-virbr10-bridge-port-loss-during-opnsense-cutover-2026-07-20) and `Documents/decisions/architecture_decisions.md`. |
 
 ### 7.6 DC01 Fleet health & Sysmon telemetry (2026-07-13)
 
@@ -447,7 +447,7 @@ The largest case — three independent, stacked root causes behind one symptom (
 2. **~9h clock skew** — `vmictimesync` was fighting NTP at every boot (DC01, as PDC Emulator, doesn't behave like an ordinary NTP client). Disabled the service, forced `w32tm /resync`, added a boot-time scheduled task. Side effect: the skew had poisoned Logstash's dead-letter queue with rejected future-timestamped events — explains why `HEALTHY`-reporting agents still showed no data. **Lesson: agent-`HEALTHY` proves shipping, not acceptance.**
 3. **Sysmon never installed** — Fleet policy expected `windows.sysmon_operational` data that could never arrive. Installed Sysmon 15.21 + SwiftOnSecurity config.
 
-**Verified:** survives Elastic Agent restart, two DC01 reboots, and a full Security Onion reboot. Rollback procedures (firewall/clock/Sysmon/timezone) kept in `docs/troubleshooting/06_dc01_fleet_health_and_sysmon.md`, not repeated here.
+**Verified:** survives Elastic Agent restart, two DC01 reboots, and a full Security Onion reboot. Rollback procedures (firewall/clock/Sysmon/timezone) kept in `Documents/troubleshooting/06_dc01_fleet_health_and_sysmon.md`, not repeated here.
 
 **General lessons:** a "Healthy" status can hide multiple stacked root causes — validate across a real reboot, not just current state. Per-hostgroup firewall reachability doesn't generalize across ports. PDC Emulators aren't ordinary NTP clients.
 
@@ -461,7 +461,7 @@ Phase 4 of the OPNsense-as-primary-router migration (routing this host's own def
 
 **The fix pattern, now a hard rule:** never call `nmcli connection up|down` on `virbr10` (or any NM connection that's also a libvirt-managed bridge). Use `nmcli connection modify <uuid>` to stage a change, then `nmcli device reapply <device>` to push it live — `reapply` updates IP/route config on an already-active device without rebuilding it. `scripts/network-fallback-to-kpn.sh` (the migration's own panic button) follows this rule explicitly. Joost's own internet (`enp6s0`) was never actually affected throughout — only the lab was down, confirmed repeatedly via `curl`.
 
-Full detail: `docs/decisions/architecture_decisions.md`, "Build the Rollback Path Before Any OPNsense-as-Primary-Router Migration Step" (Phase 4 section).
+Full detail: `Documents/decisions/architecture_decisions.md`, "Build the Rollback Path Before Any OPNsense-as-Primary-Router Migration Step" (Phase 4 section).
 
 ---
 
@@ -487,7 +487,7 @@ Full detail: `docs/decisions/architecture_decisions.md`, "Build the Rollback Pat
 
 ## 9. Asset inventory
 
-_Full detail: `docs/ASSET_INVENTORY.md`._
+_Full detail: `Documents/ASSET_INVENTORY.md`._
 
 ### Physical host
 
@@ -535,12 +535,12 @@ SSH keys (`~/.ssh/config`) — passwordless for dc01/security-onion/kali/ubuntu-
 ### Open items
 
 - `opnsense` SSH password-only by design (confirmed via audit, not a regression) — key auth could still be added for convenience if desired.
-- OPNsense's own config-revision history is empty (no built-in rollback safety net) and it hasn't checked for firmware updates since install — see `docs/OPNSENSE_AUDIT_2026-07-13.md`.
+- OPNsense's own config-revision history is empty (no built-in rollback safety net) and it hasn't checked for firmware updates since install — see `Documents/OPNSENSE_AUDIT_2026-07-13.md`.
 - The `KALI` firewall alias in OPNsense still points at Kali's old IP (`.157`) — harmless (unused in any active rule) but worth cleaning up.
 - ~~`ubuntu-server-01` SSH key login doesn't work~~ — resolved 2026-07-14, key auth confirmed working (user `sysadmin`, not `ubuntu`).
 - ~~WiFi PCI-passthrough to Kali not reconfirmed~~ — reconfirmed 2026-07-21: the AX210 is VFIO-passed to `ATTACK-Kali` for wireless-pentest work, and separately confirmed it can't run AP mode on any OS regardless (hardware/firmware limit) — so it wouldn't be usable for the deferred WiFi-behind-OPNsense project even if reassigned. Stays with Kali.
 - WIN11-01's intended training purpose — see [§12](#12-attack-scope-agreed-red-team-test-plan).
-- WiFi-behind-OPNsense segmentation needs dedicated AP hardware (new purchase or a repurposed old router) — scoped and paused 2026-07-21, see `docs/decisions/architecture_decisions.md`.
+- WiFi-behind-OPNsense segmentation needs dedicated AP hardware (new purchase or a repurposed old router) — scoped and paused 2026-07-21, see `Documents/decisions/architecture_decisions.md`.
 
 ---
 
@@ -596,23 +596,23 @@ SSH keys (`~/.ssh/config`) — passwordless for dc01/security-onion/kali/ubuntu-
 
 ## 11. Current project status / what's next
 
-_Full detail: `docs/PROJECT_STATUS.md`._
+_Full detail: `Documents/PROJECT_STATUS.md`._
 
 ### ✅ Done
 
-Base infrastructure (all 7 VMs on `pentest-lab`) · event-driven traffic mirroring · AD operational · Security Onion operational (web UI, Kibana, Fleet, Hunt) · DC01 Healthy in Fleet, survives restarts/reboots · passwordless SSH to security-onion/kali/dc01 · six desktop launchers · read-only web-audit script · this documentation structure · live network/asset/AD verification pass (2026-07-13) · read-only OPNsense configuration audit (2026-07-13) · Elastic Agent on the Bazzite host itself, Healthy, confirmed reboot-survival, plus a central health-check script covering it and all 7 lab VMs (2026-07-14) · SSH access to WIN11-01 (2026-07-14) — OpenSSH Server enabled, integrated into `~/.ssh/config` and `lab-ssh-all.sh`/`soc-health-check.sh`, giving it the same admin path as the other lab systems · Elastic Agent + Sysmon on WIN11-01 (2026-07-14) — Healthy in Fleet, Elastic Defend/osquery/winlog/Sysmon/metrics all confirmed, telemetry verified in Hunt; endpoint-monitoring priority 1 of `docs/ROADMAP_ENDPOINT_MONITORING.md` done · Elastic Agent on ubuntu-server-01 (2026-07-14) — Healthy in Fleet, log/metrics-only, telemetry verified in Hunt; priority 2 done · ubuntu-server-01's long-standing `.100`-drift DHCP bug root-caused and fixed (2026-07-14) — see `docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md` · endpoint-monitoring phase fully closed (2026-07-15) — Kali will deliberately not get an Elastic Agent, Joost's final decision, not deferred · Phase 3 Tier 1 (recon) fully validated in Hunt (2026-07-15), see [§6.3](#63-detection-validation-plan) · SOC Alarmdashboard (2026-07-15) — live local banner+sound alerting on the Bazzite host per attack type, see `docs/guides/alarm_dashboard.md` · **OPNsense-as-primary-router migration, all 4 phases complete (2026-07-20)** — this host's own default traffic now routes through OPNsense (not just the lab's), with a tested one-action rollback ("KPN-terugval" panic button) if it ever needs undoing; real incident during the cutover ([§7.9](#79-virbr10-bridge-port-loss-during-opnsense-cutover-2026-07-20)) found, fixed, and turned into a standing hard rule · Alarmdashboard grown substantially (2026-07-20/21): search bar, per-connection WHOIS/GeoIP/authorization-gated SYN-scan, block-IP via a real OPNsense alias, kill-process, timed/permanent ban list, WAN-DDoS spike detection (on both this host's and OPNsense's own WAN, both with a qBittorrent exclusion) · **false-positive triage system** (2026-07-21) — a local, rule-based, no-AI engine (signature knowledge base + known-daily-process correlation + timing correlation) that now runs automatically on every new alert at ingestion, plus an on-demand periodic Claude Code check for novel cases; hard-gated so Reverse Shell/Priv Esc/Exploit/Credential Access/Lateral Movement/Persistence/MITM/SQLi/XSS alerts are never auto-dismissed · KPN Box 14 bridge-mode capability investigated and closed out (2026-07-21) — not supported on this fiber connection, confirmed via KPN's own community forum, documented as a permanent constraint rather than a pending task.
+Base infrastructure (all 7 VMs on `pentest-lab`) · event-driven traffic mirroring · AD operational · Security Onion operational (web UI, Kibana, Fleet, Hunt) · DC01 Healthy in Fleet, survives restarts/reboots · passwordless SSH to security-onion/kali/dc01 · six desktop launchers · read-only web-audit script · this documentation structure · live network/asset/AD verification pass (2026-07-13) · read-only OPNsense configuration audit (2026-07-13) · Elastic Agent on the Bazzite host itself, Healthy, confirmed reboot-survival, plus a central health-check script covering it and all 7 lab VMs (2026-07-14) · SSH access to WIN11-01 (2026-07-14) — OpenSSH Server enabled, integrated into `~/.ssh/config` and `lab-ssh-all.sh`/`soc-health-check.sh`, giving it the same admin path as the other lab systems · Elastic Agent + Sysmon on WIN11-01 (2026-07-14) — Healthy in Fleet, Elastic Defend/osquery/winlog/Sysmon/metrics all confirmed, telemetry verified in Hunt; endpoint-monitoring priority 1 of `Documents/ROADMAP_ENDPOINT_MONITORING.md` done · Elastic Agent on ubuntu-server-01 (2026-07-14) — Healthy in Fleet, log/metrics-only, telemetry verified in Hunt; priority 2 done · ubuntu-server-01's long-standing `.100`-drift DHCP bug root-caused and fixed (2026-07-14) — see `Documents/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md` · endpoint-monitoring phase fully closed (2026-07-15) — Kali will deliberately not get an Elastic Agent, Joost's final decision, not deferred · Phase 3 Tier 1 (recon) fully validated in Hunt (2026-07-15), see [§6.3](#63-detection-validation-plan) · SOC Alarmdashboard (2026-07-15) — live local banner+sound alerting on the Bazzite host per attack type, see `Documents/guides/alarm_dashboard.md` · **OPNsense-as-primary-router migration, all 4 phases complete (2026-07-20)** — this host's own default traffic now routes through OPNsense (not just the lab's), with a tested one-action rollback ("KPN-terugval" panic button) if it ever needs undoing; real incident during the cutover ([§7.9](#79-virbr10-bridge-port-loss-during-opnsense-cutover-2026-07-20)) found, fixed, and turned into a standing hard rule · Alarmdashboard grown substantially (2026-07-20/21): search bar, per-connection WHOIS/GeoIP/authorization-gated SYN-scan, block-IP via a real OPNsense alias, kill-process, timed/permanent ban list, WAN-DDoS spike detection (on both this host's and OPNsense's own WAN, both with a qBittorrent exclusion) · **false-positive triage system** (2026-07-21) — a local, rule-based, no-AI engine (signature knowledge base + known-daily-process correlation + timing correlation) that now runs automatically on every new alert at ingestion, plus an on-demand periodic Claude Code check for novel cases; hard-gated so Reverse Shell/Priv Esc/Exploit/Credential Access/Lateral Movement/Persistence/MITM/SQLi/XSS alerts are never auto-dismissed · KPN Box 14 bridge-mode capability investigated and closed out (2026-07-21) — not supported on this fiber connection, confirmed via KPN's own community forum, documented as a permanent constraint rather than a pending task.
 
 ### ⚠️ Open
 
-Security Onion OS-level timezone still UTC (cosmetic, blocked on root scope) · AD structural gaps (empty `Helpdesk` group, `IT Admin 01` not elevated, undifferentiated role accounts, empty `Workstations`/`Servers` OUs) — **to be deliberately fixed as part of [§12](#12-attack-scope-agreed-red-team-test-plan)**, not left as-is · the full §12 test pass, AD escalation-path build, and WIN11-01 cleanup are scoped and agreed but **not yet executed** — pre-change snapshots already taken (`DC01`: `2026-07-13-pre-ad-escalation-path`, `WIN11-01`: `2026-07-13-pre-target-cleanup`) · the Bazzite host's own Elastic Agent's log delivery is now verified end-to-end into Elasticsearch (see `docs/troubleshooting/08_bazzite_host_elastic_agent.md`), but not yet re-confirmed across a reboot cycle · WiFi-behind-OPNsense segmentation is scoped but blocked on sourcing dedicated AP hardware (the host's own WiFi can't be reused — see [§9 Open items](#open-items)) · the periodic false-positive triage `CronCreate` job is session-only (dies when the current Claude Code session ends, auto-expires after 7 days regardless) — not a 24/7 watcher, by deliberate choice (see `docs/decisions/architecture_decisions.md`).
+Security Onion OS-level timezone still UTC (cosmetic, blocked on root scope) · AD structural gaps (empty `Helpdesk` group, `IT Admin 01` not elevated, undifferentiated role accounts, empty `Workstations`/`Servers` OUs) — **to be deliberately fixed as part of [§12](#12-attack-scope-agreed-red-team-test-plan)**, not left as-is · the full §12 test pass, AD escalation-path build, and WIN11-01 cleanup are scoped and agreed but **not yet executed** — pre-change snapshots already taken (`DC01`: `2026-07-13-pre-ad-escalation-path`, `WIN11-01`: `2026-07-13-pre-target-cleanup`) · the Bazzite host's own Elastic Agent's log delivery is now verified end-to-end into Elasticsearch (see `Documents/troubleshooting/08_bazzite_host_elastic_agent.md`), but not yet re-confirmed across a reboot cycle · WiFi-behind-OPNsense segmentation is scoped but blocked on sourcing dedicated AP hardware (the host's own WiFi can't be reused — see [§9 Open items](#open-items)) · the periodic false-positive triage `CronCreate` job is session-only (dies when the current Claude Code session ends, auto-expires after 7 days regardless) — not a 24/7 watcher, by deliberate choice (see `Documents/decisions/architecture_decisions.md`).
 
 ### ❌ Planned
 
-Detection engineering confirmation ([§6.3](#63-detection-validation-plan), Tier 1 done, Tier 2/3 pending approval, Tier 2 vsftpd test already run 2026-07-15) · combined host/security/gaming dashboard · four-tier alerting (INFO/WARNING/HIGH/CRITICAL) with Discord/Telegram forwarding — **note:** a *different*, attack-type-categorized local dashboard now exists (`docs/guides/alarm_dashboard.md`), this severity-tier/external-forwarding design remains separately unbuilt · WiFi-behind-OPNsense segmentation, pending AP hardware · VLAN segmentation, separate mgmt/attack networks, additional Windows clients, honeypots, periodic Purple Team exercises.
+Detection engineering confirmation ([§6.3](#63-detection-validation-plan), Tier 1 done, Tier 2/3 pending approval, Tier 2 vsftpd test already run 2026-07-15) · combined host/security/gaming dashboard · four-tier alerting (INFO/WARNING/HIGH/CRITICAL) with Discord/Telegram forwarding — **note:** a *different*, attack-type-categorized local dashboard now exists (`Documents/guides/alarm_dashboard.md`), this severity-tier/external-forwarding design remains separately unbuilt · WiFi-behind-OPNsense segmentation, pending AP hardware · VLAN segmentation, separate mgmt/attack networks, additional Windows clients, honeypots, periodic Purple Team exercises.
 
 ### Keeping this current
 
-Every important change: update the specific source doc → `CHANGELOG.md` → `docs/PROJECT_STATUS.md` → a daily report in `docs/daily/` → this master document.
+Every important change: update the specific source doc → `CHANGELOG.md` → `Documents/PROJECT_STATUS.md` → a daily report in `Documents/daily/` → this master document.
 
 ---
 
@@ -663,8 +663,8 @@ Every important change: update the specific source doc → `CHANGELOG.md` → `d
 ## Document index
 
 Root: `README.md`, `LAB_OVERVIEW.md`, `PROJECT_RULES.md`, `AI_ACCESS_POLICY.md`, `NETWORK.md`, `SERVERS.md`, `SECURITY.md`, `ACTIVE_DIRECTORY.md`, `CHANGELOG.md`.
-`docs/`: `INDEX.md`, `ASSET_INVENTORY.md`, `GLOSSARY.md`, `PROJECT_STATUS.md`, `OPNSENSE_AUDIT_2026-07-13.md`, `ROADMAP_ENDPOINT_MONITORING.md`, `PHASE1_CLOSURE_SUMMARY.md`, `ROADMAP_OPNSENSE_LOGGING.md` (Phase 2A — Firewall + DHCP syslog forwarding, validated 2026-07-15), `ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md` (Unbound query logging, deliberately deferred 2026-07-15), `decisions/*.md`, `guides/*.md` (12 files, incl. `alarm_dashboard.md`), `troubleshooting/01`–`12`, `chat_history/*.md` (6 files), `daily/*/`, `screenshots/`.
+`Documents/`: `INDEX.md`, `ASSET_INVENTORY.md`, `GLOSSARY.md`, `PROJECT_STATUS.md`, `OPNSENSE_AUDIT_2026-07-13.md`, `ROADMAP_ENDPOINT_MONITORING.md`, `PHASE1_CLOSURE_SUMMARY.md`, `ROADMAP_OPNSENSE_LOGGING.md` (Phase 2A — Firewall + DHCP syslog forwarding, validated 2026-07-15), `ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md` (Unbound query logging, deliberately deferred 2026-07-15), `decisions/*.md`, `guides/*.md` (12 files, incl. `alarm_dashboard.md`), `troubleshooting/01`–`12`, `chat_history/*.md` (6 files), `daily/*/`, `screenshots/`, plus committed personal artifacts: `dagrapporten-pdf/`, `CV Cybersecurity.pdf`, `soc-alarmdashboard-plan-en-architectuur.md`.
 
-`pentest.lab - by Joost Hebly.md` (repo root) is an earlier, unmerged concatenation of the same sources, built for the portfolio deliverable — this document supersedes it as the synthesized reference.
+**Single `Documents/` folder (2026-07-22):** the former `docs/` (technical documentation) and `Documents/` (personal artifacts) were merged into one `Documents/` folder — the case-different pair was confusing on GitHub. `pentest.lab - by Joost Hebly.md` (repo root), an earlier unmerged concatenation of the same sources that this document had already superseded, was removed from the repo in the same pass (still recoverable from git history).
 
-**`Documents/` folder policy (2026-07-22):** daily-report PDFs (`dagrapporten-pdf/`) and portfolio artifacts are committed to this repo. Job-application material (CVs, motivation letters per company) is deliberately kept out of the public repo — it lives locally in `~/Documents/Sollicitaties/<Bedrijf>/`, outside the git working tree. A per-application example (`Documents/sollicitaties/WhiteHats/`) was briefly committed on 2026-07-21 and removed on 2026-07-22 once this was flagged as a privacy concern; it remains recoverable from git history unless that history is later rewritten.
+**Job-application material policy:** CVs and motivation letters per company are deliberately kept out of the public repo — they live locally in `~/Documents/Sollicitaties/<Bedrijf>/`, outside the git working tree. A per-application example (`Documents/sollicitaties/WhiteHats/`) was briefly committed on 2026-07-21 and removed on 2026-07-22 once this was flagged as a privacy concern; it remains recoverable from git history unless that history is later rewritten.

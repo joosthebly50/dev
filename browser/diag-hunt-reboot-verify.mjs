@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // One-off diagnostic: after the 2026-07-14 ~17:35 CEST Bazzite-host reboot
 // (deliberate reboot cycle #1 of the standing reproducibility requirement
-// from docs/troubleshooting/08_bazzite_host_elastic_agent.md), confirm the
+// from Documents/troubleshooting/08_bazzite_host_elastic_agent.md), confirm the
 // journald(system.auth) pipeline still delivers to Elasticsearch. Uses a
 // distinctive `logger -p auth.info` marker (no sudo needed) instead of a
 // sudo burst. Read-only, via Security Onion's own Hunt UI.

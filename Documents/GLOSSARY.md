@@ -73,7 +73,7 @@ hierboven) — let dus op de context.
 
 ## Firewall-hostgroup / portgroup
 
-Zie `docs/guides/network_ports_and_hostgroups.md` voor de volledige
+Zie `Documents/guides/network_ports_and_hostgroups.md` voor de volledige
 uitleg. Kort: een hostgroup is een naam voor een groep IP-adressen, een
 portgroup is een naam voor een groep poorten. Security Onion's firewall
 koppelt hostgroups aan portgroups om te bepalen wie bij welke poort mag.
@@ -146,7 +146,7 @@ regels voor netwerkverkeer) beschrijft welk patroon verdacht is.
 
 Het commandoregel-programma waarmee je Security Onion's eigen firewall
 beheert (hostgroups toevoegen/verwijderen, wijzigingen toepassen). Zie
-`docs/guides/network_ports_and_hostgroups.md`.
+`Documents/guides/network_ports_and_hostgroups.md`.
 
 ## Sysmon (System Monitor)
 

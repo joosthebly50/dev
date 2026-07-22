@@ -289,7 +289,7 @@ ls
 
 Daarna:
 
-ls docs/troubleshooting
+ls Documents/troubleshooting
 
 We waren bezig met:
 
@@ -297,12 +297,12 @@ We waren bezig met:
 
 Als die nog niet bestaat, maak je hem:
 
-nano docs/troubleshooting/05_dc01_active_directory_setup.md
+nano Documents/troubleshooting/05_dc01_active_directory_setup.md
 
 Dan kun je het plakblok van hierboven erin zetten.
 
 Als je daarna klaar bent:
 
-ls -lh docs/troubleshooting
+ls -lh Documents/troubleshooting
 
 Dan controleren we of alle 5 troubleshooting-documenten erin staan. 👍

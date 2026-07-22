@@ -58,7 +58,7 @@ Current project structure:
 
 Homelab/
 
-├── docs/
+├── Documents/
 ├── configs/
 ├── scripts/
 ├── backups/

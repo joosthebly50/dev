@@ -84,13 +84,13 @@ Controleer daarna in Security Onion → Hunt:
 destination.ip:"192.168.50.40" AND event.dataset:*ssh*
 ```
 
-Zie ook `docs/guides/incident_response_runbook.md` voor wat je doet als
+Zie ook `Documents/guides/incident_response_runbook.md` voor wat je doet als
 je een échte (of gesimuleerde) alert vindt.
 
 ---
 
 ## Gerelateerde documentatie
 
-- `docs/guides/incident_response_runbook.md`
-- `docs/PROJECT_STATUS.md` — dashboard/alarmniveau-plannen uit het
+- `Documents/guides/incident_response_runbook.md`
+- `Documents/PROJECT_STATUS.md` — dashboard/alarmniveau-plannen uit het
   oorspronkelijke Fortress Bazzite-ontwerp

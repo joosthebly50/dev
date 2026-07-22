@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Reboot cycle 2/2 verification, using the broader plain message:*marker*
 // wildcard query -- the query shape that actually worked for cycle 1, per
-// docs/troubleshooting/08_bazzite_host_elastic_agent.md ("Methodology
+// Documents/troubleshooting/08_bazzite_host_elastic_agent.md ("Methodology
 // note"). Read-only, via Security Onion's own Hunt UI.
 import { attachToDaemon, activePage, ARTIFACTS_DIR, timestamp } from './lib/browser.mjs';
 import { BASE } from './lib/pages.mjs';

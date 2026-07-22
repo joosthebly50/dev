@@ -17,7 +17,7 @@ TABSFILE="/tmp/homelab-ssh-tabs.txt"
 # come from ~/.ssh/config. WIN11-01 added 2026-07-14: OpenSSH Server is now
 # active there (Joost enabled it via the VM console), port 22 confirmed
 # open and the alias reaches the auth stage -- see
-# docs/troubleshooting/09_win11-01_ssh_access.md.
+# Documents/troubleshooting/09_win11-01_ssh_access.md.
 declare -A LABELS=(
   [opnsense]="OPNsense-FW"
   [security-onion]="Security Onion"

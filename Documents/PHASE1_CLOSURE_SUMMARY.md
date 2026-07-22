@@ -20,14 +20,14 @@ Give every real (non-attack-platform) system in the lab **host-level telemetry**
 | **ubuntu-server-01** | Log/metrics-only (journald `system.auth`/`system.syslog` + `system/metrics`), no Elastic Defend — same `linux-endpoints-initial` policy as the Bazzite host | ✅ Healthy, verified in Hunt |
 | ATTACK-Kali | — | ❌ Deliberately not implemented (see below) |
 
-Full rollout detail: `docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`, `docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`.
+Full rollout detail: `Documents/troubleshooting/10_win11-01_sysmon_elastic_agent.md`, `Documents/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`.
 
 ---
 
 ## Problems solved
 
 **WIN11-01:**
-- No remote-admin path at all (SSH now set up, key-auth working) — `docs/troubleshooting/09_win11-01_ssh_access.md`.
+- No remote-admin path at all (SSH now set up, key-auth working) — `Documents/troubleshooting/09_win11-01_ssh_access.md`.
 - Fleet's server-side status lagged real local health by ~12 minutes after enrollment — investigated, found benign (first-time Elastic Defend artifact download), not a stuck state.
 - A `wsasend` connection-reset message was investigated as a possible fault and explicitly **ruled out** — DC01's already-healthy agent showed the identical message; a firewall-hostgroup re-check that looked like a plausible fix turned out to be a no-op.
 
@@ -36,14 +36,14 @@ Full rollout detail: `docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`,
 - **Two separate enrollment-token exposures** (`bash -x`, and separately `sudo`/PAM command-line auditing) — both tokens revoked immediately on discovery; the audit-trail entries were deliberately preserved, not deleted (revoke the credential, don't tamper with the forensic record).
 - A genuinely missing Security Onion firewall hostgroup for `.40` — found via `so-firewall.log` evidence (0 entries vs. other hosts' several), fixed, confirmed as a real change this time.
 - A ~20-minute "Hunt shows no new data" false alarm — traced to a stale/cached state in one specific reused browser tab, not a real ingest gap.
-- **The long-standing `.100`-drift DHCP reservation bug**, previously only worked around, was root-caused and permanently fixed: two DHCP negotiations occur per boot (an early dracut-managed one, then the real netplan-managed one), and only one of them sent the MAC-based client identifier the reservation is keyed on. Fixed with one netplan line (`dhcp-identifier: mac`), proven with Kea's own log, validated across three independent boot cycles including a full cold power-cycle. Full RCA: `docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`.
+- **The long-standing `.100`-drift DHCP reservation bug**, previously only worked around, was root-caused and permanently fixed: two DHCP negotiations occur per boot (an early dracut-managed one, then the real netplan-managed one), and only one of them sent the MAC-based client identifier the reservation is keyed on. Fixed with one netplan line (`dhcp-identifier: mac`), proven with Kea's own log, validated across three independent boot cycles including a full cold power-cycle. Full RCA: `Documents/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`.
 
 ---
 
 ## Design decisions made
 
 1. **Log/metrics-only vs. full EDR is a deliberate per-host scope choice**, not a default: the Bazzite host and ubuntu-server-01 stay log/metrics-only (the former is the hypervisor everything else depends on; the latter's value is host-level exploitation telemetry, not endpoint protection). WIN11-01 gets full EDR because it's a planned Tier 3 attack target where Elastic Defend telemetry has direct value for the later lateral-movement test.
-2. **`dhcp-identifier: mac` is now a standing architecture rule** (`docs/decisions/architecture_decisions.md`) for any future dracut/netplan-based Linux VM that gets a DHCP reservation — applied at VM-creation time going forward, not rediscovered per host.
+2. **`dhcp-identifier: mac` is now a standing architecture rule** (`Documents/decisions/architecture_decisions.md`) for any future dracut/netplan-based Linux VM that gets a DHCP reservation — applied at VM-creation time going forward, not rediscovered per host.
 3. **Credential-exposure incident response pattern established**: revoke the exposed credential immediately, verify the already-running system is unaffected, and deliberately leave the audit-trail log entries intact rather than deleting them — treat it as a documented incident, not something to be scrubbed.
 4. **Never pass a secret as a `sudo`-prefixed command-line argument on a host where command-line auditing ships to the SIEM** — this is exactly what the journald `system.auth` integration is designed to capture, and it captured its own enrollment token as a result. Flagged as unresolved tooling debt for any future Linux enrollment (Kali, if ever revisited): use an environment variable or interactive/non-`sudo`-prefixed invocation instead.
 
@@ -78,4 +78,4 @@ Full rollout detail: `docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`,
 
 ---
 
-Phase 1 is closed. See `docs/ROADMAP_OPNSENSE_LOGGING.md` for the Phase 2 design proposal (planning only — no changes made yet).
+Phase 1 is closed. See `Documents/ROADMAP_OPNSENSE_LOGGING.md` for the Phase 2 design proposal (planning only — no changes made yet).

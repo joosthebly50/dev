@@ -12,7 +12,7 @@ The documentation is the source of truth for the project.
 
 # Documentation Structure
 
-docs/
+Documents/
 
 ├── chat_history/
 ├── decisions/
@@ -65,7 +65,7 @@ Important files:
 Location:
 
 
-docs/chat_history/
+Documents/chat_history/
 
 
 Purpose:
@@ -95,7 +95,7 @@ Use this when understanding:
 Location:
 
 
-docs/decisions/
+Documents/decisions/
 
 
 Contains:
@@ -127,7 +127,7 @@ Explains:
 Location:
 
 
-docs/guides/
+Documents/guides/
 
 
 Contains step-by-step build documentation.
@@ -204,7 +204,7 @@ Covers:
 Location:
 
 
-docs/troubleshooting/
+Documents/troubleshooting/
 
 
 Contains real problems encountered during the build.
@@ -331,7 +331,7 @@ Covers:
 
 - Executive Summary + proven root cause (via Kea's own log, not inference) for why ubuntu-server-01 sometimes ended up on `.100` instead of its reserved `.40` after a reboot
 - All eight hypotheses investigated, each with its own test and evidence: Kea reservation misconfigured, rogue DHCP server, Security Onion firewall, Dnsmasq DHCP also enabled, stale persisted lease, changed MAC, Kea allocation bug (all rejected), and the confirmed one — mismatched DHCPv4 client identifiers between the two per-boot DHCP negotiations (dracut fallback vs. real netplan config)
-- Fix: `dhcp-identifier: mac` in netplan — see also `docs/decisions/architecture_decisions.md` for the standing rule this sets for future Linux endpoints
+- Fix: `dhcp-identifier: mac` in netplan — see also `Documents/decisions/architecture_decisions.md` for the standing rule this sets for future Linux endpoints
 - **Three** independent full boot-cycle validations (two warm reboots, one full cold power-cycle) — Kea log proof of the corrected DORA exchange in every cycle, no regressions
 
 
@@ -342,7 +342,7 @@ Covers:
 Location:
 
 
-docs/screenshots/
+Documents/screenshots/
 
 
 Purpose:
@@ -366,7 +366,7 @@ Read:
 1. README.md
 2. PROJECT_RULES.md
 3. AI_ACCESS_POLICY.md
-4. docs/INDEX.md
+4. Documents/INDEX.md
 5. Relevant documentation folders
 
 

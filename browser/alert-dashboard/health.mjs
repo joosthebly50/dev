@@ -7,7 +7,7 @@
 // so matching its responsiveness just means polling this ourselves more
 // often, not invoking MangoHud directly. Security Onion's own component
 // health (Suricata/Zeek/Elasticsearch/Fleet) is a separate, not-yet-built
-// piece -- see docs/guides/alarm_dashboard.md "Toekomstige uitbreidbaarheid".
+// piece -- see Documents/guides/alarm_dashboard.md "Toekomstige uitbreidbaarheid".
 import fs from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -26,7 +26,7 @@ const NETWORK_INTERFACE = 'virbr10';
 // traffic all goes out here, so THIS is the interface that matters for
 // "am I being flooded" -- not the lab bridge, and not OPNsense's WAN (which
 // currently only serves the isolated lab, not this host's own internet
-// path -- see docs/guides/alarm_dashboard.md, "WAN-piekdetectie").
+// path -- see Documents/guides/alarm_dashboard.md, "WAN-piekdetectie").
 // Hardcoded interface name, like NETWORK_INTERFACE above: not guaranteed
 // stable if hardware changes, but stable across reboots on this host.
 const KPN_INTERFACE = 'enp6s0';

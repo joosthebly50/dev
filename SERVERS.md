@@ -7,7 +7,7 @@ Laatst gecontroleerd tegen de werkelijke omgeving: 2026-07-13.
 This document contains technical information about all systems inside the SOC Homelab environment.
 
 Voor de volledige lijst met IP's, SSH-aliassen en verificatiestatus in
-één tabel: zie `docs/ASSET_INVENTORY.md`. Dit document beschrijft elk
+één tabel: zie `Documents/ASSET_INVENTORY.md`. Dit document beschrijft elk
 systeem in meer detail (rol, functies, doel).
 
 ---
@@ -103,7 +103,7 @@ Aanvullende details (✅ geverifieerd 2026-07-13):
 - DC01 is de PDC Emulator van dit domein (enige domeincontroller).
 - SSH: alias `dc01`, gebruiker `Administrator`.
 - Tijdzone: `W. Europe Standard Time` (Amsterdam/CEST). Zie
-  `docs/troubleshooting/06_dc01_fleet_health_and_sysmon.md` voor de
+  `Documents/troubleshooting/06_dc01_fleet_health_and_sysmon.md` voor de
   reden — DC01 had een terugkerend klokprobleem dat via NTP is opgelost.
 
 
@@ -136,7 +136,7 @@ werkend — een non-interactieve test (`PreferredAuthentications=publickey`,
 `dc01`/`ubuntu-server`); Joost heeft de publieke sleutel zelf op WIN11-01
 geplaatst. `win11-01` is dus vanaf nu de standaard SSH-toegang voor
 beheerwerk op dit systeem, net als bij Bazzite en Security Onion. Volledig
-verhaal: `docs/troubleshooting/09_win11-01_ssh_access.md`.
+verhaal: `Documents/troubleshooting/09_win11-01_ssh_access.md`.
 
 Purpose:
 
@@ -177,7 +177,7 @@ IP Address:
 
 192.168.50.40
 
-(Tweede correctie op 2026-07-13, zie `docs/OPNSENSE_AUDIT_2026-07-13.md`
+(Tweede correctie op 2026-07-13, zie `Documents/OPNSENSE_AUDIT_2026-07-13.md`
 voor het volledige bewijs van toen. **Definitief root-cause bewezen
 2026-07-14** — dit was geen eenmalige timing-toevalligheid: elke boot
 doet twee losse DHCP-onderhandelingen (een vroege dracut-fallback, dan
@@ -189,8 +189,8 @@ log (verschillende `cid=` per onderhandeling, verschillend resultaat).
 **Fix:** `dhcp-identifier: mac` toegevoegd aan
 `/etc/netplan/00-installer-config.yaml` voor `enp1s0`; geverifieerd met
 een volledige reboot — beide DHCP-fases in die boot kregen `.40`. Zie
-`docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md` en
-`docs/decisions/architecture_decisions.md` (nieuwe standaardregel voor
+`Documents/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md` en
+`Documents/decisions/architecture_decisions.md` (nieuwe standaardregel voor
 elke toekomstige Linux-endpoint met een reservation).)
 
 SSH:
@@ -200,7 +200,7 @@ eerder stond hier `ubuntu`, dat bleek onjuist). **Key-auth bevestigd
 werkend** sinds 2026-07-14 (Joost heeft de public key zelf geplaatst) —
 `ubuntu-server` is vanaf nu de standaard SSH-toegang, net als bij de
 overige lab-systemen. Zie
-`docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`.
+`Documents/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`.
 
 Purpose:
 

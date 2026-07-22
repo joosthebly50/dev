@@ -1,7 +1,7 @@
 // Read-only: check whether OPNsense's Dnsmasq DNS & DHCP service is
 // enabled (a second, independent DHCP service besides Kea -- ruled out
 // as the source of ubuntu-server-01's stray .100 lease on 2026-07-14,
-// see docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md).
+// see Documents/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md).
 // Requires the OPNsense browser daemon (browser/launch-opnsense-daemon.mjs)
 // already running and logged in on port 9333.
 import { chromium } from 'playwright';

@@ -33,7 +33,7 @@ access to VM consoles, only to the network.
 **Goal:** give WIN11-01 the same SSH-based admin path as the other lab
 systems, so it no longer needs console-only management — in particular
 so the upcoming Elastic Agent + Sysmon rollout (see
-`docs/ROADMAP_ENDPOINT_MONITORING.md`) can be scripted/assisted the same
+`Documents/ROADMAP_ENDPOINT_MONITORING.md`) can be scripted/assisted the same
 way DC01's was, instead of requiring Joost to type every command by hand
 into the VM console.
 
@@ -165,7 +165,7 @@ expected, unrelated, documented since 2026-07-14's health-check script.
 # Why this matters for the current phase
 
 This directly unblocks the WIN11-01 Elastic Agent + Sysmon rollout
-(`docs/ROADMAP_ENDPOINT_MONITORING.md`, priority 1 of the endpoint-
+(`Documents/ROADMAP_ENDPOINT_MONITORING.md`, priority 1 of the endpoint-
 monitoring phase Joost set on 2026-07-14): the Sysmon and
 `elastic-agent install` steps can now potentially be run over SSH
 instead of requiring every command to be typed manually into the VM
@@ -176,7 +176,7 @@ console — to be confirmed once that rollout is actually attempted.
 # Addendum: key-auth confirmed working (later 2026-07-14)
 
 Later the same day, ahead of the WIN11-01 Sysmon + Elastic Agent rollout
-(`docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`), Joost placed
+(`Documents/troubleshooting/10_win11-01_sysmon_elastic_agent.md`), Joost placed
 the public key on WIN11-01 himself (outside AI access, same reasoning as
 enabling OpenSSH Server above). Independent verification, following the
 same standing rule as everywhere else in this file (test before trusting):

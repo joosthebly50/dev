@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # "Paniekknop" voor het OPNsense-als-hoofdrouter-migratieplan (zie
-# docs/decisions/architecture_decisions.md, "OPNsense-migratie-fallback").
+# Documents/decisions/architecture_decisions.md, "OPNsense-migratie-fallback").
 #
 # Dwingt af dat deze host (weer) rechtstreeks via de KPN-router internet
 # haalt (enp6s0), ongeacht wat er verder aan routing-configuratie bij een

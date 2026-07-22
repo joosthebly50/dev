@@ -8,7 +8,7 @@ connection, open the Security Onion browser environment, and open the live
 alarm dashboard. The first four were built to replace several earlier,
 inconsistent attempts at the same thing (see "History" below); the last two
 were added later (Security Onion Operator on 2026-07-12, SOC Alarmdashboard
-on 2026-07-15, see `docs/guides/alarm_dashboard.md`).
+on 2026-07-15, see `Documents/guides/alarm_dashboard.md`).
 
 ---
 
@@ -31,7 +31,7 @@ on 2026-07-15, see `docs/guides/alarm_dashboard.md`).
 | SSH Alle Machines | `lab-ssh-all.sh` (the script itself opens Konsole -- see below) |
 | Homelab VM Manager | `flatpak run org.virt_manager.virt-manager --connect qemu:///system` |
 | Security Onion Operator | `scripts/soc-browser.sh` |
-| SOC Alarmdashboard | `scripts/soc-alarm-dashboard.sh` — see `docs/guides/alarm_dashboard.md` |
+| SOC Alarmdashboard | `scripts/soc-alarm-dashboard.sh` — see `Documents/guides/alarm_dashboard.md` |
 
 `--hold` keeps the Start/Stop Konsole windows open after the script finishes so
 the summary stays readable until closed manually. All terminal launchers use
@@ -83,7 +83,7 @@ connection test, not assumed):
 | `security-onion` | 192.168.50.30 | socadmin | SSH confirmed, key auth already works |
 | `kali` | 192.168.50.50 | blue1 | SSH confirmed, key auth already works |
 | `ubuntu-server` | 192.168.50.40 | ubuntu | SSH port confirmed open; **username not verified**, edit if wrong |
-| `win11-01` | 192.168.50.20 | `pentest\administrator` | Added 2026-07-14 -- SSH confirmed, key auth already works (confirmed later the same day: non-interactive publickey-only test logs in with no password). See `docs/troubleshooting/09_win11-01_ssh_access.md`. |
+| `win11-01` | 192.168.50.20 | `pentest\administrator` | Added 2026-07-14 -- SSH confirmed, key auth already works (confirmed later the same day: non-interactive publickey-only test logs in with no password). See `Documents/troubleshooting/09_win11-01_ssh_access.md`. |
 
 Previously, `WIN11-01` (192.168.50.20) was checked and excluded: port 22
 didn't respond (no SSH server -- normal default state for a Windows 11

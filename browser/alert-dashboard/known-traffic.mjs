@@ -72,7 +72,7 @@ export const BENIGN_SIGNATURE_PATTERNS = [
 
 // Signature patterns that must NEVER be waved through by the local agent,
 // regardless of any correlation match -- mirrors the hard safety rule in
-// the CronCreate prompt (docs/decisions/architecture_decisions.md, "False-
+// the CronCreate prompt (Documents/decisions/architecture_decisions.md, "False-
 // Positive Triage Agent"), enforced here too so the local (button-
 // triggered) path can't accidentally be looser than the scheduled one.
 export const NEVER_AUTO_DISMISS_BUCKETS = new Set([

@@ -3,8 +3,8 @@
 Dit is de centrale pagina om te zien: wat is af, wat loopt er nu, en wat
 is gepland? Laatst bijgewerkt: 2026-07-15.
 
-Voor de dag-op-dag geschiedenis: `docs/daily/`.
-Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
+Voor de dag-op-dag geschiedenis: `Documents/daily/`.
+Voor opgeloste problemen met technisch bewijs: `Documents/troubleshooting/`.
 
 ---
 
@@ -18,7 +18,7 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
 | 2026-07-11 | — | Volledige documentatiestructuur opgezet (README, regels, netwerk-, server- en AD-documentatie, troubleshooting-geschiedenis). |
 | 2026-07-12 | — | Geheim (`Secure/SOC-Secure.img`) uit git-geschiedenis verwijderd. Desktop-launchers gebouwd. Event-driven traffic mirroring (`soc-mirror.service`) herschreven. Browser-automatisering voor Security Onion gebouwd. |
 | 2026-07-13 | — | DC01's Fleet-storing volledig opgelost (firewall, klok, Sysmon). Documentatiestructuur flink uitgebreid: dagrapporten, asset-inventaris, glossarium, netwerk-/poortoverzicht, incident-response-runbook, detectie-use-cases. Read-only OPNsense-audit uitgevoerd. |
-| 2026-07-14 | — | Elastic Agent geïnstalleerd op de Bazzite-host zelf (log/metrics-only, geen Elastic Defend), bevestigd Healthy in Fleet en bevestigd dat dit een host-reboot overleeft. Centraal health-check script (`scripts/soc-health-check.sh`) en een roadmap voor uitrol naar overige endpoints (`docs/ROADMAP_ENDPOINT_MONITORING.md`) toegevoegd. |
+| 2026-07-14 | — | Elastic Agent geïnstalleerd op de Bazzite-host zelf (log/metrics-only, geen Elastic Defend), bevestigd Healthy in Fleet en bevestigd dat dit een host-reboot overleeft. Centraal health-check script (`scripts/soc-health-check.sh`) en een roadmap voor uitrol naar overige endpoints (`Documents/ROADMAP_ENDPOINT_MONITORING.md`) toegevoegd. |
 
 ---
 
@@ -43,7 +43,7 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
 - ✅ Elastic Agent op de Bazzite-host zelf (log/metrics-only via journald,
   geen Elastic Defend), Healthy in Fleet, bevestigd bestand tegen een
   volledige host-reboot. Zie
-  `docs/troubleshooting/08_bazzite_host_elastic_agent.md`.
+  `Documents/troubleshooting/08_bazzite_host_elastic_agent.md`.
 - ✅ Centraal health-check script (`scripts/soc-health-check.sh`):
   libvirt-status, ping en SSH-bereikbaarheid van alle 7 lab-VM's plus de
   Elastic Agent-status van de Bazzite-host, in één commando.
@@ -54,13 +54,13 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   meetfout (verkeerde diagnose-API), geen echt probleem: een gerichte
   packet capture + Hunt-query op de exacte testvensters bevestigde alle
   3 test-events end-to-end, zonder TCP-resets. Zie
-  `docs/troubleshooting/08_bazzite_host_elastic_agent.md`.
+  `Documents/troubleshooting/08_bazzite_host_elastic_agent.md`.
 - ✅ Beide vereiste reboot-cycli (Bazzite-host + Security Onion) uitgevoerd
   en bevestigd: in beide gevallen werd een verse `logger`-marker na de
   herstart end-to-end teruggevonden in Elasticsearch via Hunt, zonder
   configuratiewijzigingen. De standaard twee-cycli-reproduceerbaarheidseis
   voor deze pipeline is hiermee volledig afgerond. Zie
-  `docs/troubleshooting/08_bazzite_host_elastic_agent.md` ("Reboot cycle
+  `Documents/troubleshooting/08_bazzite_host_elastic_agent.md` ("Reboot cycle
   2/2 confirmed").
 - ✅ WIN11-01 heeft nu een SSH-beheerpad, net als de overige lab-systemen.
   Joost heeft OpenSSH Server zelf ingeschakeld via de VM-console;
@@ -70,7 +70,7 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   is nu ook bevestigd werkend (non-interactieve publickey-only test,
   geen wachtwoord nodig) — `win11-01` is vanaf nu de standaard
   SSH-toegang voor dit systeem, net als bij Bazzite/security-onion. Zie
-  `docs/troubleshooting/09_win11-01_ssh_access.md`.
+  `Documents/troubleshooting/09_win11-01_ssh_access.md`.
 - ✅ Sysmon + Elastic Agent uitgerold naar WIN11-01 (via SSH gescript,
   zelfde `endpoints-initial`-policy als DC01, inclusief Elastic Defend —
   bewuste keuze i.v.m. de geplande Tier 3-aanvalsrol). Fleet stond na
@@ -86,7 +86,7 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   firewall-hostgroups bleken al correct ingesteld vóór de herbevestiging
   ervan (`so-firewall apply` was een no-op, geen aantoonbare fix). Geen
   nieuwe packet capture uitgevoerd, dus "geen TCP RST's" wordt niet als
-  claim gedaan. Zie `docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`.
+  claim gedaan. Zie `Documents/troubleshooting/10_win11-01_sysmon_elastic_agent.md`.
   Dit rondt prioriteit 1 van de endpoint-monitoringfase af.
 - ✅ Sysmon-vrije Elastic Agent uitgerold naar `ubuntu-server-01`
   (log/metrics-only via `linux-endpoints-initial`, zelfde scope als de
@@ -97,7 +97,7 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   intact gelaten, tokenwaarden nergens gedocumenteerd. Ontbrekende
   Security Onion-hostgroup voor `.40` gevonden en gefixt (dit was ditmaal
   wél een echte fix, 0→2 nieuwe firewall-log-regels). Zie
-  `docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`.
+  `Documents/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`.
 - ✅ **Definitieve root cause gevonden en opgelost** voor het al langer
   bekende "ubuntu-server-01 krijgt soms `.100` i.p.v. de gereserveerde
   `.40`"-probleem: elke boot doet twee DHCP-onderhandelingen (dracut-
@@ -107,8 +107,8 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   rechtstreeks in Kea's eigen log (verschillende `cid=`, verschillend
   resultaat). Fix: één regel in netplan; gevalideerd met een volledige
   reboot (beide DHCP-fases kregen `.40`). Zie
-  `docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md` en
-  de nieuwe standaardregel in `docs/decisions/architecture_decisions.md`
+  `Documents/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md` en
+  de nieuwe standaardregel in `Documents/decisions/architecture_decisions.md`
   voor toekomstige Linux-endpoints.
 - ✅ **Endpoint-monitoringfase volledig afgerond (2026-07-15).** Kali
   krijgt definitief géén Elastic Agent — bewust besloten door Joost, niet
@@ -117,7 +117,7 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   Security Onion bij de dóelwitten en op het netwerk ziet, niet bij de
   aanvaller), en voor Purple Team-correlatie is het gewenst maar niet
   essentieel — het bestaande §12-testplan werkt al zonder. Zie
-  `docs/ROADMAP_ENDPOINT_MONITORING.md`.
+  `Documents/ROADMAP_ENDPOINT_MONITORING.md`.
 - ✅ **Phase 2A: OPNsense-syslog naar Security Onion — Firewall + Kea
   DHCP bewezen werkend (2026-07-15).** Oorzaak van het aanvankelijke
   "er komt niets binnen"-probleem: het Contents/Log sources-veld van de
@@ -136,7 +136,7 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   pakketten onafhankelijk op de kabel, `pfsense.firewall` parseert echte
   firewall-events, en een bewuste DHCP-renew op ubuntu-server-01 werd via
   het exacte MAC-adres teruggevonden in Kea-logregels in Hunt. Zie
-  `docs/ROADMAP_OPNSENSE_LOGGING.md`.
+  `Documents/ROADMAP_OPNSENSE_LOGGING.md`.
 - ⏸️ **Phase 2B: Unbound DNS query logging — bewust uitgesteld
   (2026-07-15), geen bug.** DNS valideerde niet mee met Phase 2A, maar dat
   bleek geen pijplijnfout: `unbound.advanced.logqueries` staat standaard
@@ -148,7 +148,7 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   Eerst ervaring opdoen met het huidige ingestvolume; herbeoordelen tijdens
   Fase 3 (detection engineering), met name bij het ontwerpen van DNS-
   tunneling-/beaconingdetecties. Geen OPNsense-configuratiewijziging
-  uitgevoerd. Zie `docs/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md`.
+  uitgevoerd. Zie `Documents/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md`.
 - ✅ **Phase 3, Tier 1: Detection engineering — volledig afgerond
   (2026-07-15).** Uitvoering van het al op 2026-07-13 afgesproken
   §12-aanvalsplan (master doc), alle drie geplande recon-scenario's
@@ -168,7 +168,7 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
     (andere gedragingen, andere signatures).
   Tier 2 (exploitatie) en Tier 3 (AD-escalatie, firewallversoepeling)
   bleven buiten scope zonder aparte expliciete toestemming. Zie
-  `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §6.1/§6.3/§12.
+  `Documents/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §6.1/§6.3/§12.
 - ✅ **Phase 3, Tier 2: Exploitatie gestart met expliciete toestemming
   (2026-07-15, "test tier 2 met mijn toestemming").** Eerste scenario:
   vsftpd 2.3.4-backdoor (CVE-2011-2523) tegen Metasploitable2 — echte
@@ -184,11 +184,11 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   niet van de specifieke exploit. Drie Tier 2-scenario's resteren
   (Samba/NFS/RMI, Juice Shop OWASP Top 10, UnrealIRCd-backdoor), één voor
   één. Tier 3 blijft buiten scope zonder aparte toestemming. Zie
-  `docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §6.1/§6.3/§12.
+  `Documents/SOC_HOMELAB_MASTER_DOCUMENTATION.md` §6.1/§6.3/§12.
 - 📋 **Nieuwe standaardregel (2026-07-15): snapshot vóór elke Tier 2/3-
   exploit, schone staat herstellen erna** (verwijderen wat de techniek
   achterliet, of in het slechtste geval de snapshot terugzetten). Zie
-  `docs/decisions/architecture_decisions.md`. Metasploitable2's
+  `Documents/decisions/architecture_decisions.md`. Metasploitable2's
   `01-Clean`-snapshot (2026-07-09) is nog geldig; ubuntu-server-01's
   `01-Clean` is **verouderd** (van vóór de Elastic Agent-rollout en de
   DHCP-fix) — vóór de eerste Juice Shop-Tier 2-test moet daar eerst een
@@ -204,7 +204,7 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   (vereist Tier 2, nog niet toegestaan). Apart, lokaal bouwsel — **niet**
   hetzelfde als het hieronder nog geplande vier-niveau
   INFO/WARNING/HIGH/CRITICAL-schema met Discord/Telegram-doorsturing. Zie
-  `docs/guides/alarm_dashboard.md`.
+  `Documents/guides/alarm_dashboard.md`.
 
 ---
 
@@ -220,7 +220,7 @@ Voor opgeloste problemen met technisch bewijs: `docs/troubleshooting/`.
   `so-firewall`-regel.
 - ⚠️ DHCP-ranges en DNS-forwarders zijn niet in detail gedocumenteerd.
 - ⚠️ OPNsense heeft nog geen passwordless SSH-key opgezet (bewuste
-  password-only-instelling, geen open punt — zie `docs/OPNSENSE_AUDIT_2026-07-13.md`).
+  password-only-instelling, geen open punt — zie `Documents/OPNSENSE_AUDIT_2026-07-13.md`).
   `ubuntu-server` heeft dit inmiddels wel (2026-07-14, gebruiker `sysadmin`).
 
 ---
@@ -234,7 +234,7 @@ Wazuh):
 
 ### Detectie (deels al aanwezig via Security Onion, deels nog te verfijnen)
 
-Zie `docs/guides/detection_use_cases.md` voor de volledige lijst en
+Zie `Documents/guides/detection_use_cases.md` voor de volledige lijst en
 status per detectietype.
 
 ### Dashboard
@@ -255,7 +255,7 @@ apart, open punt. Wel gerealiseerd (2026-07-15, ander ontwerp): een lokaal
 alarmdashboard op de Bazzite-host zelf, categoriserend op **aanvalstype**
 (scan, exploit, reverse shell, DDoS, SQLi, XSS) in plaats van op
 severity-niveau, zonder externe doorsturing. Zie
-`docs/guides/alarm_dashboard.md`.
+`Documents/guides/alarm_dashboard.md`.
 
 ### Overig
 
@@ -279,19 +279,19 @@ Alles wat er nu is, op één plek:
 | `SERVERS.md` | Gedetailleerde serverbeschrijvingen |
 | `ACTIVE_DIRECTORY.md`, `SECURITY.md` | AD- en beveiligingsdocumentatie |
 | `CHANGELOG.md` | Chronologisch overzicht van belangrijke wijzigingen |
-| `docs/PROJECT_STATUS.md` | Dit document |
-| `docs/ASSET_INVENTORY.md` | Alle systemen in één tabel |
-| `docs/ROADMAP_ENDPOINT_MONITORING.md` | Planning: Elastic Agent-uitrol naar overige endpoints |
-| `docs/PHASE1_CLOSURE_SUMMARY.md` | Formele afsluiting endpoint-monitoringfase |
-| `docs/ROADMAP_OPNSENSE_LOGGING.md` | Fase 2A: OPNsense-syslog naar Security Onion (Firewall + DHCP, bewezen werkend) |
-| `docs/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md` | Fase 2B: Unbound DNS query logging — onderzoek, bewust uitgesteld |
-| `docs/GLOSSARY.md` | Uitleg van vaktermen |
-| `docs/guides/` | Technische handleidingen (setup, launchers, netwerk/poorten, detectie, incident response, quick reference, alarmdashboard) |
-| `docs/decisions/` | Architectuur- en beveiligingskeuzes |
-| `docs/troubleshooting/` | Opgeloste problemen, met bewijs |
-| `docs/daily/` | Dagrapporten en commandologs, één map per dag |
-| `docs/chat_history/` | Logs van eerdere sessies |
-| `docs/screenshots/` | Visueel bewijsmateriaal |
+| `Documents/PROJECT_STATUS.md` | Dit document |
+| `Documents/ASSET_INVENTORY.md` | Alle systemen in één tabel |
+| `Documents/ROADMAP_ENDPOINT_MONITORING.md` | Planning: Elastic Agent-uitrol naar overige endpoints |
+| `Documents/PHASE1_CLOSURE_SUMMARY.md` | Formele afsluiting endpoint-monitoringfase |
+| `Documents/ROADMAP_OPNSENSE_LOGGING.md` | Fase 2A: OPNsense-syslog naar Security Onion (Firewall + DHCP, bewezen werkend) |
+| `Documents/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md` | Fase 2B: Unbound DNS query logging — onderzoek, bewust uitgesteld |
+| `Documents/GLOSSARY.md` | Uitleg van vaktermen |
+| `Documents/guides/` | Technische handleidingen (setup, launchers, netwerk/poorten, detectie, incident response, quick reference, alarmdashboard) |
+| `Documents/decisions/` | Architectuur- en beveiligingskeuzes |
+| `Documents/troubleshooting/` | Opgeloste problemen, met bewijs |
+| `Documents/daily/` | Dagrapporten en commandologs, één map per dag |
+| `Documents/chat_history/` | Logs van eerdere sessies |
+| `Documents/screenshots/` | Visueel bewijsmateriaal |
 
 ---
 
@@ -304,4 +304,4 @@ Bij elke belangrijke wijziging:
 2. Werk `CHANGELOG.md` bij.
 3. Werk dit document (`PROJECT_STATUS.md`) bij als de status van een
    punt in de lijst hierboven verandert.
-4. Schrijf een dagrapport in `docs/daily/JJJJ-MM-DD/`.
+4. Schrijf een dagrapport in `Documents/daily/JJJJ-MM-DD/`.

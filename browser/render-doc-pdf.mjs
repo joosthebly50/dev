@@ -1,6 +1,6 @@
 // Renders a markdown doc to a printed PDF: marked (markdown -> HTML) piped
 // into a Chromium tab via Playwright, then page.pdf(). Reused for
-// docs/SOC_HOMELAB_MASTER_DOCUMENTATION.md -> .pdf, but works for any
+// Documents/SOC_HOMELAB_MASTER_DOCUMENTATION.md -> .pdf, but works for any
 // markdown file.
 //
 // Usage: node render-doc-pdf.mjs <input.md> <output.pdf> [--title "..."]

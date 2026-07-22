@@ -2,7 +2,7 @@
 
 Routinehandelingen die je regelmatig nodig hebt. Dit is géén
 troubleshooting-document — voor opgeloste problemen zie
-`docs/troubleshooting/`. Dit is puur: "ik wil X doen, hoe?"
+`Documents/troubleshooting/`. Dit is puur: "ik wil X doen, hoe?"
 
 ---
 
@@ -28,7 +28,7 @@ virsh -c qemu:///system shutdown <vm-naam>
 ```
 
 Let op: gebruik `shutdown` (netjes afsluiten), niet `destroy` (hard
-uitzetten), tenzij een VM echt vastzit. Zie `docs/ASSET_INVENTORY.md`
+uitzetten), tenzij een VM echt vastzit. Zie `Documents/ASSET_INVENTORY.md`
 voor de exacte VM-namen (let op de spatie in ` ATTACK-Kali`).
 
 ## Status van alle VM's bekijken
@@ -132,16 +132,16 @@ host.name:"dc01" AND event.dataset:"windows.sysmon_operational"
 ssh security-onion "cat /opt/so/log/so-firewall.log | tail -20"
 ```
 
-Zie `docs/guides/network_ports_and_hostgroups.md` voor de volledige
+Zie `Documents/guides/network_ports_and_hostgroups.md` voor de volledige
 uitleg van hostgroups/portgroups en hoe je een systeem toevoegt.
 
 ---
 
 ## Gerelateerde documentatie
 
-- `docs/guides/desktop_launchers.md` — volledige uitleg van elke
+- `Documents/guides/desktop_launchers.md` — volledige uitleg van elke
   launcher.
-- `docs/guides/security_onion_browser_access.md` — hoe de browser-
+- `Documents/guides/security_onion_browser_access.md` — hoe de browser-
   toegang precies werkt en waarom.
-- `docs/guides/incident_response_runbook.md` — wat te doen bij een
+- `Documents/guides/incident_response_runbook.md` — wat te doen bij een
   alert.

@@ -22,7 +22,7 @@ om vier dingen te oefenen, in willekeurige volgorde:
    worden met detectie én respons.
 
 Dit lab is de opvolger van het oorspronkelijke "Fortress Bazzite"-plan
-(zie `docs/PROJECT_STATUS.md` voor de volledige geschiedenis). Het
+(zie `Documents/PROJECT_STATUS.md` voor de volledige geschiedenis). Het
 oorspronkelijke idee was om Suricata, Zeek en Wazuh los van elkaar op te
 zetten; in de praktijk is gekozen voor Security Onion, dat Suricata en
 Zeek al ingebouwd heeft en Elastic Agent/Fleet gebruikt voor host-
@@ -114,15 +114,15 @@ harde evidence) geverifieerd, tenzij anders aangegeven.
 |---|---|---|---|---|
 | `OPNsense-FW` | 192.168.50.1 | `opnsense` | `root` | Firewall, gateway, DHCP, DNS-forwarding |
 | `DC01` | 192.168.50.10 | `dc01` | `Administrator` | Windows Server 2022, Active Directory Domain Controller (PDC Emulator), domein `pentest.lab` |
-| `WIN11-01` | 192.168.50.20 | `win11-01` *(✅ toegevoegd 2026-07-14, zie `docs/troubleshooting/09_win11-01_ssh_access.md`)* | `pentest\administrator` (✅ key-auth bevestigd werkend, later 2026-07-14) | Windows 11 werkstation. |
+| `WIN11-01` | 192.168.50.20 | `win11-01` *(✅ toegevoegd 2026-07-14, zie `Documents/troubleshooting/09_win11-01_ssh_access.md`)* | `pentest\administrator` (✅ key-auth bevestigd werkend, later 2026-07-14) | Windows 11 werkstation. |
 | `SOC-SecurityOnion` | 192.168.50.30 | `security-onion` | `socadmin` | Security Onion 3.1.0, standalone — SIEM/IDS/Fleet |
-| `ubuntu-server-01` | 192.168.50.40 *(✅ reservation-drift definitief root-cause opgelost 2026-07-14 — `dhcp-identifier: mac` in netplan, zie `docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`)* | `ubuntu-server` | `sysadmin` (✅ key-auth bevestigd werkend, 2026-07-14) | Linux-server, draait actief OWASP Juice Shop op poort 3000 |
+| `ubuntu-server-01` | 192.168.50.40 *(✅ reservation-drift definitief root-cause opgelost 2026-07-14 — `dhcp-identifier: mac` in netplan, zie `Documents/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`)* | `ubuntu-server` | `sysadmin` (✅ key-auth bevestigd werkend, 2026-07-14) | Linux-server, draait actief OWASP Juice Shop op poort 3000 |
 | ` ATTACK-Kali` *(let op: naam heeft een leidende spatie in libvirt — bekende bug, zie troubleshooting)* | 192.168.50.50 | `kali` | `blue1` | Red Team-werkstation, penetratietests |
 | `Target-Metasploitable2` | 192.168.50.70 *(✅ geverifieerd 2026-07-13)* | *(geen)* | — | Opzettelijk kwetsbaar doelsysteem (bevestigd stock Metasploitable2-poortenprofiel), alleen voor exploitatie-oefening |
 
 **Let op de spatie:** de VM-naam ` ATTACK-Kali` begint met een spatie.
 Dit heeft in het verleden een echte bug veroorzaakt in scripts die op
-VM-naam zochten (zie `docs/troubleshooting/` voor de geschiedenis van
+VM-naam zochten (zie `Documents/troubleshooting/` voor de geschiedenis van
 `soc-mirror.sh`). Nieuwe scripts moeten hiermee rekening houden of, beter,
 op UUID werken in plaats van op naam.
 
@@ -151,12 +151,12 @@ bepaalt welk IP-adres bij welke poort/dienst mag. Dit werkt met
 en elke hostgroup heeft een eigen lijst van toegestane poorten
 ("portgroups"). **Lidmaatschap van de ene hostgroup geeft geen toegang
 tot poorten van een andere hostgroup** — dit is precies waar de grote
-DC01-storing van vandaag (zie `docs/troubleshooting/06_...md`) door kwam.
+DC01-storing van vandaag (zie `Documents/troubleshooting/06_...md`) door kwam.
 
 ✅ Alle onderstaande hostgroups en poorten zijn deze sessie rechtstreeks
 uitgelezen uit `/opt/so/saltstack/default/salt/firewall/defaults.yaml` en
 `soc_firewall.yaml`. Volledig overzicht: zie
-`docs/guides/network_ports_and_hostgroups.md`.
+`Documents/guides/network_ports_and_hostgroups.md`.
 
 Belangrijkste hostgroups voor een Windows-endpoint zoals DC01:
 
@@ -188,7 +188,7 @@ een libvirt qemu-hook bij elke VM start/stop):
    stop-events. Status opvragen kan met:
    `scripts/soc-mirror.sh --status`
 
-Zie `docs/troubleshooting/` (soc-mirror-geschiedenis) voor de volledige
+Zie `Documents/troubleshooting/` (soc-mirror-geschiedenis) voor de volledige
 achtergrond, inclusief een eerder gevonden en opgeloste
 libvirtd-deadlock-bug.
 
@@ -202,7 +202,7 @@ libvirtd-deadlock-bug.
 
 ⚠️ Exacte DHCP-ranges en DNS-forwarders zijn nog niet in detail
 gedocumenteerd. Poging tot verificatie 2026-07-13: de `opnsense`
-SSH-alias (root, passwordless, eerder in `docs/PROJECT_STATUS.md` als
+SSH-alias (root, passwordless, eerder in `Documents/PROJECT_STATUS.md` als
 werkend genoteerd) gaf nu `Permission denied (publickey,password,
 keyboard-interactive)` — dus geen passwordless toegang meer, of nooit
 daadwerkelijk werkend geweest. Dit moet handmatig gecontroleerd worden
@@ -221,7 +221,7 @@ ingesteld worden.
   oorspronkelijke Fortress Bazzite-ontwerp: eerst volledige zichtbaarheid,
   dan pas extra blokkades of automatische respons.
 - **Documentatie verplicht** — elke infrastructuurwijziging wordt
-  vastgelegd (zie `docs/daily/` en `docs/troubleshooting/`).
+  vastgelegd (zie `Documents/daily/` en `Documents/troubleshooting/`).
 
 ---
 
@@ -235,7 +235,7 @@ Voor elke netwerkwijziging:
 4. Wijziging doorvoeren.
 5. Werking testen.
 6. Documentatie bijwerken (dit bestand, plus een dagrapport in
-   `docs/daily/`).
+   `Documents/daily/`).
 
 ---
 
@@ -254,9 +254,9 @@ Uit het oorspronkelijke Fortress Bazzite-plan, nog niet uitgevoerd:
 
 ## Gerelateerde documentatie
 
-- `docs/guides/network_ports_and_hostgroups.md` — volledige
+- `Documents/guides/network_ports_and_hostgroups.md` — volledige
   poort/hostgroup-referentie.
-- `docs/ASSET_INVENTORY.md` — alle systemen in één tabel, met specs.
-- `docs/troubleshooting/06_dc01_fleet_health_and_sysmon.md` — de
+- `Documents/ASSET_INVENTORY.md` — alle systemen in één tabel, met specs.
+- `Documents/troubleshooting/06_dc01_fleet_health_and_sysmon.md` — de
   firewall-storing en -fix van vandaag, met bewijs.
 - `SERVERS.md` — gedetailleerde beschrijving per server.

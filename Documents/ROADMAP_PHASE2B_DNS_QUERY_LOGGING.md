@@ -4,7 +4,7 @@
 Query logging is NOT enabled. No changes have been made to OPNsense, and
 none are currently planned — this is an explicit, considered decision, not
 an open task waiting on more research. Split off from Phase 2A
-(`docs/ROADMAP_OPNSENSE_LOGGING.md`) on 2026-07-15 once Phase 2A's
+(`Documents/ROADMAP_OPNSENSE_LOGGING.md`) on 2026-07-15 once Phase 2A's
 validation showed the missing DNS events weren't a syslog-pipeline defect —
 Firewall and DHCP both proved end-to-end — but a distinct Unbound setting
 that was never enabled in the first place. Kept separate deliberately: one
@@ -87,7 +87,7 @@ for that use case.
 
 **Confirmed off** — `unbound.advanced.logqueries` reads `checked: false`
 on the live 192.168.50.1 config (OPNsense **26.1.11_6**, confirmed version
-per `docs/OPNSENSE_AUDIT_2026-07-13.md`). This matches upstream Unbound/
+per `Documents/OPNSENSE_AUDIT_2026-07-13.md`). This matches upstream Unbound/
 OPNsense's own default posture (query logging is opt-in everywhere it
 ships, precisely because of the volume/privacy tradeoff above) — nothing
 lab-specific suppressed it.
@@ -141,5 +141,5 @@ assume DNS query-level visibility does **not** exist yet.
 | Firewall logging | ✅ Working (Phase 2A) |
 | Kea DHCP logging | ✅ Working (Phase 2A) |
 | Unbound DNS query logging | ⏸️ Deferred / deliberately not enabled (Phase 2B, this decision) |
-| OPNsense Suricata forwarding | ⏸️ Deliberately not enabled (out of scope by original Phase 2 design, `docs/ROADMAP_OPNSENSE_LOGGING.md`) |
+| OPNsense Suricata forwarding | ⏸️ Deliberately not enabled (out of scope by original Phase 2 design, `Documents/ROADMAP_OPNSENSE_LOGGING.md`) |
 | TLS migration | 🔜 Still-open follow-up item, not yet scheduled |

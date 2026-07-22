@@ -2,7 +2,7 @@
 
 **Status: Phase 2A ✅ VALIDATED (2026-07-15) — Phase 2B ⏸️ DEFERRED
 (decided 2026-07-15, not an open question).** This is Phase 2 of the
-roadmap Joost set on 2026-07-14 (see `docs/PHASE1_CLOSURE_SUMMARY.md` for
+roadmap Joost set on 2026-07-14 (see `Documents/PHASE1_CLOSURE_SUMMARY.md` for
 the closed Phase 1). Split into two sub-phases to keep each change
 independently validatable:
 
@@ -13,10 +13,10 @@ independently validatable:
   separate change once Phase 2A validation showed DNS wasn't a syslog-pipeline
   problem but a distinct, not-yet-enabled Unbound setting. Researched, then
   **deliberately deferred** — not a bug, an optional feature with a real
-  volume/privacy cost. See `docs/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md`.
+  volume/privacy cost. See `Documents/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md`.
 
 This was already anticipated, in outline, in
-`docs/ROADMAP_ENDPOINT_MONITORING.md`'s "Expliciet buiten scope" section:
+`Documents/ROADMAP_ENDPOINT_MONITORING.md`'s "Expliciet buiten scope" section:
 *"OPNsense — een firewall-appliance... Als host-niveau zichtbaarheid ooit
 gewenst is: syslog-forwarding naar Security Onion is het gebruikelijke
 alternatief, geen Elastic Agent."* This document is that plan, made concrete.
@@ -59,7 +59,7 @@ assumed**, as the first validation step (see below) before any OPNsense
 change is made — if it's already active, this phase may be smaller than
 it looks (just pointing OPNsense at it + a firewall hostgroup check).
 
-**Confirmed from the OPNsense audit** (`docs/OPNSENSE_AUDIT_2026-07-13.md`):
+**Confirmed from the OPNsense audit** (`Documents/OPNSENSE_AUDIT_2026-07-13.md`):
 OPNsense's logging backend is **syslog-ng** (seen in the package-upgrade
 log during that audit), which supports TCP and TLS-encrypted remote
 syslog (RFC 5425) natively — not just legacy UDP.
@@ -72,7 +72,7 @@ syslog (RFC 5425) natively — not just legacy UDP.
 |---|---|---|---|
 | **Firewall (filterlog)** — allow/block decisions | Core perimeter visibility; complements Suricata/Zeek's payload-level view with the firewall's own pass/block verdict | High | ✅ Validated 2026-07-15 |
 | **DHCP (Kea)** | Already proven valuable this session for troubleshooting (the `.100`/`.40` investigation) — forwarding this means future Kea issues are diagnosable via Hunt instead of requiring SSH + `grep` each time | High | ✅ Validated 2026-07-15 |
-| **DNS (Unbound query log)** | Lab-wide DNS resolution visibility — direct relevance to Phase 3 detection engineering (DNS tunneling/beaconing detection needs this) | Medium | ⏸ Deferred to Phase 2B — confirmed `unbound.advanced.logqueries` is off by default in this install (OPNsense 26.1.11_6); see `docs/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md` |
+| **DNS (Unbound query log)** | Lab-wide DNS resolution visibility — direct relevance to Phase 3 detection engineering (DNS tunneling/beaconing detection needs this) | Medium | ⏸ Deferred to Phase 2B — confirmed `unbound.advanced.logqueries` is off by default in this install (OPNsense 26.1.11_6); see `Documents/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md` |
 | **OPNsense's own Intrusion Detection (Suricata) plugin** | OPNsense has this as an available service, separate from Security Onion's own network-mirror-fed Suricata | **Needs verification first** — not confirmed whether Joost has this enabled. If it *is* running, forwarding its alerts would likely **duplicate** Security Onion's own Suricata detections on the same traffic, which needs a deliberate decision (forward it anyway for a second, firewall-side vantage point? skip it as redundant?) rather than a default yes. |
 | **VPN** | N/A for now — the OPNsense audit confirmed no VPN is configured at all. Placeholder only, revisit if a VPN is ever set up (ties into the "WireGuard for remote lab access" idea from the earlier network-ideas discussion). |
 | **NAT events** | Typically part of the firewall/filterlog stream on this firewall family, not a separate log — no separate collection needed. |
@@ -83,7 +83,7 @@ syslog (RFC 5425) natively — not just legacy UDP.
 
 - **Transport: TCP with TLS** (syslog-ng/OPNsense supports RFC 5425 syslog-over-TLS) rather than plain UDP 514. Even though OPNsense and Security Onion sit on the same internal `192.168.50.0/24` segment today, TLS is cheap to configure here and avoids creating a plaintext-log-in-transit habit that would matter more if the "VLAN segmentation" network idea (from the earlier ideas discussion) is ever implemented and this traffic starts crossing a segment boundary.
 - **Fallback if TLS setup proves troublesome:** plain TCP syslog (RFC 6587) rather than UDP — TCP at least guarantees delivery ordering/reliability; UDP syslog can silently drop under load with zero indication.
-- **Security Onion side:** OPNsense's IP (`192.168.50.1`) needs to reach whichever port syslog-ng is configured to target. The relevant Security Onion firewall hostgroup for this **has not been identified yet** — `docs/guides/network_ports_and_hostgroups.md`'s captured portgroup table doesn't list a `syslog` entry explicitly; this needs a direct, read-only check against Security Onion's own firewall config (same method used throughout Phase 1 — `so-firewall`/pillar files where sudo scope allows, or Joost checking directly) before assuming which hostgroup (if any) needs `192.168.50.1` added.
+- **Security Onion side:** OPNsense's IP (`192.168.50.1`) needs to reach whichever port syslog-ng is configured to target. The relevant Security Onion firewall hostgroup for this **has not been identified yet** — `Documents/guides/network_ports_and_hostgroups.md`'s captured portgroup table doesn't list a `syslog` entry explicitly; this needs a direct, read-only check against Security Onion's own firewall config (same method used throughout Phase 1 — `so-firewall`/pillar files where sudo scope allows, or Joost checking directly) before assuming which hostgroup (if any) needs `192.168.50.1` added.
 - **No credentials involved** in syslog transport itself (TLS here is for confidentiality/integrity of the log data, not authentication of OPNsense as a client) — consistent with the project's "never store secrets" posture, there's nothing credential-like to protect here beyond the log content itself.
 
 ---
@@ -192,7 +192,7 @@ Evidence collected, in the order validated:
 **Not tested this phase, deliberately:** a firewall *block* event. Given
 `pfsense.firewall` already proved the parser/pipeline works end-to-end for
 a "pass" verdict, and the current LAN ruleset has no rule that would ever
-produce a genuine block from ordinary lab traffic (`docs/OPNSENSE_AUDIT_2026-07-13.md`
+produce a genuine block from ordinary lab traffic (`Documents/OPNSENSE_AUDIT_2026-07-13.md`
 confirms only the two default allow-any rules exist, no segmentation), a
 block-test would require adding a temporary firewall rule — a separate,
 explicitly-approved change, not bundled into this validation. Judged
@@ -209,6 +209,6 @@ Phase 2A is complete. Remaining open items, none blocking:
    behavior so far is that pass events *are* being logged (not blocks-only),
    worth revisiting for storage/volume once real usage accumulates.
 4. Phase 2B (DNS query logging) — **deferred, decided 2026-07-15** (not an
-   open question). See `docs/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md`; to be
+   open question). See `Documents/ROADMAP_PHASE2B_DNS_QUERY_LOGGING.md`; to be
    reassessed during Phase 3 detection engineering, specifically for DNS
    tunneling/beaconing detections.

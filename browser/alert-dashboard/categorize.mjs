@@ -17,7 +17,7 @@
 // Access, Lateral Movement -- are usually host-based/Sysmon territory,
 // not Suricata's strong suit, and will land in OTHER far more often than
 // not until host-based sources are integrated, see the "Future
-// Integrations" note in docs/guides/alarm_dashboard.md).
+// Integrations" note in Documents/guides/alarm_dashboard.md).
 //
 // IMPORTANT, learned the hard way (2026-07-15, twice): Suricata's own
 // classtype free-text fields ("Web Application Attack", "Potentially Bad

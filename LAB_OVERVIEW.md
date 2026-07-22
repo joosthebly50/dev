@@ -44,9 +44,9 @@ en gebruikt Elastic Agent/Fleet voor host-monitoring — de rol die Wazuh
 zou hebben vervuld. De oorspronkelijke detectiewensen uit het Fortress
 Bazzite-document (portscans, bruteforce, reverse shells, webaanvallen,
 enzovoort) blijven het uitgangspunt; zie
-`docs/guides/detection_use_cases.md`.
+`Documents/guides/detection_use_cases.md`.
 
-Voor de volledige tijdlijn van deze evolutie: `docs/PROJECT_STATUS.md`.
+Voor de volledige tijdlijn van deze evolutie: `Documents/PROJECT_STATUS.md`.
 
 ---
 
@@ -97,7 +97,7 @@ OPNsense Firewall (192.168.50.1)
    |
 Intern lab-netwerk: 192.168.50.0/24
    |
-   +-- Virtuele machines (zie docs/ASSET_INVENTORY.md)
+   +-- Virtuele machines (zie Documents/ASSET_INVENTORY.md)
 ```
 
 Volledige netwerkkaart met alle systemen, IP's en de Security Onion-
@@ -108,7 +108,7 @@ firewall-hostgroups: zie `NETWORK.md`.
 ## Systemen (kort overzicht)
 
 Voor het volledige, geverifieerde overzicht met IP's en SSH-toegang: zie
-`docs/ASSET_INVENTORY.md` en `SERVERS.md`.
+`Documents/ASSET_INVENTORY.md` en `SERVERS.md`.
 
 | Systeem | Rol |
 |---|---|
@@ -132,14 +132,14 @@ Elke infrastructuurwijziging wordt vastgelegd. Voor elke wijziging:
 4. Het resultaat documenteren.
 
 Sinds 2026-07-13 gebeurt dit ook via dagelijkse rapporten
-(`docs/daily/JJJJ-MM-DD/`), met een apart bestand voor gebruikte
-commando's. Zie `docs/daily/SJABLOON.md` voor het format.
+(`Documents/daily/JJJJ-MM-DD/`), met een apart bestand voor gebruikte
+commando's. Zie `Documents/daily/SJABLOON.md` voor het format.
 
 ---
 
 ## Huidige status
 
-Zie `docs/PROJECT_STATUS.md` voor het volledige, actuele overzicht van
+Zie `Documents/PROJECT_STATUS.md` voor het volledige, actuele overzicht van
 wat af is, wat loopt, en wat gepland staat. Kort samengevat op
 2026-07-13:
 
@@ -147,7 +147,7 @@ wat af is, wat loopt, en wat gepland staat. Kort samengevat op
   traffic mirroring werkt.
 - Security Onion is operationeel, met Fleet-monitoring van DC01
   (opgelost op 2026-07-13, zie
-  `docs/troubleshooting/06_dc01_fleet_health_and_sysmon.md`).
+  `Documents/troubleshooting/06_dc01_fleet_health_and_sysmon.md`).
 - Documentatie is vandaag flink uitgebreid: dagrapporten, asset-
   inventaris, glossarium, netwerk-/poortoverzicht, incident-response-
   runbook, detectie-use-cases en een centrale statuspagina.
@@ -156,8 +156,8 @@ wat af is, wat loopt, en wat gepland staat. Kort samengevat op
 
 ## Gerelateerde documentatie
 
-- `docs/PROJECT_STATUS.md` — centrale voortgangspagina
+- `Documents/PROJECT_STATUS.md` — centrale voortgangspagina
 - `NETWORK.md` — volledige netwerkdocumentatie met kaart
 - `SERVERS.md` — gedetailleerde serverbeschrijvingen
-- `docs/ASSET_INVENTORY.md` — alle systemen in één tabel
-- `docs/GLOSSARY.md` — uitleg van vaktermen
+- `Documents/ASSET_INVENTORY.md` — alle systemen in één tabel
+- `Documents/GLOSSARY.md` — uitleg van vaktermen

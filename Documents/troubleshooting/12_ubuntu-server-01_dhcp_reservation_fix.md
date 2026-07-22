@@ -40,7 +40,7 @@ OPNsense-FW (Kea DHCPv4 server, 192.168.50.1) — every other reserved lab host 
 
 # 1. The original problem
 
-After a routine reboot (part of the standing reboot-validation requirement for the Elastic Agent rollout, `docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`), ubuntu-server-01 came back up on **192.168.50.100** instead of its reserved **192.168.50.40**.
+After a routine reboot (part of the standing reboot-validation requirement for the Elastic Agent rollout, `Documents/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`), ubuntu-server-01 came back up on **192.168.50.100** instead of its reserved **192.168.50.40**.
 
 Concrete, observed effects:
 
@@ -48,7 +48,7 @@ Concrete, observed effects:
 - **Elastic Agent kept running and stayed enrolled** throughout — it doesn't care which IP the host has, it just uses whatever interface is up. This meant the symptom was purely a networking/addressing issue, not an application or agent problem, from the very first observation.
 - **Every other reserved host in the lab — DC01, WIN11-01, ATTACK-Kali, SOC-SecurityOnion — has always received its reserved address reliably**, including through the WIN11-01 reboot validations done earlier the same day. This made ubuntu-server-01 look like a genuine outlier rather than a lab-wide DHCP problem, which shaped which hypotheses were worth pursuing first.
 
-This exact *symptom* (this host landing on `.100`) had already been seen once before, on 2026-07-13 (`docs/OPNSENSE_AUDIT_2026-07-13.md`), and was worked around at the time (documented as "probably a timing race, reservation is confirmed correct in Kea's config"). This session revisited it after it recurred, and this time it was pushed to an actual, evidence-backed mechanism instead of being worked around again.
+This exact *symptom* (this host landing on `.100`) had already been seen once before, on 2026-07-13 (`Documents/OPNSENSE_AUDIT_2026-07-13.md`), and was worked around at the time (documented as "probably a timing race, reservation is confirmed correct in Kea's config"). This session revisited it after it recurred, and this time it was pushed to an actual, evidence-backed mechanism instead of being worked around again.
 
 ---
 
@@ -123,7 +123,7 @@ Hypotheses **not** seriously entertained, and why: "Fleet problem" and "Elastic 
 
 ### Hypothesis 3 — Security Onion's firewall is involved
 
-This required active disambiguation rather than a single test, because a firewall-hostgroup fix (`so-firewall includehost ... 192.168.50.40`) had just been applied the same day, for the *Elastic Agent Fleet-connectivity* problem documented separately in `docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`. That fix was real (confirmed via `so-firewall.log` going from 0 to 2 entries for `.40`) — but it fixed port 8220 reachability, a completely different layer from DHCP addressing. **Verdict: not applicable to this bug** — Security Onion's firewall has no involvement in OPNsense's own DHCP negotiation on the LAN side; this was a case of two real, separate issues on the same host on the same day that needed to be kept explicitly distinct in the documentation rather than conflated into one story.
+This required active disambiguation rather than a single test, because a firewall-hostgroup fix (`so-firewall includehost ... 192.168.50.40`) had just been applied the same day, for the *Elastic Agent Fleet-connectivity* problem documented separately in `Documents/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`. That fix was real (confirmed via `so-firewall.log` going from 0 to 2 entries for `.40`) — but it fixed port 8220 reachability, a completely different layer from DHCP addressing. **Verdict: not applicable to this bug** — Security Onion's firewall has no involvement in OPNsense's own DHCP negotiation on the LAN side; this was a case of two real, separate issues on the same host on the same day that needed to be kept explicitly distinct in the documentation rather than conflated into one story.
 
 ### Hypothesis 8 — different DHCP client identifiers between two negotiations
 
@@ -148,7 +148,7 @@ This raised an immediate objection worth recording: Kea's reservation is stored 
 # 4. Why we made the decisions we did
 
 - **No static IP was set, at any point.** A static IP would have made the symptom disappear without explaining it, and would have made the DHCP reservation table a lie for this one host — exactly the outcome explicitly ruled out from the start of this investigation.
-- **DHCP reservations remain the single source of truth for this lab's IP plan**, as already established in `docs/OPNSENSE_AUDIT_2026-07-13.md` §4. Fixing the client instead of bypassing the reservation keeps that true for every host, not just six out of seven.
+- **DHCP reservations remain the single source of truth for this lab's IP plan**, as already established in `Documents/OPNSENSE_AUDIT_2026-07-13.md` §4. Fixing the client instead of bypassing the reservation keeps that true for every host, not just six out of seven.
 - **OPNsense stays the one central DHCP server.** Hypothesis 2 and 4 existed specifically to make sure of this before trusting anything else — confirming there's exactly one DHCP authority on this network was a precondition for every subsequent step being meaningful.
 - **No workaround was accepted** — not a static IP, not a manual `dhclient` renew loop, not disabling the dracut fallback network stage. Each would have hidden the mechanism rather than fixed it, and none would have been provably durable across a future OS/image update.
 - **The cause had to be reproducible**, not a one-off timing story (which is exactly what the 2026-07-13 note had already, incorrectly, settled for). This is why hypothesis 7 (checking Kea's log across the *entire* relevant history, not just one boot) mattered — a single absent DHCPACK for `.100` could have been a fluke; a *complete absence across every log entry for this MAC* is a pattern.
@@ -236,26 +236,26 @@ One clean reboot (`virsh reboot ubuntu-server-01`) after the fix:
 
 # 9. Architecture Decision Record: MAC-based DHCP client identifiers for Linux endpoints with reservations
 
-**Status:** Adopted 2026-07-14. See also `docs/decisions/architecture_decisions.md` for the durable, indexed version of this record.
+**Status:** Adopted 2026-07-14. See also `Documents/decisions/architecture_decisions.md` for the durable, indexed version of this record.
 
 **Decision:** every dracut/netplan-based Linux VM in this lab that has a DHCP reservation on OPNsense must set `dhcp-identifier: mac` for its reserved interface, from the moment the reservation is created — not retrofitted after the symptom appears.
 
 **Why DHCP reservations, not static IPs:**
-- One authoritative IP plan lives in one place (OPNsense's Kea config), matching the standing rule from `docs/OPNSENSE_AUDIT_2026-07-13.md` §4 that the reservation table is the canonical source of truth for this lab's addressing — not a live snapshot, and not per-host static configuration scattered across every guest.
+- One authoritative IP plan lives in one place (OPNsense's Kea config), matching the standing rule from `Documents/OPNSENSE_AUDIT_2026-07-13.md` §4 that the reservation table is the canonical source of truth for this lab's addressing — not a live snapshot, and not per-host static configuration scattered across every guest.
 - A reservation is visible and auditable centrally (the Reservations UI, or `so-firewall`/Kea logs); a static IP set inside a guest is invisible from the network side until something breaks.
 
 **Why MAC-based client identifiers specifically:**
 - It is the identifier Kea's reservations in this lab are actually keyed on (hardware address), and — as proven in section 7 — it is not safe to assume any other identifier scheme will be matched equivalently, even when DHCP theory suggests it should be.
 - It costs one line of netplan configuration and has no downside for a lab VM (no scenario in this environment relies on the RFC 4361 IAID/DUID identifier's properties, e.g. surviving a NIC replacement with the same logical interface — these are disposable/rebuildable lab VMs, not physical hardware where that guarantee matters).
 
-**Why this becomes the standard for future Linux VMs:** the underlying cause (a dracut-based image performing an early, correctly-configured DHCP negotiation followed by a real, netplan-driven one that silently uses a different client identifier) is a property of the base OS image, not something specific to ubuntu-server-01. Any future Linux endpoint built from a similar image — a rebuilt ubuntu-server-01, a new Kali Elastic Agent rollout if that's ever pursued (`docs/ROADMAP_ENDPOINT_MONITORING.md`), or any other Ubuntu/Debian-family VM added to the reservation table — will have the identical latent bug until this setting is applied. Setting it at VM-creation time avoids rediscovering this exact investigation from scratch.
+**Why this becomes the standard for future Linux VMs:** the underlying cause (a dracut-based image performing an early, correctly-configured DHCP negotiation followed by a real, netplan-driven one that silently uses a different client identifier) is a property of the base OS image, not something specific to ubuntu-server-01. Any future Linux endpoint built from a similar image — a rebuilt ubuntu-server-01, a new Kali Elastic Agent rollout if that's ever pursued (`Documents/ROADMAP_ENDPOINT_MONITORING.md`), or any other Ubuntu/Debian-family VM added to the reservation table — will have the identical latent bug until this setting is applied. Setting it at VM-creation time avoids rediscovering this exact investigation from scratch.
 
 ---
 
 # What was deliberately NOT done
 
 - **No packet capture was needed or taken for this investigation** — Kea's own log, read directly, was sufficient and more precise (it shows the client-id string itself, which a packet capture would also show but with more manual decoding).
-- **No change was made to OPNsense/Kea configuration.** Every real fix was on the Ubuntu side. The one OPNsense-side action taken the same day (re-running `so-firewall includehost` for `.40`'s hostgroups) was a **separate, already-resolved issue** (Fleet Server port 8220 reachability, see `docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`) and is explicitly not conflated with this DHCP fix — see hypothesis 3 above for why that distinction mattered during the investigation itself.
+- **No change was made to OPNsense/Kea configuration.** Every real fix was on the Ubuntu side. The one OPNsense-side action taken the same day (re-running `so-firewall includehost` for `.40`'s hostgroups) was a **separate, already-resolved issue** (Fleet Server port 8220 reachability, see `Documents/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`) and is explicitly not conflated with this DHCP fix — see hypothesis 3 above for why that distinction mattered during the investigation itself.
 - **No further changes were made to this specific fix** after the first reboot validation succeeded — the two additional cycles in section 10 were independent confirmation, not further debugging.
 
 ---
@@ -282,7 +282,7 @@ Requested specifically to rule out any dependency on a warm-reboot code path —
 - `networkctl status enp1s0`: `DHCPv4 Client ID: 52:54:00:0e:0f:65`, `Address: 192.168.50.40`.
 - `journalctl -u systemd-networkd -b`: both negotiations (PID 354, PID 1114) acquired `.40`.
 - `ssh ubuntu-server` worked immediately, no manual changes.
-- **Fleet's server-side view took ~5 minutes to report `HEALTHY`** (longer than the ~2 minutes seen on the prior warm reboots) while showing `STARTING` for all 3 components the whole time. This was **not** treated as a failure without checking first — the same "Fleet display lag" pattern already documented for WIN11-01 (`docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`). Confirmed benign two ways before waiting it out: (1) `ss -tnp` on ubuntu-server-01 showed 4 already-established TCP connections to Security Onion (3× port 5055, 1× port 8220) throughout the "STARTING" window — the agent was genuinely connected the whole time; (2) a fresh test marker (`logger -p auth.info "SOC_HOMELAB_COLDBOOT_VERIFY_..."`) was found in Hunt (via a new browser tab, avoiding the earlier-documented tab-caching pitfall) within seconds of being written, proving live telemetry delivery independent of what Fleet's UI happened to be showing. Fleet's status did subsequently catch up to `HEALTHY`/all components healthy on its own, with no intervention.
+- **Fleet's server-side view took ~5 minutes to report `HEALTHY`** (longer than the ~2 minutes seen on the prior warm reboots) while showing `STARTING` for all 3 components the whole time. This was **not** treated as a failure without checking first — the same "Fleet display lag" pattern already documented for WIN11-01 (`Documents/troubleshooting/10_win11-01_sysmon_elastic_agent.md`). Confirmed benign two ways before waiting it out: (1) `ss -tnp` on ubuntu-server-01 showed 4 already-established TCP connections to Security Onion (3× port 5055, 1× port 8220) throughout the "STARTING" window — the agent was genuinely connected the whole time; (2) a fresh test marker (`logger -p auth.info "SOC_HOMELAB_COLDBOOT_VERIFY_..."`) was found in Hunt (via a new browser tab, avoiding the earlier-documented tab-caching pitfall) within seconds of being written, proving live telemetry delivery independent of what Fleet's UI happened to be showing. Fleet's status did subsequently catch up to `HEALTHY`/all components healthy on its own, with no intervention.
 - **OPNsense's own Kea log, read directly, is unambiguous for this cycle:**
 
 ```

@@ -2,8 +2,8 @@
 
 **Status: WIN11-01 (prioriteit 1) én `ubuntu-server-01` (prioriteit 2)
 zijn uitgevoerd en geverifieerd (2026-07-14, zie
-`docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md` en
-`docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`).
+`Documents/troubleshooting/10_win11-01_sysmon_elastic_agent.md` en
+`Documents/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`).
 **Kali krijgt definitief géén Elastic Agent — bewust besloten door Joost
 (2026-07-15), niet langer "uitgesteld" maar afgesloten.** Endpoint-
 monitoringfase is hiermee volledig afgerond.** Dit
@@ -23,7 +23,7 @@ normale procedure: uitleggen → risico → bevestiging van Joost → uitvoeren
 
 | Systeem | Elastic Agent? | Wat wordt verzameld | Hostgroups (Security Onion firewall) |
 |---|---|---|---|
-| `DC01` (.10) | ✅ Ja, **Healthy** in Fleet | Windows Event Logs, Sysmon (SwiftOnSecurity-config), metrics | `elastic_agent_endpoint`, `beats_endpoint`, `endgame` (zie `docs/guides/network_ports_and_hostgroups.md`) |
+| `DC01` (.10) | ✅ Ja, **Healthy** in Fleet | Windows Event Logs, Sysmon (SwiftOnSecurity-config), metrics | `elastic_agent_endpoint`, `beats_endpoint`, `endgame` (zie `Documents/guides/network_ports_and_hostgroups.md`) |
 | Bazzite-host (.1-net, host zelf) | ✅ Ja, Healthy | journald (`system.auth`, `system.syslog`), system-metrics — **geen** Elastic Defend, bewuste scope-keuze | `elastic_agent_endpoint`, `beats_endpoint` (geen `endgame` — geen Elastic Defend geconfigureerd) |
 | `SOC-SecurityOnion` (.30) | N.v.t. — dit ís het platform | — | — |
 | `WIN11-01` (.20) | ✅ Ja, **Healthy** in Fleet (2026-07-14) | Windows Event Logs, Sysmon (SwiftOnSecurity-config), Elastic Defend, osquery, metrics — zelfde `endpoints-initial`-policy als DC01 | `elastic_agent_endpoint`, `beats_endpoint`, `endgame` |
@@ -46,7 +46,7 @@ policy (inclusief Elastic Defend, bewuste keuze). Healthy in Fleet
 gedocumenteerde patroon), bevestigd in Hunt met actuele Sysmon- en
 Elastic Defend-telemetrie. Volledig verhaal, inclusief een onderzochte
 maar niet-bevestigde firewall-hypothese:
-`docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`. De
+`Documents/troubleshooting/10_win11-01_sysmon_elastic_agent.md`. De
 onderstaande planningstekst blijft staan als het oorspronkelijke recept
 (gevolgd, op de policy-keuze na — geen nieuwe policy aangemaakt, de
 bestaande DC01-policy hergebruikt).
@@ -59,7 +59,7 @@ verkeer via Suricata/Zeek. Dit is precies de blanco detectie-rij die
 §6.1 van de masterdoc nu al als "⚠️ nog niet bevestigd" markeert.
 
 **Aanpak:** zelfde recept als DC01 (masterdoc §7.6 /
-`docs/troubleshooting/06_dc01_fleet_health_and_sysmon.md`):
+`Documents/troubleshooting/06_dc01_fleet_health_and_sysmon.md`):
 1. Nieuwe of hergebruikte Fleet-agentpolicy voor Windows-werkstations
    (Windows Event Log-integratie + Sysmon, zoals DC01's policy — niet de
    generieke Linux-policy).
@@ -86,12 +86,12 @@ system-metrics, geen Elastic Defend). Healthy in Fleet binnen ~2 minuten.
 Onderweg drie losse, opgeloste issues: een te kleine `/tmp`-tmpfs, twee
 enrollment-token-blootstellingen (beide ingetrokken), en een ontbrekende
 Security Onion-hostgroup voor `.40`. Volledig verhaal:
-`docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`.
+`Documents/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`.
 
 **Aanvullend, apart onderzocht en opgelost:** een al langer bekend
 DHCP-reservation-probleem (host kreeg soms `.100` i.p.v. `.40` na een
 reboot) kreeg tijdens deze rollout een definitief bewezen root cause en
-fix — `docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`.
+fix — `Documents/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`.
 
 **Afweging (achteraf bevestigd):** dit systeem wordt actief
 kapotgemaakt/geëxploiteerd tijdens Tier 1/2-oefeningen — een agent erop
@@ -122,7 +122,7 @@ achterlaat (niet alleen op het netwerk).
   kwetsbaar doelwit blijven). Nooit gepland.
 - **MGMT-Debian** — bestaat alleen nog als (uitgeschakelde) VM en als
   reservation in OPNsense's DHCP-config (zie
-  `docs/OPNSENSE_AUDIT_2026-07-13.md` §4). Geen onderdeel van de actieve
+  `Documents/OPNSENSE_AUDIT_2026-07-13.md` §4). Geen onderdeel van de actieve
   lab-omgeving; pas relevant als dit systeem ooit weer actief wordt.
 
 ---
@@ -130,13 +130,13 @@ achterlaat (niet alleen op het netwerk).
 ## Samenvatting: aanbevolen volgorde
 
 1. **WIN11-01** — ✅ **uitgevoerd 2026-07-14**, zie
-   `docs/troubleshooting/10_win11-01_sysmon_elastic_agent.md`. De
+   `Documents/troubleshooting/10_win11-01_sysmon_elastic_agent.md`. De
    §12-WIN11-01-opschoonstap (verplaatsen naar `OU=Workstations`, etc.)
    staat nog los open, zie de master doc §12.
 2. **ubuntu-server-01** — ✅ **uitgevoerd 2026-07-14**, zie
-   `docs/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`
+   `Documents/troubleshooting/11_ubuntu-server-01_elastic_agent_rollout.md`
    (plus een apart opgeloste, langlopende DHCP-reservation-bug:
-   `docs/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`).
+   `Documents/troubleshooting/12_ubuntu-server-01_dhcp_reservation_fix.md`).
 3. **ATTACK-Kali** — ❌ **definitief besloten, geen Elastic Agent** (2026-07-15).
    Niet nodig gebleken voor Red/Blue Team, nuttig-maar-niet-essentieel
    voor Purple Team-correlatie — zie sectie 3 hierboven voor de volledige
